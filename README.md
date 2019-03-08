@@ -6,7 +6,7 @@ Current process:
 2. ./download_data.sh
 3. python join_datasets.py
 4. cd ../src/recsys
-5. python generate_training_data.py
+5. python generate_training_data.py (or pypy generate_training_data.py which is 2x faster)
 6. python validate.py 
 
 The last script generates submission.csv and prints the validation.
