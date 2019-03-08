@@ -1,6 +1,7 @@
-# import joblib
 import numpy as np
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 train = pq.read_table('./train.parquet').to_pandas()
 train["src"] = "train"
