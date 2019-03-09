@@ -1,3 +1,4 @@
+from recsys.utils import timer
 from sklearn.base import BaseEstimator, TransformerMixin
 
 
@@ -19,3 +20,11 @@ class RankFeatures(BaseEstimator, TransformerMixin):
             X[col] = X.groupby("clickout_id")[col].rank("max", ascending=False) - 1
         X.drop("clickout_id", axis=1, inplace=True)
         return X
+
+
+class PandasToRecords(BaseEstimator, TransformerMixin):
+    def fit(self, X, *arg):
+        return self
+
+    def transform(self, X):
+        return X.to_dict(orient="records")

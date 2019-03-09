@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def calculate_mean_rec_err(queries, clicks):
     recs = []
     for click, query in zip(clicks, queries):

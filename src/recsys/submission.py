@@ -14,6 +14,8 @@ def group_clickouts(df):
         ]
         submission.append(record + [" ".join(session_df.item_id.map(str).to_list())])
         sessions_items[session_id] = session_df.item_id.to_list()
-    submission_df = pd.DataFrame(submission,
-                                 columns="user_id,session_id,timestamp,step,item_recommendations".split(","))
+    submission_df = pd.DataFrame(
+        submission,
+        columns="user_id,session_id,timestamp,step,item_recommendations".split(","),
+    )
     return sessions_items, submission_df
