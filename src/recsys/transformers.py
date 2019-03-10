@@ -16,12 +16,16 @@ class FeatureEng(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         items_to_score = list(zip(X["item_id"], X["last_item_clickout"]))
-        with timer('calculating item similarity'):
-            X["item_similarity_to_last_clicked_item"] = [jaccard(self.imm[a], self.imm[b]) for a, b in tqdm(items_to_score)]
+        with timer("calculating item similarity"):
+            X["item_similarity_to_last_clicked_item"] = [
+                jaccard(self.imm[a], self.imm[b]) for a, b in tqdm(items_to_score)
+            ]
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (
-                X["clickout_user_item_impressions"] + 1
+            X["clickout_user_item_impressions"] + 1
         )
-        X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (X["last_poi_item_impressions"] + 1)
+        X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (
+            X["last_poi_item_impressions"] + 1
+        )
         # X = pd.merge(X, self.item_metadata, on="item_id", how="left")
         # X["properties"].fillna("", inplace=True)
         # X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)

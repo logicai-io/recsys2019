@@ -19,7 +19,9 @@ np.random.seed(0)
 
 
 def train_models(nrows):
-    df_all = pd.read_csv("../../data/events_sorted_trans.csv", nrows=nrows).query("src == 'train'")
+    df_all = pd.read_csv("../../data/events_sorted_trans.csv", nrows=nrows).query(
+        "src == 'train'"
+    )
     df_all["last_event_ts"] = df_all["last_event_ts"].map(json.loads)
     print(df_all["session_id"].nunique())
 
@@ -95,7 +97,7 @@ def read_test():
 def make_test_predictions(models):
     df_test = read_test()
     df_test["click_proba"] = (
-            models[0][1].predict_proba(df_test)[:, 1] + models[1][1].predict(df_test) * 0.2
+        models[0][1].predict_proba(df_test)[:, 1] + models[1][1].predict(df_test) * 0.2
     )
     _, submission_df = group_clickouts(df_test)
     submission_df.to_csv("submission.csv", index=False)

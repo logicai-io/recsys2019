@@ -94,9 +94,7 @@ def make_vectorizer_1():
                 # ),
                 (
                     "last_10_actions",
-                    CountVectorizer(
-                        ngram_range=(1, 5), tokenizer=list, min_df=5
-                    ),
+                    CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
                     "last_10_actions",
                 ),
                 ("last_event_ts", DictVectorizer(), "last_event_ts"),
@@ -140,9 +138,7 @@ def make_vectorizer_2():
                 # ),
                 (
                     "last_10_actions",
-                    CountVectorizer(
-                        ngram_range=(1, 5), tokenizer=list, min_df=5
-                    ),
+                    CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
                     "last_10_actions",
                 ),
                 ("last_event_ts", DictVectorizer(), "last_event_ts"),
