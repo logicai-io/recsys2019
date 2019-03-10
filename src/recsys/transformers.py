@@ -1,18 +1,12 @@
 import joblib
 import numpy as np
 import pandas as pd
-from recsys.utils import jaccard
+from recsys.utils import jaccard, timer
 from sklearn.base import BaseEstimator, TransformerMixin
+from tqdm import tqdm
 
 
 class FeatureEng(BaseEstimator, TransformerMixin):
-    features = [
-        "item_id",
-        "last_item_clickout",
-        "clickout_user_item_clicks",
-        "clickout_user_item_impressions",
-    ]
-
     def __init__(self):
         self.imm = joblib.load("../../data/item_metadata_map.joblib")
         self.item_metadata = pd.read_csv("../../data/item_metadata.csv")
@@ -21,17 +15,17 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X):
-        X["item_similarity_to_last_clicked_item"] = X.apply(
-            lambda row: jaccard(
-                self.imm[row["item_id"]], self.imm[row["last_item_clickout"]]
-            ),
-            axis=1,
-        )
+        items_to_score = list(zip(X["item_id"], X["last_item_clickout"]))
+        with timer('calculating item similarity'):
+            X["item_similarity_to_last_clicked_item"] = [jaccard(self.imm[a], self.imm[b]) for a, b in tqdm(items_to_score)]
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (
-            X["clickout_user_item_impressions"] + 1
+                X["clickout_user_item_impressions"] + 1
         )
-        X = pd.merge(X, self.item_metadata, on="item_id", how="left")
-        X["properties"].fillna("", inplace=True)
+        X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (X["last_poi_item_impressions"] + 1)
+        # X = pd.merge(X, self.item_metadata, on="item_id", how="left")
+        # X["properties"].fillna("", inplace=True)
+        # X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)
+        X["is_rank_greater_than_prv_click"] = X["rank"] > X["last_item_index"]
         return X
 
 
