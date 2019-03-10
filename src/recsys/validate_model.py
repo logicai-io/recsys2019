@@ -1,108 +1,81 @@
+import json
+
 import numpy as np
 import pandas as pd
-from lightgbm import LGBMClassifier
+from lightgbm import LGBMClassifier, LGBMRanker
 from recsys.metric import calculate_mean_rec_err
 from recsys.submission import group_clickouts
-from recsys.transformers import PandasToRecords, RankFeatures
-from recsys.utils import timer
-from sklearn.compose import ColumnTransformer
-from sklearn.feature_extraction import DictVectorizer
-from sklearn.impute import SimpleImputer
+from recsys.utils import group_lengths, timer
+from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2, numerical_features
+from scipy.stats import pearsonr
 from sklearn.metrics import roc_auc_score
 from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
+
+import warnings
+
+warnings.filterwarnings("ignore")
 
 np.random.seed(0)
 
-if __name__ == "__main__":
-    df_all = pd.read_csv("../../data/events_sorted_trans.csv")
+
+def train_models(nrows=200000):
+    df_all = pd.read_csv("../../data/events_sorted_trans.csv", nrows=nrows)
+    df_all["last_event_ts"] = df_all["last_event_ts"].map(json.loads)
+    print(df_all["session_id"].nunique())
+
     train_sessions = None
 
     with timer("filtering training observations"):
         if train_sessions:
             print("Before splitting shape", df_all.shape[0])
-            sample_sessions = df_all.query("src == 'train'")["session_id"].sample(
+            sample_users = df_all.query("src == 'train'")["user_id"].sample(
                 train_sessions
             )
-            df = df_all[df_all["session_id"].isin(sample_sessions)].reset_index()
+            df = df_all[df_all["user_id"].isin(sample_users)].reset_index()
             print("After splitting shape", df.shape[0])
         else:
             df = df_all
     print("Training data shape", df.shape)
 
-    # item_metadata = pd.read_csv("../../data/item_metadata.csv")
-    # df = pd.merge(df, item_metadata, on="item_id", how="left")
-    # df["properties"].fillna("", inplace=True)
-
-    numerical_features = [
-        "rank",
-        "price",
-        "clickout_user_item_clicks",
-        "clickout_item_clicks",
-        "clickout_item_impressions",
-        "was_interaction_img",
-        "interaction_img_freq",
-        "was_interaction_deal",
-        "interaction_deal_freq",
-        "was_interaction_info",
-        "interaction_info_freq",
-    ]
-    numerical_features_for_ranking = [
-        "price",
-        "clickout_user_item_clicks",
-        "clickout_item_clicks",
-        "clickout_item_impressions",
-        "interaction_img_freq",
-        "interaction_deal_freq",
-        "interaction_info_freq",
-    ]
-    categorical_features = ["device", "platform"]  # , "current_filters"]
+    print("Correlations of numerical features")
+    for col in numerical_features:
+        if col in df.columns:
+            print(col, pearsonr(df[col], df["was_clicked"]))
 
     with timer("splitting timebased"):
         split_timestamp = np.percentile(df.timestamp, 70)
-        df_train = df[df["timestamp"] < split_timestamp]
-        df_val = df[(df["timestamp"] > split_timestamp)]
 
-    vectorizer = ColumnTransformer(
-        [
-            (
-                "numerical",
-                make_pipeline(SimpleImputer(strategy="mean"), StandardScaler()),
-                numerical_features,
-            ),
-            # ('feat_eng', make_pipeline(FeatureEng(), StandardScaler()), numerical_features),
-            (
-                "numerical_ranking",
-                RankFeatures(),
-                numerical_features_for_ranking + ["clickout_id"],
-            ),
-            (
-                "categorical",
-                make_pipeline(PandasToRecords(), DictVectorizer()),
-                categorical_features,
-            ),
-            # ('categorical', make_pipeline(SimpleImputer(strategy="most_frequent"), PandasToRecords(), DictVectorizer()),
-            #  categorical_features),
-            # ('properties',
-            #  CountVectorizer(preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=5),
-            #  "properties")
-        ]
-    )
+    df_train = df[df["timestamp"] < split_timestamp]
+    df_val = df[(df["timestamp"] > split_timestamp)]
 
-    with timer("fitting"):
-        model = make_pipeline(vectorizer, LGBMClassifier(n_estimators=100, n_jobs=-2))
-        model.fit(df_train, df_train["was_clicked"])
+    with timer("lgb"):
+        vectorizer_1 = make_vectorizer_1()
+        clf = LGBMClassifier(n_estimators=200, n_jobs=-2)
+        model_lgb = make_pipeline(vectorizer_1, clf)
+        model_lgb.fit(df_train, df_train["was_clicked"])
 
-    train_pred = model.predict_proba(df_train)[:, 1]
-    print(roc_auc_score(df_train["was_clicked"].values, train_pred))
+        train_pred_lgb = model_lgb.predict_proba(df_train)[:, 1]
+        print(roc_auc_score(df_train["was_clicked"].values, train_pred_lgb))
 
-    val_pred = model.predict_proba(df_val)[:, 1]
-    print(roc_auc_score(df_val["was_clicked"].values, val_pred))
+        val_pred_lgb = model_lgb.predict_proba(df_val)[:, 1]
+        print(roc_auc_score(df_val["was_clicked"].values, val_pred_lgb))
 
-    df_val["click_proba"] = val_pred
+    with timer("lgb rank"):
+        vectorizer_2 = make_vectorizer_2()
+        ranker = LGBMRanker(n_estimators=200, n_jobs=-2)
+        model_lgbrank = make_pipeline(vectorizer_2, ranker)
+        model_lgbrank.fit(
+            df_train,
+            df_train["was_clicked"].values,
+            lgbmranker__group=group_lengths(df_train["clickout_id"].values),
+        )
+        train_pred_lgbrank = model_lgbrank.predict(df_train)
+        print(roc_auc_score(df_train["was_clicked"].values, train_pred_lgbrank))
+        val_pred_lgbrank = model_lgbrank.predict(df_val)
+        print(roc_auc_score(df_val["was_clicked"].values, val_pred_lgbrank))
 
+    df_val["click_proba"] = val_pred_lgb + val_pred_lgbrank * 0.2
     sessions_items, _ = group_clickouts(df_val)
-
     val_check = df_val[df_val["was_clicked"] == 1][["clickout_id", "item_id"]]
     val_check["predicted"] = val_check["clickout_id"].map(sessions_items)
     print(
@@ -110,19 +83,26 @@ if __name__ == "__main__":
         calculate_mean_rec_err(val_check["predicted"].tolist(), val_check["item_id"]),
     )
 
-    df_test = df_all.query("is_test==1")
-    df_test["click_proba"] = model.predict_proba(df_test)[:, 1]
+    return [(1.0, model_lgb), (0.2, model_lgbrank)]
 
-    print(
-        """For some reason it can be that click_proba is much greater 
-    for test data. It is not a good idea to submit something if 
-    the mean click_proba for test is much greater than for validation"""
-    )
 
-    print(
-        "Mean click proba validation {:2f} test {:2f}".format(
-            df_val["click_proba"].mean(), df_test["click_proba"].mean()
-        )
+def read_test():
+    df_all = pd.read_csv("../../data/events_sorted_trans.csv")
+    df_all["last_event_ts"] = df_all["last_event_ts"].map(json.loads)
+    return df_all.query("is_test==1")
+
+
+def make_test_predictions(models):
+    df_test = read_test()
+    df_test["click_proba"] = (
+        models[0][1].predict_proba(df_test)[:, 1] + models[1][1].predict(df_test) * 0.2
     )
     _, submission_df = group_clickouts(df_test)
     submission_df.to_csv("submission.csv", index=False)
+
+
+if __name__ == "__main__":
+    with timer("training models"):
+        models = train_models()
+    with timer("predicting"):
+        make_test_predictions(models)
