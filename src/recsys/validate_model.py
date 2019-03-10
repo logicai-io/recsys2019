@@ -12,6 +12,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.pipeline import make_pipeline
 
 import warnings
+
 warnings.filterwarnings("ignore")
 
 np.random.seed(0)
@@ -82,10 +83,7 @@ def train_models(nrows=200000):
         calculate_mean_rec_err(val_check["predicted"].tolist(), val_check["item_id"]),
     )
 
-    return [
-        (1.0, model_lgb),
-        (0.2, model_lgbrank)
-    ]
+    return [(1.0, model_lgb), (0.2, model_lgbrank)]
 
 
 def read_test():
@@ -97,14 +95,14 @@ def read_test():
 def make_test_predictions(models):
     df_test = read_test()
     df_test["click_proba"] = (
-            models[0][1].predict_proba(df_test)[:, 1] + models[1][1].predict(df_test) * 0.2
+        models[0][1].predict_proba(df_test)[:, 1] + models[1][1].predict(df_test) * 0.2
     )
     _, submission_df = group_clickouts(df_test)
     submission_df.to_csv("submission.csv", index=False)
 
 
 if __name__ == "__main__":
-    with timer('training models'):
+    with timer("training models"):
         models = train_models()
-    with timer('predicting'):
+    with timer("predicting"):
         make_test_predictions(models)

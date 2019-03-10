@@ -1,4 +1,9 @@
-from recsys.transformers import FeatureEng, PandasToNpArray, PandasToRecords, RankFeatures
+from recsys.transformers import (
+    FeatureEng,
+    PandasToNpArray,
+    PandasToRecords,
+    RankFeatures,
+)
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
@@ -51,7 +56,11 @@ def make_vectorizer_1():
             [
                 (
                     "numerical",
-                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), StandardScaler()),
+                    make_pipeline(
+                        PandasToNpArray(),
+                        SimpleImputer(strategy="mean"),
+                        StandardScaler(),
+                    ),
                     numerical_features,
                 ),
                 (
@@ -82,7 +91,7 @@ def make_vectorizer_1():
                 ),
                 ("last_event_ts", DictVectorizer(), "last_event_ts"),
             ]
-        )
+        ),
     )
 
 
@@ -93,7 +102,11 @@ def make_vectorizer_2():
             [
                 (
                     "numerical",
-                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), KBinsDiscretizer()),
+                    make_pipeline(
+                        PandasToNpArray(),
+                        SimpleImputer(strategy="mean"),
+                        KBinsDiscretizer(),
+                    ),
                     numerical_features,
                 ),
                 (
@@ -124,5 +137,5 @@ def make_vectorizer_2():
                 ),
                 ("last_event_ts", DictVectorizer(), "last_event_ts"),
             ]
-        )
+        ),
     )

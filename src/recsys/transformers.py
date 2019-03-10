@@ -22,11 +22,13 @@ class FeatureEng(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         X["item_similarity_to_last_clicked_item"] = X.apply(
-            lambda row: jaccard(self.imm[row["item_id"]], self.imm[row["last_item_clickout"]]),
+            lambda row: jaccard(
+                self.imm[row["item_id"]], self.imm[row["last_item_clickout"]]
+            ),
             axis=1,
         )
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (
-                X["clickout_user_item_impressions"] + 1
+            X["clickout_user_item_impressions"] + 1
         )
         X = pd.merge(X, self.item_metadata, on="item_id", how="left")
         X["properties"].fillna("", inplace=True)
