@@ -18,6 +18,14 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 
 
+def calc_mre(df, col):
+    df["click_proba"] = df[col]
+    sessions_items, _ = group_clickouts(df)
+    val_check = df[df["was_clicked"] == 1][["clickout_id", "item_id"]]
+    val_check["predicted"] = val_check["clickout_id"].map(sessions_items)
+    return calculate_mean_rec_err(val_check["predicted"].tolist(), val_check["item_id"]),
+
+
 def train_models(nrows):
     df_all = pd.read_csv("../../data/events_sorted_trans.csv", nrows=nrows).query(
         "src == 'train'"
@@ -42,6 +50,7 @@ def train_models(nrows):
     print("Correlations of numerical features")
     for col in numerical_features:
         if col in df.columns:
+            # print(col, calc_mre(df, col), pearsonr(df[col], df["was_clicked"]))
             print(col, pearsonr(df[col], df["was_clicked"]))
 
     with timer("splitting timebased"):
@@ -97,7 +106,7 @@ def read_test():
 def make_test_predictions(models):
     df_test = read_test()
     df_test["click_proba"] = (
-        models[0][1].predict_proba(df_test)[:, 1] + models[1][1].predict(df_test) * 0.2
+            models[0][1].predict_proba(df_test)[:, 1] + models[1][1].predict(df_test) * 0.2
     )
     _, submission_df = group_clickouts(df_test)
     submission_df.to_csv("submission.csv", index=False)

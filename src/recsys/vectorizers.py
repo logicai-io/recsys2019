@@ -3,7 +3,7 @@ from recsys.transformers import (
     PandasToNpArray,
     PandasToRecords,
     RankFeatures,
-)
+    LagNumericalFeaturesWithinGroup)
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
@@ -13,6 +13,7 @@ from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
 
 numerical_features = [
     "rank",
+    "item_id",
     "price",
     "price_vs_max_price",
     "price_vs_mean_price",
@@ -33,6 +34,8 @@ numerical_features = [
     "interaction_info_freq",
     "was_item_searched",
     "interaction_img_diff_ts",
+    "identical_impressions_item_clicks",
+    "clickout_item_platform_clicks"
 ]
 numerical_features_for_ranking = [
     "price",
@@ -47,7 +50,9 @@ numerical_features_for_ranking = [
     "interaction_img_freq",
     "interaction_deal_freq",
     "interaction_info_freq",
-    # "interaction_img_diff_ts",
+    "identical_impressions_item_clicks",
+    "item_id",
+    "clickout_item_platform_clicks"
 ]
 categorical_features = [
     "device",
@@ -73,6 +78,11 @@ def make_vectorizer_1():
                     ),
                     numerical_features,
                 ),
+                # (
+                #     "numerical_context",
+                #     LagNumericalFeaturesWithinGroup(),
+                #     numerical_features + ["clickout_id"]
+                # ),
                 (
                     "categorical",
                     make_pipeline(PandasToRecords(), DictVectorizer()),
@@ -83,15 +93,15 @@ def make_vectorizer_1():
                     RankFeatures(),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
-                # (
-                #     "properties",
-                #     CountVectorizer(
-                #         preprocessor=lambda x: "UNK" if x != x else x,
-                #         tokenizer=lambda x: x.split("|"),
-                #         min_df=5,
-                #     ),
-                #     "properties",
-                # ),
+                (
+                    "properties",
+                    CountVectorizer(
+                        preprocessor=lambda x: "UNK" if x != x else x,
+                        tokenizer=lambda x: x.split("|"),
+                        min_df=5,
+                    ),
+                    "properties",
+                ),
                 (
                     "last_10_actions",
                     CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
@@ -117,6 +127,11 @@ def make_vectorizer_2():
                     ),
                     numerical_features,
                 ),
+                # (
+                #     "numerical_context",
+                #     LagNumericalFeaturesWithinGroup(),
+                #     numerical_features + ["clickout_id"]
+                # ),
                 (
                     "categorical",
                     make_pipeline(PandasToRecords(), DictVectorizer()),
@@ -127,15 +142,15 @@ def make_vectorizer_2():
                     make_pipeline(RankFeatures(), StandardScaler()),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
-                # (
-                #     "properties",
-                #     CountVectorizer(
-                #         preprocessor=lambda x: "UNK" if x != x else x,
-                #         tokenizer=lambda x: x.split("|"),
-                #         min_df=5,
-                #     ),
-                #     "properties",
-                # ),
+                (
+                    "properties",
+                    CountVectorizer(
+                        preprocessor=lambda x: "UNK" if x != x else x,
+                        tokenizer=lambda x: x.split("|"),
+                        min_df=5,
+                    ),
+                    "properties",
+                ),
                 (
                     "last_10_actions",
                     CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),

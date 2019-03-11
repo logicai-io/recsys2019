@@ -21,13 +21,13 @@ class FeatureEng(BaseEstimator, TransformerMixin):
                 jaccard(self.imm[a], self.imm[b]) for a, b in tqdm(items_to_score)
             ]
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (
-            X["clickout_user_item_impressions"] + 1
+                X["clickout_user_item_impressions"] + 1
         )
         X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (
-            X["last_poi_item_impressions"] + 1
+                X["last_poi_item_impressions"] + 1
         )
-        # X = pd.merge(X, self.item_metadata, on="item_id", how="left")
-        # X["properties"].fillna("", inplace=True)
+        X = pd.merge(X, self.item_metadata, on="item_id", how="left")
+        X["properties"].fillna("", inplace=True)
         # X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)
         X["is_rank_greater_than_prv_click"] = X["rank"] > X["last_item_index"]
         return X
@@ -39,7 +39,23 @@ class RankFeatures(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         for col in X.columns:
-            X[col] = X.groupby("clickout_id")[col].rank("max", ascending=False) - 1
+            if col != "clickout_id":
+                X[col] = X.groupby("clickout_id")[col].rank("max", ascending=False) - 1
+        X.drop("clickout_id", axis=1, inplace=True)
+        return X
+
+
+class LagNumericalFeaturesWithinGroup(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        for col in X.columns:
+            if col != "clickout_id":
+                X[col + '_shifted_p1_diff'] = X[col] - X.groupby(['clickout_id'])[col].shift(1).fillna(0)
+                X[col + '_shifted_m1_diff'] = X[col] - X.groupby(['clickout_id'])[col].shift(-1).fillna(0)
+                X[col + '_shifted_p1'] = X.groupby(['clickout_id'])[col].shift(1).fillna(0)
+                X[col + '_shifted_m1'] = X.groupby(['clickout_id'])[col].shift(-1).fillna(0)
         X.drop("clickout_id", axis=1, inplace=True)
         return X
 

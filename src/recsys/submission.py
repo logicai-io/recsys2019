@@ -5,7 +5,7 @@ from tqdm import tqdm
 def group_clickouts(df):
     sessions_items = {}
     submission = []
-    for session_id, session_df in tqdm(df.groupby("clickout_id")):
+    for session_id, session_df in df.groupby("clickout_id"):
         session_df = session_df.sort_values("click_proba", ascending=False)
         # user_id,session_id,timestamp,step,item_recommendations
         record = [
