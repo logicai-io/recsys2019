@@ -3,6 +3,7 @@ from recsys.transformers import (
     PandasToNpArray,
     PandasToRecords,
     RankFeatures,
+    LagNumericalFeaturesWithinGroup,
 )
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
@@ -13,8 +14,14 @@ from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
 
 numerical_features = [
     "rank",
+    "item_id",
     "price",
+    "price_vs_max_price",
+    "price_vs_mean_price",
     "item_similarity_to_last_clicked_item",
+    "last_poi_item_clicks",
+    "last_poi_item_impressions",
+    "last_poi_item_ctr",
     "user_item_ctr",
     "last_item_index",
     "clickout_user_item_clicks",
@@ -27,10 +34,18 @@ numerical_features = [
     "was_interaction_info",
     "interaction_info_freq",
     "was_item_searched",
+    "interaction_img_diff_ts",
+    "identical_impressions_item_clicks",
+    "clickout_item_platform_clicks",
+    "is_impression_the_same",
+    "clicked_before",
 ]
 numerical_features_for_ranking = [
     "price",
     "item_similarity_to_last_clicked_item",
+    "last_poi_item_clicks",
+    "last_poi_item_impressions",
+    "last_poi_item_ctr",
     "user_item_ctr",
     "clickout_user_item_clicks",
     "clickout_item_clicks",
@@ -38,6 +53,9 @@ numerical_features_for_ranking = [
     "interaction_img_freq",
     "interaction_deal_freq",
     "interaction_info_freq",
+    "identical_impressions_item_clicks",
+    "item_id",
+    "clickout_item_platform_clicks",
 ]
 categorical_features = [
     "device",
@@ -63,6 +81,11 @@ def make_vectorizer_1():
                     ),
                     numerical_features,
                 ),
+                # (
+                #     "numerical_context",
+                #     LagNumericalFeaturesWithinGroup(),
+                #     numerical_features + ["clickout_id"]
+                # ),
                 (
                     "categorical",
                     make_pipeline(PandasToRecords(), DictVectorizer()),
@@ -83,10 +106,17 @@ def make_vectorizer_1():
                     "properties",
                 ),
                 (
-                    "last_10_actions",
+                    "last_filter",
                     CountVectorizer(
-                        ngram_range=(1, 5), tokenizer=lambda x: x.split(), min_df=5
+                        preprocessor=lambda x: "UNK" if x != x else x,
+                        tokenizer=lambda x: x.split("|"),
+                        min_df=5,
                     ),
+                    "last_filter",
+                ),
+                (
+                    "last_10_actions",
+                    CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
                     "last_10_actions",
                 ),
                 ("last_event_ts", DictVectorizer(), "last_event_ts"),
@@ -109,6 +139,11 @@ def make_vectorizer_2():
                     ),
                     numerical_features,
                 ),
+                # (
+                #     "numerical_context",
+                #     LagNumericalFeaturesWithinGroup(),
+                #     numerical_features + ["clickout_id"]
+                # ),
                 (
                     "categorical",
                     make_pipeline(PandasToRecords(), DictVectorizer()),
@@ -129,10 +164,17 @@ def make_vectorizer_2():
                     "properties",
                 ),
                 (
-                    "last_10_actions",
+                    "last_filter",
                     CountVectorizer(
-                        ngram_range=(1, 5), tokenizer=lambda x: x.split(), min_df=5
+                        preprocessor=lambda x: "UNK" if x != x else x,
+                        tokenizer=lambda x: x.split("|"),
+                        min_df=5,
                     ),
+                    "last_filter",
+                ),
+                (
+                    "last_10_actions",
+                    CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
                     "last_10_actions",
                 ),
                 ("last_event_ts", DictVectorizer(), "last_event_ts"),

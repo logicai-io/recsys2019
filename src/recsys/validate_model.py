@@ -1,5 +1,7 @@
 import json
+import warnings
 
+import click
 import numpy as np
 import pandas as pd
 from lightgbm import LGBMClassifier, LGBMRanker
@@ -11,15 +13,25 @@ from scipy.stats import pearsonr
 from sklearn.metrics import roc_auc_score
 from sklearn.pipeline import make_pipeline
 
-import warnings
-
 warnings.filterwarnings("ignore")
 
 np.random.seed(0)
 
 
-def train_models(nrows=200000):
-    df_all = pd.read_csv("../../data/events_sorted_trans.csv", nrows=nrows)
+def calc_mre(df, col):
+    df["click_proba"] = df[col]
+    sessions_items, _ = group_clickouts(df)
+    val_check = df[df["was_clicked"] == 1][["clickout_id", "item_id"]]
+    val_check["predicted"] = val_check["clickout_id"].map(sessions_items)
+    return (
+        calculate_mean_rec_err(val_check["predicted"].tolist(), val_check["item_id"]),
+    )
+
+
+def train_models(nrows):
+    df_all = pd.read_csv("../../data/events_sorted_trans.csv", nrows=nrows).query(
+        "src == 'train'"
+    )
     df_all["last_event_ts"] = df_all["last_event_ts"].map(json.loads)
     print(df_all["session_id"].nunique())
 
@@ -35,11 +47,14 @@ def train_models(nrows=200000):
             print("After splitting shape", df.shape[0])
         else:
             df = df_all
+
+    df["clicked_before"] = (df["item_id"] == df["last_item_clickout"]).astype(np.int)
     print("Training data shape", df.shape)
 
     print("Correlations of numerical features")
     for col in numerical_features:
         if col in df.columns:
+            # print(col, calc_mre(df, col), pearsonr(df[col], df["was_clicked"]))
             print(col, pearsonr(df[col], df["was_clicked"]))
 
     with timer("splitting timebased"):
@@ -101,8 +116,15 @@ def make_test_predictions(models):
     submission_df.to_csv("submission.csv", index=False)
 
 
-if __name__ == "__main__":
+@click.command()
+@click.option("--limit", type=int, default=None, help="Number of rows to process")
+@click.option("--submit", type=bool, default=False, help="Prepare submission file")
+def main(limit, submit):
     with timer("training models"):
-        models = train_models()
+        models = train_models(limit)
     with timer("predicting"):
         make_test_predictions(models)
+
+
+if __name__ == "__main__":
+    main()
