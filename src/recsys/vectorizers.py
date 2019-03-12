@@ -3,7 +3,8 @@ from recsys.transformers import (
     PandasToNpArray,
     PandasToRecords,
     RankFeatures,
-    LagNumericalFeaturesWithinGroup)
+    LagNumericalFeaturesWithinGroup,
+)
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
@@ -35,7 +36,9 @@ numerical_features = [
     "was_item_searched",
     "interaction_img_diff_ts",
     "identical_impressions_item_clicks",
-    "clickout_item_platform_clicks"
+    "clickout_item_platform_clicks",
+    "is_impression_the_same",
+    "clicked_before",
 ]
 numerical_features_for_ranking = [
     "price",
@@ -52,7 +55,7 @@ numerical_features_for_ranking = [
     "interaction_info_freq",
     "identical_impressions_item_clicks",
     "item_id",
-    "clickout_item_platform_clicks"
+    "clickout_item_platform_clicks",
 ]
 categorical_features = [
     "device",
@@ -103,6 +106,15 @@ def make_vectorizer_1():
                     "properties",
                 ),
                 (
+                    "last_filter",
+                    CountVectorizer(
+                        preprocessor=lambda x: "UNK" if x != x else x,
+                        tokenizer=lambda x: x.split("|"),
+                        min_df=5,
+                    ),
+                    "last_filter",
+                ),
+                (
                     "last_10_actions",
                     CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
                     "last_10_actions",
@@ -150,6 +162,15 @@ def make_vectorizer_2():
                         min_df=5,
                     ),
                     "properties",
+                ),
+                (
+                    "last_filter",
+                    CountVectorizer(
+                        preprocessor=lambda x: "UNK" if x != x else x,
+                        tokenizer=lambda x: x.split("|"),
+                        min_df=5,
+                    ),
+                    "last_filter",
                 ),
                 (
                     "last_10_actions",

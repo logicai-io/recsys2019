@@ -23,7 +23,9 @@ def calc_mre(df, col):
     sessions_items, _ = group_clickouts(df)
     val_check = df[df["was_clicked"] == 1][["clickout_id", "item_id"]]
     val_check["predicted"] = val_check["clickout_id"].map(sessions_items)
-    return calculate_mean_rec_err(val_check["predicted"].tolist(), val_check["item_id"]),
+    return (
+        calculate_mean_rec_err(val_check["predicted"].tolist(), val_check["item_id"]),
+    )
 
 
 def train_models(nrows):
@@ -45,6 +47,8 @@ def train_models(nrows):
             print("After splitting shape", df.shape[0])
         else:
             df = df_all
+
+    df["clicked_before"] = (df["item_id"] == df["last_item_clickout"]).astype(np.int)
     print("Training data shape", df.shape)
 
     print("Correlations of numerical features")
@@ -106,7 +110,7 @@ def read_test():
 def make_test_predictions(models):
     df_test = read_test()
     df_test["click_proba"] = (
-            models[0][1].predict_proba(df_test)[:, 1] + models[1][1].predict(df_test) * 0.2
+        models[0][1].predict_proba(df_test)[:, 1] + models[1][1].predict(df_test) * 0.2
     )
     _, submission_df = group_clickouts(df_test)
     submission_df.to_csv("submission.csv", index=False)
@@ -118,9 +122,8 @@ def make_test_predictions(models):
 def main(limit, submit):
     with timer("training models"):
         models = train_models(limit)
-    if submit:
-        with timer("predicting"):
-            make_test_predictions(models)
+    with timer("predicting"):
+        make_test_predictions(models)
 
 
 if __name__ == "__main__":

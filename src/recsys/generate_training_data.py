@@ -65,9 +65,11 @@ def set_nested_key(acc, key1, key2, value):
     acc[key1][key2] = value
     return acc
 
+
 def add_one_nested_key(acc, key1, key2):
-    acc[key1][key2]+=1
+    acc[key1][key2] += 1
     return acc
+
 
 def append_to_list(acc, key, value):
     acc[key].append(value)
@@ -94,8 +96,20 @@ accumulators = [
         name="identical_impressions_item_clicks",
         filter=lambda row: row["action_type"] == "clickout item",
         acc=defaultdict(lambda: defaultdict(int)),
-        updater=lambda acc, row: add_one_nested_key(acc, row["impressions_hash"], row["reference"]),
-        get_stats_func=lambda acc, row, item: acc[row["impressions_hash"]][item["item_id"]]
+        updater=lambda acc, row: add_one_nested_key(
+            acc, row["impressions_hash"], row["reference"]
+        ),
+        get_stats_func=lambda acc, row, item: acc[row["impressions_hash"]][
+            item["item_id"]
+        ],
+    ),
+    StatsAcc(
+        name="is_impression_the_same",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc=defaultdict(str),
+        updater=lambda acc, row: set_key(acc, row["user_id"], row["impressions_hash"]),
+        get_stats_func=lambda acc, row, item: acc.get(row["user_id"])
+        == row["impressions_hash"],
     ),
     StatsAcc(
         name="last_10_actions",
@@ -212,14 +226,16 @@ accumulators = [
         name="clickout_item_clicks",
         filter=lambda row: row["action_type"] == "clickout item",
         acc=defaultdict(int),
-        updater=lambda acc, row: increment_key_by_one(acc, (row["reference"])),
+        updater=lambda acc, row: increment_key_by_one(acc, row["reference"]),
         get_stats_func=lambda acc, row, item: acc[item["item_id"]],
     ),
     StatsAcc(
         name="clickout_item_platform_clicks",
         filter=lambda row: row["action_type"] == "clickout item",
         acc=defaultdict(int),
-        updater=lambda acc, row: increment_key_by_one(acc, (row["reference"], row["platform"])),
+        updater=lambda acc, row: increment_key_by_one(
+            acc, (row["reference"], row["platform"])
+        ),
         get_stats_func=lambda acc, row, item: acc[(item["item_id"], row["platform"])],
     ),
     StatsAcc(
@@ -315,10 +331,11 @@ accumulators = [
     ),
     StatsAcc(
         name="last_filter",
-        filter=lambda row: row["action_type"] in ("filter selection", "search for destination", "search for poi"),
+        filter=lambda row: row["action_type"]
+        in ("filter selection", "search for destination", "search for poi"),
         acc={},
         updater=lambda acc, row: set_key(acc, row["user_id"], row["current_filters"]),
-        get_stats_func=lambda acc, row, item: acc.get(row["user_id"]),
+        get_stats_func=lambda acc, row, item: acc.get(row["user_id"], ""),
     ),
 ]
 
@@ -355,6 +372,7 @@ def main(limit):
             for rank, (item_id, price) in enumerate(zip(row["impressions"], prices)):
                 obs = row.copy()
                 del obs["impressions"]
+                del obs["impressions_hash"]
                 del obs["prices"]
                 del obs["action_type"]
                 obs["item_id"] = item_id
