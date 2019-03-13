@@ -3,7 +3,6 @@ from recsys.transformers import (
     PandasToNpArray,
     PandasToRecords,
     RankFeatures,
-    LagNumericalFeaturesWithinGroup,
 )
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
@@ -98,11 +97,7 @@ def make_vectorizer_1():
                 ),
                 (
                     "properties",
-                    CountVectorizer(
-                        preprocessor=lambda x: "UNK" if x != x else x,
-                        tokenizer=lambda x: x.split("|"),
-                        min_df=5,
-                    ),
+                    CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5),
                     "properties",
                 ),
                 (
@@ -156,11 +151,7 @@ def make_vectorizer_2():
                 ),
                 (
                     "properties",
-                    CountVectorizer(
-                        preprocessor=lambda x: "UNK" if x != x else x,
-                        tokenizer=lambda x: x.split("|"),
-                        min_df=5,
-                    ),
+                    CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5),
                     "properties",
                 ),
                 (

@@ -1,6 +1,5 @@
 import joblib
 import numpy as np
-import pandas as pd
 from recsys.utils import jaccard, timer
 from sklearn.base import BaseEstimator, TransformerMixin
 from tqdm import tqdm
@@ -9,7 +8,6 @@ from tqdm import tqdm
 class FeatureEng(BaseEstimator, TransformerMixin):
     def __init__(self):
         self.imm = joblib.load("../../data/item_metadata_map.joblib")
-        self.item_metadata = pd.read_csv("../../data/item_metadata.csv")
 
     def fit(self, X, y=None):
         return self
@@ -27,7 +25,7 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (
             X["last_poi_item_impressions"] + 1
         )
-        X = pd.merge(X, self.item_metadata, on="item_id", how="left")
+        X["properties"] = X["item_id"].map(self.imm)
         X["properties"].fillna("", inplace=True)
         # X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)
         X["is_rank_greater_than_prv_click"] = X["rank"] > X["last_item_index"]

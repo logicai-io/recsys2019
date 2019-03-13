@@ -17,8 +17,7 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 
 
-class ModelTrain():
-
+class ModelTrain:
     def __init__(self, n_jobs=-2, reduce_df_memory=False):
         self.n_jobs = n_jobs
         self.reduce_df_memory = reduce_df_memory
@@ -78,7 +77,9 @@ class ModelTrain():
                 print("After splitting shape", df.shape[0])
             else:
                 df = df_all
-        df["clicked_before"] = (df["item_id"] == df["last_item_clickout"]).astype(np.int)
+        df["clicked_before"] = (df["item_id"] == df["last_item_clickout"]).astype(
+            np.int
+        )
         print("Training data shape", df.shape)
         with timer("splitting timebased"):
             split_timestamp = np.percentile(df.timestamp, 70)
@@ -96,7 +97,8 @@ class ModelTrain():
     def make_test_predictions(self, models):
         df_test = self.read_test()
         df_test["click_proba"] = (
-                models[0][1].predict_proba(df_test)[:, 1] + models[1][1].predict(df_test) * 0.2
+            models[0][1].predict_proba(df_test)[:, 1]
+            + models[1][1].predict(df_test) * 0.2
         )
         _, submission_df = group_clickouts(df_test)
         submission_df.to_csv("submission.csv", index=False)
@@ -106,8 +108,14 @@ class ModelTrain():
 @click.option("--limit", type=int, default=None, help="Number of rows to process")
 @click.option("--n_jobs", type=int, default=-2, help="Number of cores to run models on")
 @click.option("--submit", type=bool, default=True, help="Prepare submission file")
-@click.option("--reduce_df_memory", type=bool, default=True, help="Aggresively reduce DataFrame memory")
+@click.option(
+    "--reduce_df_memory",
+    type=bool,
+    default=True,
+    help="Aggresively reduce DataFrame memory",
+)
 def main(limit, submit, n_jobs, reduce_df_memory):
+    print(f"limit={limit}")
     print(f"submit={submit}")
     print(f"n_jobs={n_jobs}")
     print(f"reduce_df_memory={reduce_df_memory}")
