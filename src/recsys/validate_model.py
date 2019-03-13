@@ -28,7 +28,7 @@ def calc_mre(df, col):
     )
 
 
-def train_models(nrows):
+def train_models(nrows, njobs):
     df_all = pd.read_csv("../../data/events_sorted_trans.csv", nrows=nrows).query(
         "src == 'train'"
     )
@@ -65,7 +65,7 @@ def train_models(nrows):
 
     with timer("lgb"):
         vectorizer_1 = make_vectorizer_1()
-        clf = LGBMClassifier(n_estimators=200, n_jobs=-2)
+        clf = LGBMClassifier(n_estimators=200, n_jobs=njobs)
         model_lgb = make_pipeline(vectorizer_1, clf)
         model_lgb.fit(df_train, df_train["was_clicked"])
 
@@ -77,7 +77,7 @@ def train_models(nrows):
 
     with timer("lgb rank"):
         vectorizer_2 = make_vectorizer_2()
-        ranker = LGBMRanker(n_estimators=200, n_jobs=-2)
+        ranker = LGBMRanker(n_estimators=200, n_jobs=njobs)
         model_lgbrank = make_pipeline(vectorizer_2, ranker)
         model_lgbrank.fit(
             df_train,
@@ -118,10 +118,11 @@ def make_test_predictions(models):
 
 @click.command()
 @click.option("--limit", type=int, default=None, help="Number of rows to process")
+@click.option("--njobs", type=int, default=-2, help="Number of cores to run models on")
 @click.option("--submit", type=bool, default=False, help="Prepare submission file")
-def main(limit, submit):
+def main(limit, submit, njobs):
     with timer("training models"):
-        models = train_models(limit)
+        models = train_models(limit, njobs)
     with timer("predicting"):
         make_test_predictions(models)
 
