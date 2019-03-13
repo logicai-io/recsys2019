@@ -109,7 +109,13 @@ venv.bak/
 .~lock.*
 .vscode
 *.csv
+<<<<<<< Updated upstream
 
 
 # WR
 data/*.joblib
+=======
+*.joblib
+*.parquet
+
+>>>>>>> Stashed changes
