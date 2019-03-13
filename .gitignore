@@ -109,3 +109,7 @@ venv.bak/
 .~lock.*
 .vscode
 *.csv
+
+
+# WR
+data/*.joblib
