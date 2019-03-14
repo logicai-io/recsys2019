@@ -22,6 +22,7 @@ if __name__ == "__main__":
                 obs["src"] = row["src"]
                 obs["is_test"] = row["is_test"]
                 obs["clickout_id"] = clickout_id
+                obs["rank"] = rank
                 obs["user_id"] = user_id
                 obs["item_id"] = item_id
                 obs["timestamp"] = row["timestamp"]
