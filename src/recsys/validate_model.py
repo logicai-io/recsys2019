@@ -108,7 +108,7 @@ class ModelTrain:
                 train_users = set(
                     np.random.choice(df_all[df_all["is_test"] == 0].user_id.unique(), n_users, replace=False))
                 if train_on_test_users:
-                    train_users |= set(df_all[df_all["is_test"] == 1].unique())
+                    train_users |= set(df_all[df_all["is_test"] == 1].user_id.unique())
                 df_all = df_all[(df_all.user_id.isin(train_users)) & (df_all.is_test == 0)]
             print("Training on {} users".format(df_all["user_id"].nunique()))
             print("Training data shape", df_all.shape)
@@ -118,23 +118,25 @@ class ModelTrain:
 @click.command()
 @click.option("--n_users", type=int, default=None, help="Number of users to user for training")
 @click.option("--n_jobs", type=int, default=-2, help="Number of cores to run models on")
-@click.option("--submit", type=bool, default=True, help="Prepare submission file")
+@click.option("--action", type=str, default="validate", help="What to do: validate/submit")
 @click.option(
     "--reduce_df_memory",
     type=bool,
     default=True,
     help="Aggresively reduce DataFrame memory",
 )
-def main(n_users, n_jobs, submit, reduce_df_memory):
+def main(n_users, n_jobs, action, reduce_df_memory):
     print(f"n_users={n_users}")
-    print(f"submit={submit}")
+    print(f"action={action}")
     print(f"n_jobs={n_jobs}")
     print(f"reduce_df_memory={reduce_df_memory}")
     trainer = ModelTrain(n_jobs=n_jobs, reduce_df_memory=reduce_df_memory)
-    with timer("validating models"):
-        trainer.validate_models(n_users)
-    with timer("training full data models"):
-        trainer.submit_models(n_users)
+    if action == "validate":
+        with timer("validating models"):
+            trainer.validate_models(n_users)
+    elif action == "submit":
+        with timer("training full data models"):
+            trainer.submit_models(n_users)
 
 
 if __name__ == "__main__":
