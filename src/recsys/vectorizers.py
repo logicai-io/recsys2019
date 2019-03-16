@@ -17,7 +17,6 @@ numerical_features = [
     "price",
     "price_vs_max_price",
     "price_vs_mean_price",
-    "item_similarity_to_last_clicked_item",
     "last_poi_item_clicks",
     "last_poi_item_impressions",
     "last_poi_item_ctr",
@@ -38,10 +37,12 @@ numerical_features = [
     "clickout_item_platform_clicks",
     "is_impression_the_same",
     "clicked_before",
+    "country_eq_platform",
+    "item_similarity_to_last_clicked_item",
+    "avg_similarity_to_interacted_items",
 ]
 numerical_features_for_ranking = [
     "price",
-    "item_similarity_to_last_clicked_item",
     "last_poi_item_clicks",
     "last_poi_item_impressions",
     "last_poi_item_ctr",
@@ -55,12 +56,15 @@ numerical_features_for_ranking = [
     "identical_impressions_item_clicks",
     "item_id",
     "clickout_item_platform_clicks",
+    "item_similarity_to_last_clicked_item",
+    "avg_similarity_to_interacted_items"
 ]
 categorical_features = [
     "device",
     "platform",
     "last_sort_order",
     "last_filter_selection",
+    "country"
 ]
 
 features_eng = FeatureEng()
@@ -95,11 +99,11 @@ def make_vectorizer_1():
                     RankFeatures(),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
-                (
-                    "properties",
-                    CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5),
-                    "properties",
-                ),
+                # (
+                #     "properties",
+                #     CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5),
+                #     "properties",
+                # ),
                 (
                     "last_filter",
                     CountVectorizer(
@@ -109,12 +113,12 @@ def make_vectorizer_1():
                     ),
                     "last_filter",
                 ),
-                (
-                    "last_10_actions",
-                    CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
-                    "last_10_actions",
-                ),
-                ("last_event_ts", DictVectorizer(), "last_event_ts"),
+                # (
+                #     "last_10_actions",
+                #     CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
+                #     "last_10_actions",
+                # ),
+                ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
             ]
         ),
     )
@@ -149,11 +153,11 @@ def make_vectorizer_2():
                     make_pipeline(RankFeatures(), StandardScaler()),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
-                (
-                    "properties",
-                    CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5),
-                    "properties",
-                ),
+                # (
+                #     "properties",
+                #     CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5),
+                #     "properties",
+                # ),
                 (
                     "last_filter",
                     CountVectorizer(
@@ -163,12 +167,12 @@ def make_vectorizer_2():
                     ),
                     "last_filter",
                 ),
-                (
-                    "last_10_actions",
-                    CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
-                    "last_10_actions",
-                ),
-                ("last_event_ts", DictVectorizer(), "last_event_ts"),
+                # (
+                #     "last_10_actions",
+                #     CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
+                #     "last_10_actions",
+                # ),
+                ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
             ]
         ),
     )

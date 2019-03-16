@@ -17,6 +17,12 @@ ACTION_SHORTENER = {
     "search for poi": "i",
 }
 
+ACTIONS_WITH_ITEM_REFERENCE = {"search for item",
+                               "interaction item info",
+                               "interaction item image",
+                               "interaction item deals",
+                               "clickout item"}
+
 
 class StatsAcc:
     """
@@ -56,6 +62,11 @@ def increment_keys_by_one(acc, keys):
     return acc
 
 
+def add_to_set(acc, key, value):
+    acc[key].add(value)
+    return True
+
+
 def set_key(acc, key, value):
     acc[key] = value
     return True
@@ -89,6 +100,13 @@ def diff_ts(acc, current_ts):
     return new_acc
 
 
+def tryint(s):
+    try:
+        return int(s)
+    except:
+        return 0
+
+
 acc_dict = {}
 
 accumulators = [
@@ -109,7 +127,7 @@ accumulators = [
         acc=defaultdict(str),
         updater=lambda acc, row: set_key(acc, row["user_id"], row["impressions_hash"]),
         get_stats_func=lambda acc, row, item: acc.get(row["user_id"])
-        == row["impressions_hash"],
+                                              == row["impressions_hash"],
     ),
     StatsAcc(
         name="last_10_actions",
@@ -273,7 +291,7 @@ accumulators = [
         get_stats_func=lambda acc, row, item: acc.get(
             (row["user_id"], item["item_id"]), item["timestamp"]
         )
-        - item["timestamp"],
+                                              - item["timestamp"],
     ),
     StatsAcc(
         name="interaction_img_freq",
@@ -332,10 +350,18 @@ accumulators = [
     StatsAcc(
         name="last_filter",
         filter=lambda row: row["action_type"]
-        in ("filter selection", "search for destination", "search for poi"),
+                           in ("filter selection", "search for destination", "search for poi"),
         acc={},
         updater=lambda acc, row: set_key(acc, row["user_id"], row["current_filters"]),
         get_stats_func=lambda acc, row, item: acc.get(row["user_id"], ""),
+    ),
+    StatsAcc(
+        name="user_item_interactions_list",
+        filter=lambda row: row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE,
+        acc=defaultdict(set),
+        updater=lambda acc, row: add_to_set(acc, row["user_id"],
+                                            tryint(row["reference"])),
+        get_stats_func=lambda acc, row, item: json.dumps(list(acc.get(row["user_id"], [])))
     ),
 ]
 
