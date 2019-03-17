@@ -44,7 +44,7 @@ numerical_features = [
     "hour",
     "n_properties",
     "rating",
-    "stars"
+    "stars",
 ]
 numerical_features_for_ranking = [
     "price",
@@ -66,7 +66,7 @@ numerical_features_for_ranking = [
     "avg_similarity_to_interacted_session_items",
     "n_properties",
     "rating",
-    "stars"
+    "stars",
 ]
 categorical_features = [
     "device",
@@ -74,7 +74,7 @@ categorical_features = [
     "last_sort_order",
     "last_filter_selection",
     "country",
-    "hotel_cat"
+    "hotel_cat",
 ]
 
 features_eng = FeatureEng()

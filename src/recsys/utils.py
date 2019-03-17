@@ -2,7 +2,6 @@ import itertools as it
 import time
 from contextlib import contextmanager
 
-import joblib
 import numpy as np
 
 
@@ -19,8 +18,6 @@ def group_lengths(group_ids):
 
 def jaccard(a, b):
     return len(a & b) / (len(a | b) + 1)
-
-
 
 
 def reduce_mem_usage(df, verbose=True, aggressive=False):
@@ -73,4 +70,3 @@ def reduce_mem_usage(df, verbose=True, aggressive=False):
             )
         )
     return df
-
