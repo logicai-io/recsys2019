@@ -1,22 +1,54 @@
 import json
 import pathlib
-
+from multiprocessing.pool import Pool, ThreadPool
+import pandas as pd
+import arrow
 import joblib
 import numpy as np
-from joblib import Parallel, delayed
 from recsys.constants import COUNTRY_CODES
-from recsys.metric import mrr_fast
 from recsys.utils import jaccard, timer
 from sklearn.base import BaseEstimator, TransformerMixin
 from tqdm import tqdm
 
-Parallel, delayed
 PATH_TO_IMM = pathlib.Path(__file__).parents[2] / "data" / "item_metadata_map.joblib"
+METADATA_DENSE = pathlib.Path(__file__).parents[2] / "data" / "item_metadata_dense.csv"
+
+
+class JaccardItemSim():
+    def __init__(self):
+        self.imm = joblib.load(PATH_TO_IMM)
+
+    def list_to_item(self, other_items, item):
+        if other_items:
+            return np.mean([jaccard(self.imm[a], self.imm[item]) for a in other_items])
+        else:
+            return 0
+
+    def two_items(self, a, b):
+        if b != 0:
+            return jaccard(self.imm[a], self.imm[b])
+        else:
+            return 0
+
+    def list_to_item_star(self, v):
+        other_items, item = v
+        if other_items:
+            return np.mean([jaccard(self.imm[a], self.imm[item]) for a in other_items])
+        else:
+            return 0
+
+    def two_items_star(self, v):
+        a, b = v
+        if b != 0:
+            return jaccard(self.imm[a], self.imm[b])
+        else:
+            return 0
 
 
 class FeatureEng(BaseEstimator, TransformerMixin):
     def __init__(self, path_to_imm=PATH_TO_IMM):
-        self.imm = joblib.load(PATH_TO_IMM)
+        self.jacc_sim = JaccardItemSim()
+        self.metadata_dense = pd.read_csv(METADATA_DENSE).fillna(0)
 
     def fit(self, X, y=None):
         return self
@@ -27,20 +59,17 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X["last_event_ts_dict"] = X["last_event_ts"].map(json.loads)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int)
 
-        items_to_score = zip(X["item_id"], X["last_item_clickout"].fillna(0).map(int))
+        jacc_sim = self.jacc_sim
         with timer("calculating item similarity"):
-            X["item_similarity_to_last_clicked_item"] = [jaccard(self.imm[a], self.imm[b]) if b != 0 else 0 for a, b in
-                                                         tqdm(items_to_score, total=X.shape[0])]
-        print("item_similarity_to_last_clicked_item mrr",
-              mrr_fast(X.iloc[:100000], "item_similarity_to_last_clicked_item"))
+            with ThreadPool(8) as pool:
+                items_to_score = zip(X["item_id"], X["last_item_clickout"].fillna(0).map(int))
+                X["item_similarity_to_last_clicked_item"] = list(tqdm(pool.imap(jacc_sim.two_items_star, items_to_score, chunksize=100)))
 
-        items_to_score = zip(X["user_item_interactions_list"].map(json.loads), X["item_id"])
-        with timer("calculating avg item similarity"):
-            X["avg_similarity_to_interacted_items"] = [
-                np.mean([jaccard(self.imm[a], self.imm[b]) for a in items]) if items else 0 for items, b in
-                tqdm(items_to_score)
-            ]
-        print("avg_similarity_to_interacted_items mrr", mrr_fast(X.iloc[:100000], "avg_similarity_to_interacted_items"))
+                items_to_score = zip(X["user_item_interactions_list"].map(json.loads), X["item_id"])
+                X["avg_similarity_to_interacted_items"] = list(tqdm(pool.imap(jacc_sim.list_to_item_star, items_to_score, chunksize=100)))
+
+                items_to_score = zip(X["user_item_session_interactions_list"].map(json.loads), X["item_id"])
+                X["avg_similarity_to_interacted_session_items"] = list(tqdm(pool.imap(jacc_sim.list_to_item_star, items_to_score, chunksize=100)))
 
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (
                 X["clickout_user_item_impressions"] + 1
@@ -50,13 +79,21 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         )
         # X["properties"] = X["item_id"].map(self.imm)
         # X["properties"].fillna("", inplace=True)
-        # X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)
+        X = pd.merge(X, self.metadata_dense, how="left", on="item_id")
+
+        X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)
         X["is_rank_greater_than_prv_click"] = X["rank"] > X["last_item_index"]
         X["last_filter"].fillna("", inplace=True)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(
             np.int
         )
         return X
+
+    def jaccard_similarity_item_to_list(self, item, other_items):
+        if other_items:
+            return np.mean([jaccard(self.imm[a], self.imm[item]) for a in other_items])
+        else:
+            return 0
 
 
 class RankFeatures(BaseEstimator, TransformerMixin):

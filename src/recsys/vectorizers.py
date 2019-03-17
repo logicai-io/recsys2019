@@ -40,6 +40,11 @@ numerical_features = [
     "country_eq_platform",
     "item_similarity_to_last_clicked_item",
     "avg_similarity_to_interacted_items",
+    "avg_similarity_to_interacted_session_items",
+    "hour",
+    "n_properties",
+    "rating",
+    "stars"
 ]
 numerical_features_for_ranking = [
     "price",
@@ -57,14 +62,19 @@ numerical_features_for_ranking = [
     "item_id",
     "clickout_item_platform_clicks",
     "item_similarity_to_last_clicked_item",
-    "avg_similarity_to_interacted_items"
+    "avg_similarity_to_interacted_items",
+    "avg_similarity_to_interacted_session_items",
+    "n_properties",
+    "rating",
+    "stars"
 ]
 categorical_features = [
     "device",
     "platform",
     "last_sort_order",
     "last_filter_selection",
-    "country"
+    "country",
+    "hotel_cat"
 ]
 
 features_eng = FeatureEng()

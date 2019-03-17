@@ -62,8 +62,8 @@ class ModelTrain:
         self.n_jobs = n_jobs
         self.reduce_df_memory = reduce_df_memory
 
-    def validate_models(self, n_users):
-        df_train, df_val = self.load_train_val(n_users)
+    def validate_models(self, n_users, n_debug=None):
+        df_train, df_val = self.load_train_val(n_users, n_debug=n_debug)
         preds = np.vstack([
             model.weight * model.fit_and_predict(df_train, df_val, validate=True) for model in self.models
         ]).sum(axis=0)
@@ -79,17 +79,20 @@ class ModelTrain:
         _, submission_df = group_clickouts(df_test)
         submission_df.to_csv("submission.csv", index=False)
 
-    def load_train_val(self, n_users, train_on_test_users=True):
+    def load_train_val(self, n_users, n_debug=None, train_on_test_users=True):
         with timer('Reading training data'):
-            df_all = pd.read_csv(SORTED_TRANS_CSV)
-            if self.reduce_df_memory:
-                df_all = reduce_mem_usage(df_all)
-            if n_users:
-                train_users = set(
-                    np.random.choice(df_all[df_all["is_test"] == 0].user_id.unique(), n_users, replace=False))
-                if train_on_test_users:
-                    train_users |= set(df_all[df_all["is_test"] == 1].user_id.unique())
-                df_all = df_all[(df_all.user_id.isin(train_users)) & (df_all.is_test == 0)]
+            if n_debug:
+                df_all = pd.read_csv(SORTED_TRANS_CSV, nrows=n_debug)
+            else:
+                df_all = pd.read_csv(SORTED_TRANS_CSV)
+                if self.reduce_df_memory:
+                    df_all = reduce_mem_usage(df_all)
+                if n_users:
+                    train_users = set(
+                        np.random.choice(df_all[df_all["is_test"] == 0].user_id.unique(), n_users, replace=False))
+                    if train_on_test_users:
+                        train_users |= set(df_all[df_all["is_test"] == 1].user_id.unique())
+                    df_all = df_all[(df_all.user_id.isin(train_users)) & (df_all.is_test == 0)]
             print("Training on {} users".format(df_all["user_id"].nunique()))
             print("Training data shape", df_all.shape)
         with timer("splitting timebased"):
@@ -118,6 +121,7 @@ class ModelTrain:
 @click.command()
 @click.option("--n_users", type=int, default=None, help="Number of users to user for training")
 @click.option("--n_jobs", type=int, default=-2, help="Number of cores to run models on")
+@click.option("--n_debug", type=int, default=None, help="Number of rows to use for debuging")
 @click.option("--action", type=str, default="validate", help="What to do: validate/submit")
 @click.option(
     "--reduce_df_memory",
@@ -125,7 +129,7 @@ class ModelTrain:
     default=True,
     help="Aggresively reduce DataFrame memory",
 )
-def main(n_users, n_jobs, action, reduce_df_memory):
+def main(n_users, n_jobs, n_debug, action, reduce_df_memory):
     print(f"n_users={n_users}")
     print(f"action={action}")
     print(f"n_jobs={n_jobs}")
@@ -133,10 +137,10 @@ def main(n_users, n_jobs, action, reduce_df_memory):
     trainer = ModelTrain(n_jobs=n_jobs, reduce_df_memory=reduce_df_memory)
     if action == "validate":
         with timer("validating models"):
-            trainer.validate_models(n_users)
+            trainer.validate_models(n_users, n_debug)
     elif action == "submit":
         with timer("training full data models"):
-            trainer.submit_models(n_users)
+            trainer.submit_models(n_users, n_debug)
 
 
 if __name__ == "__main__":
