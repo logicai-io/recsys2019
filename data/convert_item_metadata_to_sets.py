@@ -8,7 +8,7 @@ df = pd.read_csv("item_metadata.csv")
 
 features_map = {}
 hotels = defaultdict(set)
-for i,row in tqdm(df.iterrows()):
+for i, row in tqdm(df.iterrows()):
     for feature in row["properties"].split("|"):
         if feature not in features_map:
             features_map[feature] = len(features_map)

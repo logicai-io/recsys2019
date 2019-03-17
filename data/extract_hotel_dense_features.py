@@ -3,20 +3,27 @@ import pandas as pd
 
 RATING_MAP = {"Satisfactory Rating": 1, "Good Rating": 2, "Very Good Rating": 3, "Excellent Rating": 4}
 STAR_MAP = {"1 Star": 1, "2 Star": 2, "3 Star": 3, "4 Star": 4, "5 Star": 5}
-HOTEL_CAT = {"Hotel": "hotel", "Resort": "resort", "Hostal (ES)": "hostal", "Motel": "motel",
-             "House / Apartment": "house"}
-IMPORTANT_FEATURES = ["Free WiFi (Combined)",
-                      "Swimming Pool (Combined Filter)",
-                      "Car Park",
-                      "Serviced Apartment",
-                      "Air Conditioning",
-                      "Spa (Wellness Facility)",
-                      "Pet Friendly",
-                      "All Inclusive (Upon Inquiry)"]
+HOTEL_CAT = {
+    "Hotel": "hotel",
+    "Resort": "resort",
+    "Hostal (ES)": "hostal",
+    "Motel": "motel",
+    "House / Apartment": "house",
+}
+IMPORTANT_FEATURES = [
+    "Free WiFi (Combined)",
+    "Swimming Pool (Combined Filter)",
+    "Car Park",
+    "Serviced Apartment",
+    "Air Conditioning",
+    "Spa (Wellness Facility)",
+    "Pet Friendly",
+    "All Inclusive (Upon Inquiry)",
+]
 
 
 def densify(d, properties):
-    values = [None]*properties.shape[0]
+    values = [None] * properties.shape[0]
     for i, p in enumerate(properties):
         for k in d:
             if k in p:
@@ -28,7 +35,7 @@ def normalize_feature_name(name):
     return name.replace(" ", "_").lower()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     df = pd.read_csv("item_metadata.csv")
     df["properties"] = df["properties"].str.split("|").map(set)
     df["n_properties"] = df["properties"].map(len)

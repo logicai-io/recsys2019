@@ -78,5 +78,5 @@ COUNTRY_CODES = {
     "Cyprus": "CY",
     "Maldives": "MV",
     "French Polynesia": "PF",
-    "El Salvador": "SV"
+    "El Salvador": "SV",
 }
