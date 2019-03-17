@@ -160,7 +160,7 @@ accumulators = [
     StatsAcc(
         name="last_poi",
         filter=lambda row: row["action_type"] == "search for poi",
-        acc={},
+        acc=defaultdict(lambda: "UNK"),
         updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
         get_stats_func=lambda acc, row, item: acc.get(row["user_id"], "UNK"),
     ),
