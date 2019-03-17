@@ -42,7 +42,4 @@ class CooMatrixBuilder:
 
     def get_coo_matrix(self):
         shape = (len(self.row_map), len(self.col_map))
-        return sparse.coo_matrix(
-            (np.array(self.data), (np.array(self.rows), np.array(self.cols))),
-            shape=shape,
-        )
+        return sparse.coo_matrix((np.array(self.data), (np.array(self.rows), np.array(self.cols))), shape=shape)

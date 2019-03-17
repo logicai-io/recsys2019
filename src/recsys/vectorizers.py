@@ -1,9 +1,4 @@
-from recsys.transformers import (
-    FeatureEng,
-    PandasToNpArray,
-    PandasToRecords,
-    RankFeatures,
-)
+from recsys.transformers import FeatureEng, PandasToNpArray, PandasToRecords, RankFeatures
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
@@ -68,14 +63,7 @@ numerical_features_for_ranking = [
     "rating",
     "stars",
 ]
-categorical_features = [
-    "device",
-    "platform",
-    "last_sort_order",
-    "last_filter_selection",
-    "country",
-    "hotel_cat",
-]
+categorical_features = ["device", "platform", "last_sort_order", "last_filter_selection", "country", "hotel_cat"]
 
 features_eng = FeatureEng()
 
@@ -87,11 +75,7 @@ def make_vectorizer_1():
             [
                 (
                     "numerical",
-                    make_pipeline(
-                        PandasToNpArray(),
-                        SimpleImputer(strategy="mean"),
-                        StandardScaler(),
-                    ),
+                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), StandardScaler()),
                     numerical_features,
                 ),
                 # (
@@ -99,16 +83,8 @@ def make_vectorizer_1():
                 #     LagNumericalFeaturesWithinGroup(),
                 #     numerical_features + ["clickout_id"]
                 # ),
-                (
-                    "categorical",
-                    make_pipeline(PandasToRecords(), DictVectorizer()),
-                    categorical_features,
-                ),
-                (
-                    "numerical_ranking",
-                    RankFeatures(),
-                    numerical_features_for_ranking + ["clickout_id"],
-                ),
+                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
+                ("numerical_ranking", RankFeatures(), numerical_features_for_ranking + ["clickout_id"]),
                 # (
                 #     "properties",
                 #     CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5),
@@ -117,9 +93,7 @@ def make_vectorizer_1():
                 (
                     "last_filter",
                     CountVectorizer(
-                        preprocessor=lambda x: "UNK" if x != x else x,
-                        tokenizer=lambda x: x.split("|"),
-                        min_df=5,
+                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=5
                     ),
                     "last_filter",
                 ),
@@ -141,11 +115,7 @@ def make_vectorizer_2():
             [
                 (
                     "numerical",
-                    make_pipeline(
-                        PandasToNpArray(),
-                        SimpleImputer(strategy="mean"),
-                        KBinsDiscretizer(),
-                    ),
+                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), KBinsDiscretizer()),
                     numerical_features,
                 ),
                 # (
@@ -153,11 +123,7 @@ def make_vectorizer_2():
                 #     LagNumericalFeaturesWithinGroup(),
                 #     numerical_features + ["clickout_id"]
                 # ),
-                (
-                    "categorical",
-                    make_pipeline(PandasToRecords(), DictVectorizer()),
-                    categorical_features,
-                ),
+                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
                 (
                     "numerical_ranking",
                     make_pipeline(RankFeatures(), StandardScaler()),
@@ -171,9 +137,7 @@ def make_vectorizer_2():
                 (
                     "last_filter",
                     CountVectorizer(
-                        preprocessor=lambda x: "UNK" if x != x else x,
-                        tokenizer=lambda x: x.split("|"),
-                        min_df=5,
+                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=5
                     ),
                     "last_filter",
                 ),
