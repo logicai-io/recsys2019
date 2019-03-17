@@ -68,17 +68,17 @@ class FeatureEng(BaseEstimator, TransformerMixin):
             with ThreadPool(8) as pool:
                 items_to_score = zip(X["item_id"], X["last_item_clickout"].fillna(0).map(int))
                 X["item_similarity_to_last_clicked_item"] = list(
-                    tqdm(pool.imap(jacc_sim.two_items_star, items_to_score, chunksize=100))
+                    tqdm(map(jacc_sim.two_items_star, items_to_score))
                 )
 
                 items_to_score = zip(X["user_item_interactions_list"].map(json.loads), X["item_id"])
                 X["avg_similarity_to_interacted_items"] = list(
-                    tqdm(pool.imap(jacc_sim.list_to_item_star, items_to_score, chunksize=100))
+                    tqdm(map(jacc_sim.list_to_item_star, items_to_score))
                 )
 
                 items_to_score = zip(X["user_item_session_interactions_list"].map(json.loads), X["item_id"])
                 X["avg_similarity_to_interacted_session_items"] = list(
-                    tqdm(pool.imap(jacc_sim.list_to_item_star, items_to_score, chunksize=100))
+                    tqdm(map(jacc_sim.list_to_item_star, items_to_score))
                 )
 
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (X["clickout_user_item_impressions"] + 1)
