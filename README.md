@@ -11,3 +11,8 @@ Current process:
 7. python validate_model.py 
 
 The last script generates submission.csv and prints the validation.
+
+### WR:
+
+Run `to_feather.py` in data/ for process raw data into feather files for faster experiments.
+`wr_eda.ipynb` in notebooks/ shows some EDA on intersections of IDs and session lengths.
