@@ -140,7 +140,7 @@ def main(n_users, n_jobs, n_debug, action, reduce_df_memory):
             trainer.validate_models(n_users, n_debug)
     elif action == "submit":
         with timer("training full data models"):
-            trainer.submit_models(n_users, n_debug)
+            trainer.submit_models(n_users)
 
 
 if __name__ == "__main__":
