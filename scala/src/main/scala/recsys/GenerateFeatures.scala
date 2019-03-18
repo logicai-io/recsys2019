@@ -32,19 +32,19 @@ object GenerateFeatures {
     "clickout item"
   )
 
-  private var itemImpressions              = mutable.Map[ItemId, Int]().withDefaultValue(0)
-  private var itemClicks                   = mutable.Map[ItemId, Int]().withDefaultValue(0)
-  private var itemUserImpressions          = mutable.Map[(ItemId, UserId), Int]().withDefaultValue(0)
-  private var itemUserClicks               = mutable.Map[(ItemId, UserId), Int]().withDefaultValue(0)
-  private var lastSortOrder                = mutable.Map[UserId, String]().withDefaultValue("unk")
-  private var lastFilter                   = mutable.Map[UserId, String]().withDefaultValue("unk")
-  private var lastPoi                      = mutable.Map[UserId, String]().withDefaultValue("unk")
+  private var itemImpressions = mutable.Map[ItemId, Int]().withDefaultValue(0)
+  private var itemClicks = mutable.Map[ItemId, Int]().withDefaultValue(0)
+  private var itemUserImpressions = mutable.Map[(ItemId, UserId), Int]().withDefaultValue(0)
+  private var itemUserClicks = mutable.Map[(ItemId, UserId), Int]().withDefaultValue(0)
+  private var lastSortOrder = mutable.Map[UserId, String]().withDefaultValue("unk")
+  private var lastFilter = mutable.Map[UserId, String]().withDefaultValue("unk")
+  private var lastPoi = mutable.Map[UserId, String]().withDefaultValue("unk")
   private var itemsWithUserInteractionsSet = mutable.Map[UserId, mutable.Set[ItemId]]()
   private var itemsWithUserSessionInteractionsSet =
     mutable.Map[(UserId, SessionId), mutable.Set[ItemId]]()
-  private var actionTypesTimestamps     = mutable.Map[(UserId, ActionType), Timestamp]()
+  private var actionTypesTimestamps = mutable.Map[(UserId, ActionType), Timestamp]()
   private var actionTypesItemTimestamps = mutable.Map[(UserId, ItemId, ActionType), Timestamp]()
-  private var actionTypesCounter        = mutable.Map[(UserId, ActionType), Int]().withDefaultValue(0)
+  private var actionTypesCounter = mutable.Map[(UserId, ActionType), Int]().withDefaultValue(0)
   private var actionTypesItemCounter =
     mutable.Map[(UserId, ItemId, ActionType), Int]().withDefaultValue(0)
   private val itemProperties = readProperties
@@ -58,7 +58,7 @@ object GenerateFeatures {
     for ((rawRow, clickoutId) <- eventsReader.zipWithIndex) {
       pb.step()
       val actionType = rawRow.getString("action_type")
-      val row        = extractRowObj(rawRow, actionType)
+      val row = extractRowObj(rawRow, actionType)
 
       if (actionType == "clickout item") {
         val features = row.items.par.map(item => extractFeatures(clickoutId, row, item))
@@ -105,7 +105,7 @@ object GenerateFeatures {
   }
 
   private def extractFeatures(clickoutId: ItemId, row: Row, item: Item) = {
-    val j           = item.itemId
+    val j = item.itemId
     val featuresRow = mutable.LinkedHashMap[String, Any]()
     featuresRow("clickout_id") = clickoutId
     featuresRow("user_id") = row.userId
@@ -136,14 +136,13 @@ object GenerateFeatures {
     featuresRow("avg_jaccard_to_previous_interactions") = {
       calculateAverageSimilarity(itemProperties, itemsWithUserInteractionsSet, row.userId, item)
     }
-    featuresRow("avg_jaccard_to_previous_interactions_session") = {
-      calculateAverageSimilarity(
-        itemProperties,
-        itemsWithUserSessionInteractionsSet,
-        (row.userId, row.sessionId),
-        item
-      )
-    }
+    featuresRow("avg_jaccard_to_previous_interactions_session") = calculateAverageSimilarity(
+      itemProperties,
+      itemsWithUserSessionInteractionsSet,
+      (row.userId, row.sessionId),
+      item
+    )
+
 
     for (actionType <- ACTION_TYPES) {
       featuresRow(s"${actionType}_last_timestamp") =
@@ -163,13 +162,13 @@ object GenerateFeatures {
   }
 
   private def calculateAverageSimilarity[K](
-      itemProperties: mutable.Map[ItemId, Set[String]],
-      map: mutable.Map[K, mutable.Set[ItemId]],
-      key: K,
-      item: Item
-  ) = {
+                                             itemProperties: mutable.Map[ItemId, Set[String]],
+                                             map: mutable.Map[K, mutable.Set[ItemId]],
+                                             key: K,
+                                             item: Item
+                                           ) = {
     if (map contains key) {
-      val propItem        = itemProperties(item.itemId)
+      val propItem = itemProperties(item.itemId)
       val prvInteractions = map(key)
       if (propItem.nonEmpty & prvInteractions.nonEmpty) {
         val sim = prvInteractions.map(itemProperties).map { prvItem =>
@@ -191,30 +190,8 @@ object GenerateFeatures {
     map(key).add(value)
   }
 
-  private def readProperties = {
-    val itemPropertiesReader = getCSVReader("/home/pawel/logicai/recsys2019/data/item_metadata.csv")
-    val itemProperties       = mutable.Map[ItemId, Set[String]]().withDefaultValue(Set[String]())
-    for (row <- itemPropertiesReader) {
-      val itemId     = row.getInt("item_id")
-      val properties = row.getString("properties").split('|').toSet
-      itemProperties(itemId) = properties
-    }
-    itemProperties
-  }
-
   private def extractRowObj(rawRow: Record, actionType: String) = {
-    val (impressions, prices, items) = if (rawRow.getString("action_type") == "clickout item") {
-      val impressions = rawRow.getString("impressions").split('|').map(_.toInt)
-      val prices      = rawRow.getString("prices").split('|').map(_.toInt)
-      val items: Array[Item] =
-        impressions.zip(prices).map { case (item: ItemId, price: Price) => Item(item, price) }
-      (impressions, prices, items)
-    } else {
-      val impressions = null
-      val prices      = null
-      val items       = null
-      (impressions, prices, items)
-    }
+    val (impressions, prices, items) = extractImpressionsPricesItems(rawRow)
     var row = Row(
       actionType = actionType,
       userId = rawRow.getString("user_id"),
@@ -235,14 +212,41 @@ object GenerateFeatures {
     row
   }
 
+  private def extractImpressionsPricesItems(rawRow: Record) = {
+    if (rawRow.getString("action_type") == "clickout item") {
+      val impressions = rawRow.getString("impressions").split('|').map(_.toInt)
+      val prices = rawRow.getString("prices").split('|').map(_.toInt)
+      val items: Array[Item] =
+        impressions.zip(prices).map { case (item: ItemId, price: Price) => Item(item, price) }
+      (impressions, prices, items)
+    } else {
+      val impressions = null
+      val prices = null
+      val items = null
+      (impressions, prices, items)
+    }
+  }
+
   private def extractItemReference(rawRow: Record): Int = {
     if (ACTIONS_WITH_ITEM_REF.contains(rawRow.getString("action_type")) & Utils.isAllDigits(
-          rawRow.getString("reference")
-        )) {
+      rawRow.getString("reference")
+    )) {
       rawRow.getInt("reference")
     } else {
       0
     }
+  }
+
+  private def getWriter(headers: Array[String]) = {
+    val output = new StringWriter
+    val settings = new CsvWriterSettings
+    settings.setExpandIncompleteRows(true)
+    settings.getFormat.setLineSeparator("\n")
+    settings.setHeaderWritingEnabled(true)
+    settings.setHeaders(headers: _*)
+    val filePath = "/home/pawel/logicai/recsys2019/data/events_sorted_trans_scala.csv"
+    val writer = new CsvWriter(new File(filePath), settings)
+    writer
   }
 
   private def extractOtherReference(rawRow: Record): String = {
@@ -253,23 +257,22 @@ object GenerateFeatures {
     }
   }
 
-  private def getWriter(headers: Array[String]) = {
-    val output   = new StringWriter
-    val settings = new CsvWriterSettings
-    settings.setExpandIncompleteRows(true)
-    settings.getFormat.setLineSeparator("\n")
-    settings.setHeaderWritingEnabled(true)
-    settings.setHeaders(headers: _*)
-    val filePath = "/home/pawel/logicai/recsys2019/data/events_sorted_trans_scala.csv"
-    val writer   = new CsvWriter(new File(filePath), settings)
-    writer
-  }
-
   private def getCSVReader(filePath: String) = {
     val settings = new CsvParserSettings()
     settings.setHeaderExtractionEnabled(true)
     val reader = new CsvParser(settings)
-    val it     = reader.iterateRecords(new File(filePath), "UTF-8")
+    val it = reader.iterateRecords(new File(filePath), "UTF-8")
     it.iterator()
+  }
+
+  private def readProperties = {
+    val itemPropertiesReader = getCSVReader("/home/pawel/logicai/recsys2019/data/item_metadata.csv")
+    val itemProperties = mutable.Map[ItemId, Set[String]]().withDefaultValue(Set[String]())
+    for (row <- itemPropertiesReader) {
+      val itemId = row.getInt("item_id")
+      val properties = row.getString("properties").split('|').toSet
+      itemProperties(itemId) = properties
+    }
+    itemProperties
   }
 }
