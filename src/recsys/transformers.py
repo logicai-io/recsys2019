@@ -11,12 +11,9 @@ from recsys.utils import jaccard, reduce_mem_usage, timer
 from sklearn.base import BaseEstimator, TransformerMixin
 from tqdm import tqdm
 
-# PATH_TO_IMM = pathlib.Path(__file__).parents[2] / "data" / "item_metadata_map.joblib"
-# METADATA_DENSE = pathlib.Path(__file__).parents[2] / "data" / "item_metadata_dense.csv"
 
 PATH_TO_IMM = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_map.joblib"
 METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_dense.csv"
-
 
 class JaccardItemSim:
     def __init__(self):

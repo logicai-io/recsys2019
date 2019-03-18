@@ -4,6 +4,7 @@ import warnings
 import click
 import numpy as np
 import pandas as pd
+import pyarrow.feather as pf
 from lightgbm import LGBMClassifier, LGBMRanker
 from recsys.metric import mrr_fast
 from recsys.submission import group_clickouts
@@ -13,6 +14,7 @@ from sklearn.metrics import roc_auc_score
 
 warnings.filterwarnings("ignore")
 SORTED_TRANS_CSV = pathlib.Path().absolute().parents[1] / "data" / "events_sorted_trans.csv"
+SORTED_TRANS_FEATHER = pathlib.Path().absolute().parents[1] / "data" / "events_sorted_trans.feather"
 
 np.random.seed(0)
 
@@ -54,9 +56,10 @@ class ModelTrain:
         Model(make_vectorizer_2(), LGBMRanker(n_estimators=200, n_jobs=-2), weight=0.2, is_prob=False),
     ]
 
-    def __init__(self, n_jobs=-2, reduce_df_memory=False):
+    def __init__(self, n_jobs=-2, reduce_df_memory=False, load_feather=False):
         self.n_jobs = n_jobs
         self.reduce_df_memory = reduce_df_memory
+        self.load_feather = load_feather
 
     def validate_models(self, n_users, n_debug=None):
         df_train, df_val = self.load_train_val(n_users, n_debug=n_debug)
@@ -80,7 +83,10 @@ class ModelTrain:
             if n_debug:
                 df_all = pd.read_csv(SORTED_TRANS_CSV, nrows=n_debug)
             else:
-                df_all = pd.read_csv(SORTED_TRANS_CSV)
+                if self.load_feather:
+                    df_all = pf.read_feather(SORTED_TRANS_FEATHER)
+                else:
+                    df_all = pd.read_csv(SORTED_TRANS_CSV)
                 if self.reduce_df_memory:
                     df_all = reduce_mem_usage(df_all)
                 if n_users:
@@ -100,7 +106,10 @@ class ModelTrain:
 
     def load_train_test(self, n_users, train_on_test_users=True):
         with timer("Reading training and testing data"):
-            df_all = pd.read_csv(SORTED_TRANS_CSV)
+            if self.load_feather:
+                df_all = pf.read_feather(SORTED_TRANS_FEATHER)
+            else:
+                df_all = pd.read_csv(SORTED_TRANS_CSV)
             if self.reduce_df_memory:
                 df_all = reduce_mem_usage(df_all)
             df_test = df_all[df_all["is_test"] == 1]
@@ -122,12 +131,14 @@ class ModelTrain:
 @click.option("--n_debug", type=int, default=None, help="Number of rows to use for debuging")
 @click.option("--action", type=str, default="validate", help="What to do: validate/submit")
 @click.option("--reduce_df_memory", type=bool, default=True, help="Aggresively reduce DataFrame memory")
-def main(n_users, n_jobs, n_debug, action, reduce_df_memory):
+@click.option("--load_feather", type=bool, default=True, help="Use .feather or .csv DataFrame")
+def main(n_users, n_jobs, n_debug, action, reduce_df_memory, load_feather):
     print(f"n_users={n_users}")
     print(f"action={action}")
     print(f"n_jobs={n_jobs}")
     print(f"reduce_df_memory={reduce_df_memory}")
-    trainer = ModelTrain(n_jobs=n_jobs, reduce_df_memory=reduce_df_memory)
+    print(f"load_feather={load_feather}")
+    trainer = ModelTrain(n_jobs=n_jobs, reduce_df_memory=reduce_df_memory, load_feather=load_feather)
     if action == "validate":
         with timer("validating models"):
             trainer.validate_models(n_users, n_debug)
