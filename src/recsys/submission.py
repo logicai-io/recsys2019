@@ -8,14 +8,10 @@ def group_clickouts(df):
     for session_id, session_df in df.groupby("clickout_id"):
         session_df = session_df.sort_values("click_proba", ascending=False)
         # user_id,session_id,timestamp,step,item_recommendations
-        record = [
-            session_df[col].to_list()[0]
-            for col in ["user_id", "session_id", "timestamp", "step"]
-        ]
+        record = [session_df[col].to_list()[0] for col in ["user_id", "session_id", "timestamp", "step"]]
         submission.append(record + [" ".join(session_df.item_id.map(str).to_list())])
         sessions_items[session_id] = session_df.item_id.to_list()
     submission_df = pd.DataFrame(
-        submission,
-        columns="user_id,session_id,timestamp,step,item_recommendations".split(","),
+        submission, columns="user_id,session_id,timestamp,step,item_recommendations".split(",")
     )
     return sessions_items, submission_df

@@ -37,3 +37,8 @@ Selecting all users from training and combining with test users - creates `submi
 python validate_model.py --action submit
 ```
 
+Feather
+---------------
+
+Run `to_feather.py` in data/ for process raw data into feather files for faster experiments.
+`wr_eda.ipynb` in notebooks/ shows some EDA on intersections of IDs and session lengths.
