@@ -50,26 +50,34 @@ object GenerateFeatures {
   private val itemProperties = readProperties
 
   def main(args: Array[String]) {
-    val eventsReader = getCSVReader("/home/pawel/logicai/recsys2019/data/events_sorted.csv")
-
-    val writer = getWriter(Array("user_id", "session_id", "item_id"))
+    val eventsReader = getCSVReader("/home/pawel/logicai/recsys2019/data/events_sorted_sample.csv")
+    val writer = getWriter("/home/pawel/logicai/recsys2019/data/events_sorted_trans_scala.csv")
 
     val pb = new ProgressBar("Test", 19000000)
+    var headerWritten = false
     for ((rawRow, clickoutId) <- eventsReader.zipWithIndex) {
       pb.step()
       val actionType = rawRow.getString("action_type")
       val row = extractRowObj(rawRow, actionType)
 
       if (actionType == "clickout item") {
-        val features = row.items.par.map(item => extractFeatures(clickoutId, row, item))
+        val itemsFeatures = row.items.par.map(item => extractFeatures(clickoutId, row, item)).toArray
+        if (!headerWritten) {
+          writer.writeHeaders(itemsFeatures.head.keys)
+          headerWritten = true
+        }
+        for (itemFeatures <- itemsFeatures) {
+          writer.writeRow(itemFeatures.values.toArray.map(_.asInstanceOf[AnyRef]): _*)
+        }
       }
 
       updateAccumulators(actionType, row)
     }
+    writer.close()
     pb.close()
   }
 
-  private def updateAccumulators(actionType: UserId, row: Row): Unit = {
+  private def updateAccumulators(actionType: String, row: Row): Unit = {
     if (row.actionType == "clickout item") {
       itemClicks(row.referenceItem) += 1
       for (itemId <- row.impressions) {
@@ -143,18 +151,17 @@ object GenerateFeatures {
       item
     )
 
-
     for (actionType <- ACTION_TYPES) {
-      featuresRow(s"${actionType}_last_timestamp") =
-        actionTypesTimestamps.getOrElse((row.userId, row.actionType), 0)
-      featuresRow(s"${actionType}_count") = actionTypesCounter((row.userId, row.actionType))
+      featuresRow(s"${actionType}_last_timestamp") = math.min(row.timestamp -
+        actionTypesTimestamps.getOrElse((row.userId, actionType), 0), 1000000)
+      featuresRow(s"${actionType}_count") = actionTypesCounter((row.userId, actionType))
     }
 
     for (actionType <- ACTIONS_WITH_ITEM_REF) {
-      featuresRow(s"${actionType}_item_last_timestamp") =
-        actionTypesItemTimestamps.getOrElse((row.userId, item.itemId, row.actionType), 0)
+      featuresRow(s"${actionType}_item_last_timestamp") = math.min(row.timestamp -
+        actionTypesItemTimestamps.getOrElse((row.userId, item.itemId, actionType), 0), 1000000)
       featuresRow(s"${actionType}_item_count") = actionTypesItemCounter(
-        (row.userId, item.itemId, row.actionType)
+        (row.userId, item.itemId, actionType)
       )
     }
 
@@ -237,14 +244,14 @@ object GenerateFeatures {
     }
   }
 
-  private def getWriter(headers: Array[String]) = {
+  private def getWriter(filePath: String) = {
     val output = new StringWriter
     val settings = new CsvWriterSettings
-    settings.setExpandIncompleteRows(true)
-    settings.getFormat.setLineSeparator("\n")
+    //    settings.setExpandIncompleteRows(true)
+    //    settings.getFormat.setLineSeparator("\n")
     settings.setHeaderWritingEnabled(true)
-    settings.setHeaders(headers: _*)
-    val filePath = "/home/pawel/logicai/recsys2019/data/events_sorted_trans_scala.csv"
+    //    settings.setEscapeUnquotedValues(true)
+    //    settings.setHeaders(headers: _*)
     val writer = new CsvWriter(new File(filePath), settings)
     writer
   }
