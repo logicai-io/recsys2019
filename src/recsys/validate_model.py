@@ -1,3 +1,4 @@
+import gc
 import pathlib
 import warnings
 
@@ -62,7 +63,7 @@ class ModelTrain:
         self.load_feather = load_feather
 
     def validate_models(self, n_users, n_debug=None):
-        df_train, df_val = self.load_train_val(n_users, n_debug=n_debug)
+        df_train, df_val = self.load_train_val_2(n_users, n_debug=n_debug)
         preds = np.vstack(
             [model.weight * model.fit_and_predict(df_train, df_val, validate=True) for model in self.models]
         ).sum(axis=0)
@@ -104,6 +105,33 @@ class ModelTrain:
             df_val = df_all[(df_all["timestamp"] > split_timestamp)]
         return df_train, df_val
 
+    def load_train_val_2(self, n_users, n_debug=None, train_on_test_users=True):
+        with timer("Reading training data"):
+            if n_debug:
+                df_all = pd.read_csv(SORTED_TRANS_CSV, nrows=n_debug)
+            else:
+                if self.load_feather:
+                    df_all = pf.read_feather(SORTED_TRANS_FEATHER)
+                else:
+                    df_all = pd.read_csv(SORTED_TRANS_CSV)
+                if self.reduce_df_memory:
+                    df_all = reduce_mem_usage(df_all)
+
+                if n_users:
+                    users_sample = set(df_all["user_id"].sample(n_users).unique())
+                    df_all = df_all[df_all["user_id"].isin(users_sample)]
+                    gc.collect()
+
+            df_all["clickout_rank"] = df_all.groupby("user_id")["clickout_id"].rank("dense", ascending=False)
+            split_timestamp = np.percentile(df_all.timestamp, 20)
+            df_train = df_all[(df_all["clickout_rank"] > 1) | (df_all["timestamp"] <= split_timestamp)]
+            df_val = df_all[(df_all["clickout_rank"] == 1) & (df_all["timestamp"] > split_timestamp)]
+
+            print("Training on {} users".format(df_train["user_id"].nunique()))
+            print("Validating on {} users".format(df_val["user_id"].nunique()))
+
+        return df_train, df_val
+
     def load_train_test(self, n_users, train_on_test_users=True):
         with timer("Reading training and testing data"):
             if self.load_feather:
@@ -131,7 +159,7 @@ class ModelTrain:
 @click.option("--n_debug", type=int, default=None, help="Number of rows to use for debuging")
 @click.option("--action", type=str, default="validate", help="What to do: validate/submit")
 @click.option("--reduce_df_memory", type=bool, default=True, help="Aggresively reduce DataFrame memory")
-@click.option("--load_feather", type=bool, default=True, help="Use .feather or .csv DataFrame")
+@click.option("--load_feather", type=bool, default=False, help="Use .feather or .csv DataFrame")
 def main(n_users, n_jobs, n_debug, action, reduce_df_memory, load_feather):
     print(f"n_users={n_users}")
     print(f"action={action}")
