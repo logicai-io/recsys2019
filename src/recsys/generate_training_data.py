@@ -312,6 +312,7 @@ accumulators = [
         updater=lambda acc, row: set_key(acc, row["user_id"], row["current_filters"]),
         get_stats_func=lambda acc, row, item: acc.get(row["user_id"], ""),
     ),
+    # ok
     StatsAcc(
         name="user_item_interactions_list",
         filter=lambda row: row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE,
@@ -319,6 +320,7 @@ accumulators = [
         updater=lambda acc, row: add_to_set(acc, row["user_id"], tryint(row["reference"])),
         get_stats_func=lambda acc, row, item: json.dumps(list(acc.get(row["user_id"], []))),
     ),
+    # ok
     StatsAcc(
         name="user_item_session_interactions_list",
         filter=lambda row: row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE,

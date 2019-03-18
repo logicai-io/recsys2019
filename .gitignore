@@ -109,8 +109,6 @@ venv.bak/
 .~lock.*
 .vscode
 *.csv
-<<<<<<< Updated upstream
-
 
 # WR
 data/*.joblib
@@ -120,4 +118,4 @@ src/recsys/*.ipynb
 *.parquet
 *.feather
 
->>>>>>> Stashed changes
+notebooks_temp

@@ -7,6 +7,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from recsys.constants import COUNTRY_CODES
+from recsys.metric import mrr_fast
 from recsys.utils import jaccard, reduce_mem_usage, timer
 from sklearn.base import BaseEstimator, TransformerMixin
 from tqdm import tqdm
@@ -33,18 +34,17 @@ class JaccardItemSim:
 
     def list_to_item_star(self, v):
         other_items, item = v
-        if other_items:
-            return np.mean([jaccard(self.imm[a], self.imm[item]) for a in other_items])
-        else:
-            return 0
+        return self.list_to_item(other_items, item)
 
     def two_items_star(self, v):
         a, b = v
-        if b != 0:
-            return jaccard(self.imm[a], self.imm[b])
-        else:
-            return 0
+        return self.two_items(a, b)
 
+    def list_to_item_star_chunk(self, vs):
+        return [self.list_to_item_star(v) for v in vs]
+
+    def two_items_star_chunk(self, vs):
+        return [self.two_items_star(v) for v in vs]
 
 class FeatureEng(BaseEstimator, TransformerMixin):
     def __init__(self, path_to_imm=PATH_TO_IMM):
@@ -62,21 +62,26 @@ class FeatureEng(BaseEstimator, TransformerMixin):
 
         jacc_sim = self.jacc_sim
         with timer("calculating item similarity"):
-            with ThreadPool(8) as pool:
-                items_to_score = zip(X["item_id"], X["last_item_clickout"].fillna(0).map(int))
-                X["item_similarity_to_last_clicked_item"] = list(
-                    tqdm(pool.imap(jacc_sim.two_items_star, items_to_score, chunksize=100))
-                )
+            items_to_score = zip(X["item_id"], X["last_item_clickout"].fillna(0).map(int))
+            X["item_similarity_to_last_clicked_item"] = list(
+                tqdm(map(jacc_sim.two_items_star, items_to_score))
+            )
+            print("item_similarity_to_last_clicked_item",
+                  mrr_fast(X.iloc[:100000], "item_similarity_to_last_clicked_item"))
 
-                items_to_score = zip(X["user_item_interactions_list"].map(json.loads), X["item_id"])
-                X["avg_similarity_to_interacted_items"] = list(
-                    tqdm(pool.imap(jacc_sim.list_to_item_star, items_to_score, chunksize=100))
-                )
+            items_to_score = zip(X["user_item_interactions_list"].map(json.loads), X["item_id"])
+            X["avg_similarity_to_interacted_items"] = list(
+                tqdm(map(jacc_sim.list_to_item_star, items_to_score))
+            )
+            print("avg_similarity_to_interacted_items",
+                  mrr_fast(X.iloc[:100000], "avg_similarity_to_interacted_items"))
 
-                items_to_score = zip(X["user_item_session_interactions_list"].map(json.loads), X["item_id"])
-                X["avg_similarity_to_interacted_session_items"] = list(
-                    tqdm(pool.imap(jacc_sim.list_to_item_star, items_to_score, chunksize=100))
-                )
+            items_to_score = zip(X["user_item_session_interactions_list"].map(json.loads), X["item_id"])
+            X["avg_similarity_to_interacted_session_items"] = list(
+                tqdm(map(jacc_sim.list_to_item_star, items_to_score))
+            )
+            print("avg_similarity_to_interacted_session_items",
+                  mrr_fast(X.iloc[:100000], "avg_similarity_to_interacted_session_items"))
 
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (X["clickout_user_item_impressions"] + 1)
         X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (X["last_poi_item_impressions"] + 1)
