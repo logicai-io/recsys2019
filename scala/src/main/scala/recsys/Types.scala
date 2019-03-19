@@ -9,6 +9,7 @@ object Types {
   type SessionId  = String
   type ActionType = String
   type Timestamp  = Int
+  val DummyItem: ItemId = -1
 }
 
 case class Item(itemId: ItemId, price: Price)
