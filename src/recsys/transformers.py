@@ -85,8 +85,8 @@ class FeatureEng(BaseEstimator, TransformerMixin):
 
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (X["clickout_user_item_impressions"] + 1)
         X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (X["last_poi_item_impressions"] + 1)
-        # X["properties"] = X["item_id"].map(self.imm)
-        # X["properties"].fillna("", inplace=True)
+        X["properties"] = X["item_id"].map(self.jacc_sim.imm)
+        X["properties"].fillna("", inplace=True)
         X = pd.merge(X, self.metadata_dense, how="left", on="item_id")
 
         X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)

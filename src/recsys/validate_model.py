@@ -52,8 +52,8 @@ class Model:
 
 class ModelTrain:
     models = [
-        Model(make_vectorizer_1(), LGBMClassifier(n_estimators=200, n_jobs=-2), weight=1.0, is_prob=True),
-        Model(make_vectorizer_2(), LGBMRanker(n_estimators=200, n_jobs=-2), weight=0.2, is_prob=False),
+        Model(make_vectorizer_1(), LGBMClassifier(n_estimators=1600, n_jobs=-2), weight=1.0, is_prob=True),
+        Model(make_vectorizer_2(), LGBMRanker(n_estimators=1600, n_jobs=-2), weight=0.2, is_prob=False),
     ]
 
     def __init__(self, n_jobs=-2, reduce_df_memory=False, load_feather=False):
@@ -131,7 +131,7 @@ class ModelTrain:
 @click.option("--n_debug", type=int, default=None, help="Number of rows to use for debuging")
 @click.option("--action", type=str, default="validate", help="What to do: validate/submit")
 @click.option("--reduce_df_memory", type=bool, default=True, help="Aggresively reduce DataFrame memory")
-@click.option("--load_feather", type=bool, default=True, help="Use .feather or .csv DataFrame")
+@click.option("--load_feather", type=bool, default=False, help="Use .feather or .csv DataFrame")
 def main(n_users, n_jobs, n_debug, action, reduce_df_memory, load_feather):
     print(f"n_users={n_users}")
     print(f"action={action}")

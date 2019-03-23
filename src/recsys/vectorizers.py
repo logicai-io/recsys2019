@@ -1,4 +1,4 @@
-from recsys.transformers import FeatureEng, PandasToNpArray, PandasToRecords, RankFeatures
+from recsys.transformers import FeatureEng, PandasToNpArray, PandasToRecords, RankFeatures, LagNumericalFeaturesWithinGroup
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
@@ -78,18 +78,18 @@ def make_vectorizer_1():
                     make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), StandardScaler()),
                     numerical_features,
                 ),
-                # (
-                #     "numerical_context",
-                #     LagNumericalFeaturesWithinGroup(),
-                #     numerical_features + ["clickout_id"]
-                # ),
+                (
+                    "numerical_context",
+                    LagNumericalFeaturesWithinGroup(),
+                    numerical_features + ["clickout_id"]
+                ),
                 ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
                 ("numerical_ranking", RankFeatures(), numerical_features_for_ranking + ["clickout_id"]),
-                # (
-                #     "properties",
-                #     CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5),
-                #     "properties",
-                # ),
+                (
+                    "properties",
+                    CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5),
+                    "properties",
+                ),
                 (
                     "last_filter",
                     CountVectorizer(
@@ -118,22 +118,22 @@ def make_vectorizer_2():
                     make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), KBinsDiscretizer()),
                     numerical_features,
                 ),
-                # (
-                #     "numerical_context",
-                #     LagNumericalFeaturesWithinGroup(),
-                #     numerical_features + ["clickout_id"]
-                # ),
+                (
+                    "numerical_context",
+                    LagNumericalFeaturesWithinGroup(),
+                    numerical_features + ["clickout_id"]
+                ),
                 ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
                 (
                     "numerical_ranking",
                     make_pipeline(RankFeatures(), StandardScaler()),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
-                # (
-                #     "properties",
-                #     CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5),
-                #     "properties",
-                # ),
+                (
+                    "properties",
+                    CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5),
+                    "properties",
+                ),
                 (
                     "last_filter",
                     CountVectorizer(
