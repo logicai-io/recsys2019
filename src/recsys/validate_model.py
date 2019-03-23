@@ -11,6 +11,7 @@ from recsys.metric import mrr_fast
 from recsys.submission import group_clickouts
 from recsys.utils import group_lengths, reduce_mem_usage, timer
 from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2
+from scipy.optimize import fmin, fmin_powell, fmin_bfgs
 from sklearn.metrics import roc_auc_score
 
 warnings.filterwarnings("ignore")
@@ -60,11 +61,23 @@ class ModelTrain:
 
     def validate_models(self, n_users, n_debug=None):
         df_train, df_val = self.load_train_val(n_users, n_debug=n_debug)
-        preds = np.vstack(
-            [model.weight * model.fit_and_predict(df_train, df_val, validate=True) for model in self.models]
-        ).sum(axis=0)
+
+        preds_mat = np.vstack([model.fit_and_predict(df_train, df_val, validate=True) for model in self.models]).T
+
+        def opt_coefs(coefs):
+            preds = preds_mat.dot(coefs)
+            df_val["preds"] = preds
+            mrr = mrr_fast(df_val, "preds")
+            print(mrr, coefs)
+            return -mrr
+
+        best_coefs = fmin(opt_coefs, [model.weight for model in self.models])
+        best_coefs = fmin_powell(opt_coefs, best_coefs)
+
+        preds = preds_mat.dot(best_coefs)
         df_val["click_proba"] = preds
         print("MRR {:4f}".format(mrr_fast(df_val, "click_proba")))
+        print("Best coefs: ", best_coefs)
 
     def submit_models(self, n_users):
         df_train, df_test = self.load_train_test(n_users)
