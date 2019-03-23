@@ -5,12 +5,12 @@ import arrow
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, TransformerMixin
-from tqdm import tqdm
-
 from recsys.constants import COUNTRY_CODES
 from recsys.metric import mrr_fast
 from recsys.utils import jaccard, reduce_mem_usage, timer
+from scipy.sparse import csr_matrix
+from sklearn.base import BaseEstimator, TransformerMixin
+from tqdm import tqdm
 
 PATH_TO_IMM = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_map.joblib"
 METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_dense.csv"
@@ -65,22 +65,13 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         with timer("calculating item similarity"):
             items_to_score = zip(X["item_id"], X["last_item_clickout"].fillna(0).map(int))
             X["item_similarity_to_last_clicked_item"] = list(tqdm(map(jacc_sim.two_items_star, items_to_score)))
-            print(
-                "item_similarity_to_last_clicked_item",
-                mrr_fast(X.iloc[:100000], "item_similarity_to_last_clicked_item"),
-            )
 
             items_to_score = zip(X["user_item_interactions_list"].map(json.loads), X["item_id"])
             X["avg_similarity_to_interacted_items"] = list(tqdm(map(jacc_sim.list_to_item_star, items_to_score)))
-            print("avg_similarity_to_interacted_items", mrr_fast(X.iloc[:100000], "avg_similarity_to_interacted_items"))
 
             items_to_score = zip(X["user_item_session_interactions_list"].map(json.loads), X["item_id"])
             X["avg_similarity_to_interacted_session_items"] = list(
                 tqdm(map(jacc_sim.list_to_item_star, items_to_score))
-            )
-            print(
-                "avg_similarity_to_interacted_session_items",
-                mrr_fast(X.iloc[:100000], "avg_similarity_to_interacted_session_items"),
             )
 
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (X["clickout_user_item_impressions"] + 1)
@@ -90,9 +81,12 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X = pd.merge(X, self.metadata_dense, how="left", on="item_id")
 
         X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)
-        X["is_rank_greater_than_prv_click"] = X["rank"] > X["last_item_index"]
+        X["is_rank_greater_than_prv_click"] = (X["rank"] > X["last_item_index"]).astype(np.int32)
         X["last_filter"].fillna("", inplace=True)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
+        for col in X.columns:
+            if X[col].dtype == np.bool:
+                X[col] = X[col].astype(np.int32)
         return X
 
 
@@ -129,6 +123,23 @@ class PandasToRecords(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         return X.to_dict(orient="records")
+
+
+class SelectNumerical(BaseEstimator, TransformerMixin):
+    def fit(self, X, *arg):
+        self.cols = [i for i in range(X.shape[1]) if X[:, i].dtype in [np.int, np.float]]
+        return self
+
+    def transform(self, X):
+        return X[self.cols]
+
+
+class ToCSR(BaseEstimator, TransformerMixin):
+    def fit(self, X, *arg):
+        return self
+
+    def transform(self, X):
+        return csr_matrix(X)
 
 
 class PandasToNpArray(BaseEstimator, TransformerMixin):

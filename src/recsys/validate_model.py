@@ -11,7 +11,7 @@ from recsys.metric import mrr_fast
 from recsys.submission import group_clickouts
 from recsys.utils import group_lengths, reduce_mem_usage, timer
 from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2
-from scipy.optimize import fmin, fmin_powell, fmin_bfgs
+from scipy.optimize import fmin, fmin_powell
 from sklearn.metrics import roc_auc_score
 
 warnings.filterwarnings("ignore")
@@ -28,6 +28,11 @@ class Model:
         self.weight = weight
         self.is_prob = is_prob
 
+    def normalize_predictions_by_group(self, pred, clickout_id):
+        df = pd.DataFrame({"pred": pred, "clickout_id": clickout_id})
+        df["pred_norm"] = df.groupby("clickout_id")["pred"].transform(lambda x: x / (x.std() + 1))
+        return df["pred_norm"].values
+
     def fit_and_predict(self, df_train, df_val, validate=False):
         mat_train = self.vectorizer.fit_transform(df_train)
         mat_val = self.vectorizer.transform(df_val)
@@ -43,12 +48,16 @@ class Model:
                 train_pred = self.model.predict_proba(mat_train)[:, 1]
                 print(roc_auc_score(df_train["was_clicked"].values, train_pred))
                 print(roc_auc_score(df_val["was_clicked"].values, val_pred))
+                df_val["click_proba"] = val_pred
+                print("MRR val", mrr_fast(df_val, "click_proba"))
         else:
             val_pred = self.model.predict(mat_val)
             if validate:
                 train_pred = self.model.predict(mat_train)
                 print(roc_auc_score(df_train["was_clicked"].values, train_pred))
                 print(roc_auc_score(df_val["was_clicked"].values, val_pred))
+                df_val["click_proba"] = val_pred
+                print("MRR val", mrr_fast(df_val, "click_proba"))
         return val_pred
 
 

@@ -1,17 +1,17 @@
-from sklearn.compose import ColumnTransformer
-from sklearn.feature_extraction import DictVectorizer
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.impute import SimpleImputer
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
-
 from recsys.transformers import (
     FeatureEng,
     LagNumericalFeaturesWithinGroup,
     PandasToNpArray,
     PandasToRecords,
     RankFeatures,
+    ToCSR,
 )
+from sklearn.compose import ColumnTransformer
+from sklearn.feature_extraction import DictVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
 
 numerical_features = [
     "rank",
@@ -140,4 +140,44 @@ def make_vectorizer_2():
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
             ]
         ),
+    )
+
+
+def make_vectorizer_3():
+    def safe_imputer():
+        return make_pipeline(SimpleImputer(strategy="constant", fill_value=0))
+
+    return make_pipeline(
+        features_eng,
+        ColumnTransformer(
+            [
+                ("numerical", make_pipeline(PandasToNpArray(), safe_imputer()), numerical_features),
+                (
+                    "numerical_context",
+                    make_pipeline(LagNumericalFeaturesWithinGroup(), safe_imputer()),
+                    numerical_features + ["clickout_id"],
+                ),
+                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
+                (
+                    "numerical_ranking",
+                    make_pipeline(RankFeatures(), StandardScaler(), safe_imputer()),
+                    numerical_features_for_ranking + ["clickout_id"],
+                ),
+                (
+                    "last_filter",
+                    CountVectorizer(
+                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=5
+                    ),
+                    "last_filter",
+                ),
+                (
+                    "last_event_ts_dict",
+                    make_pipeline(DictVectorizer(sparse=False), safe_imputer()),
+                    "last_event_ts_dict",
+                ),
+            ]
+        ),
+        SimpleImputer(strategy="constant", fill_value=0),
+        ToCSR(),
+        StandardScaler(with_mean=False),
     )
