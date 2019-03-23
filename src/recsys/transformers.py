@@ -1,6 +1,5 @@
 import json
 import pathlib
-from multiprocessing.pool import ThreadPool
 
 import arrow
 import joblib
