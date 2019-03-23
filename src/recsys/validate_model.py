@@ -6,11 +6,12 @@ import numpy as np
 import pandas as pd
 import pyarrow.feather as pf
 from lightgbm import LGBMClassifier, LGBMRanker
+from sklearn.metrics import roc_auc_score
+
 from recsys.metric import mrr_fast
 from recsys.submission import group_clickouts
 from recsys.utils import group_lengths, reduce_mem_usage, timer
 from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2
-from sklearn.metrics import roc_auc_score
 
 warnings.filterwarnings("ignore")
 SORTED_TRANS_CSV = pathlib.Path().absolute().parents[1] / "data" / "events_sorted_trans.csv"

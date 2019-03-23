@@ -1,8 +1,7 @@
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
 from csv import DictReader, DictWriter
 
 from tqdm import tqdm
-
 
 if __name__ == "__main__":
     inp = open("../../data/events_sorted.csv")
