@@ -1,8 +1,9 @@
 import click
 import numpy as np
 import pandas as pd
-from recsys.metric import mrr_fast
 from tqdm import tqdm
+
+from recsys.metric import mrr_fast
 
 
 @click.command()

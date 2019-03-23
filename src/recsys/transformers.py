@@ -1,17 +1,16 @@
 import json
 import pathlib
-from multiprocessing.pool import ThreadPool
 
 import arrow
 import joblib
 import numpy as np
 import pandas as pd
-from recsys.constants import COUNTRY_CODES
-from recsys.metric import mrr_fast
-from recsys.utils import jaccard, reduce_mem_usage, timer
 from sklearn.base import BaseEstimator, TransformerMixin
 from tqdm import tqdm
 
+from recsys.constants import COUNTRY_CODES
+from recsys.metric import mrr_fast
+from recsys.utils import jaccard, reduce_mem_usage, timer
 
 PATH_TO_IMM = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_map.joblib"
 METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_dense.csv"
@@ -86,8 +85,8 @@ class FeatureEng(BaseEstimator, TransformerMixin):
 
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (X["clickout_user_item_impressions"] + 1)
         X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (X["last_poi_item_impressions"] + 1)
-        # X["properties"] = X["item_id"].map(self.imm)
-        # X["properties"].fillna("", inplace=True)
+        X["properties"] = X["item_id"].map(self.jacc_sim.imm)
+        X["properties"].fillna("", inplace=True)
         X = pd.merge(X, self.metadata_dense, how="left", on="item_id")
 
         X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)
