@@ -12,7 +12,8 @@ class JaccardItemSim:
 
     def list_to_item(self, other_items, item):
         if other_items:
-            return np.mean([jaccard(self.imm[a], self.imm[item]) for a in other_items])
+            sims = [jaccard(self.imm[a], self.imm[item]) for a in other_items]
+            return sum(sims) / len(sims)
         else:
             return 0
 

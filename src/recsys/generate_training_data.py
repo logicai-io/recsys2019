@@ -319,7 +319,7 @@ accumulators = [
         filter=lambda row: row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE,
         acc=defaultdict(set),
         updater=lambda acc, row: add_to_set(acc, row["user_id"], tryint(row["reference"])),
-        get_stats_func=lambda acc, row, item: json.dumps(list(acc.get(row["user_id"], []))),
+        get_stats_func=lambda acc, row, item: list(acc.get(row["user_id"], [])),
     ),
     # ok
     StatsAcc(
@@ -327,7 +327,7 @@ accumulators = [
         filter=lambda row: row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE,
         acc=defaultdict(set),
         updater=lambda acc, row: add_to_set(acc, (row["user_id"], row["session_id"]), tryint(row["reference"])),
-        get_stats_func=lambda acc, row, item: json.dumps(list(acc.get((row["user_id"], row["session_id"]), []))),
+        get_stats_func=lambda acc, row, item: list(acc.get((row["user_id"], row["session_id"]), [])),
     ),
 ]
 
@@ -336,7 +336,7 @@ for acc in accumulators:
 
 
 class FeatureGenerator:
-    def __init__(self, limit):
+    def __init__(self, limit, parallel=True):
         self.limit = limit
         self.jacc_sim = JaccardItemSim(path="../../data/item_metadata_map.joblib")
 
@@ -357,12 +357,12 @@ class FeatureGenerator:
         for acc in accumulators:
             obs[acc.name] = acc.get_stats(row, obs)
 
-        obs["item_similarity_to_last_clicked_item"] = self.jacc_sim.two_items(obs["last_item_clickout"], item_id)
+        obs["item_similarity_to_last_clicked_item"] = self.jacc_sim.two_items(obs["last_item_clickout"], int(item_id))
         obs["avg_similarity_to_interacted_items"] = self.jacc_sim.list_to_item(
-            obs["user_item_interactions_list"], item_id
+            obs["user_item_interactions_list"], int(item_id)
         )
         obs["avg_similarity_to_interacted_session_items"] = self.jacc_sim.list_to_item(
-            obs["user_item_session_interactions_list"], item_id
+            obs["user_item_session_interactions_list"], int(item_id)
         )
 
         return obs
