@@ -13,7 +13,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
 
-numerical_features = [
+numerical_features_py = [
     "rank",
     "item_id",
     "price",
@@ -48,7 +48,7 @@ numerical_features = [
     "rating",
     "stars",
 ]
-numerical_features_for_ranking = [
+numerical_features_for_ranking_py = [
     "price",
     "last_poi_item_clicks",
     "last_poi_item_impressions",
@@ -70,14 +70,16 @@ numerical_features_for_ranking = [
     "rating",
     "stars",
 ]
-categorical_features = ["device", "platform", "last_sort_order", "last_filter_selection", "country", "hotel_cat"]
-
-features_eng = FeatureEng()
+categorical_features_py = ["device", "platform", "last_sort_order", "last_filter_selection", "country", "hotel_cat"]
 
 
-def make_vectorizer_1():
+def make_vectorizer_1(
+    categorical_features=categorical_features_py,
+    numerical_features=numerical_features_py,
+    numerical_features_for_ranking=numerical_features_for_ranking_py,
+):
     return make_pipeline(
-        features_eng,
+        FeatureEng(),
         ColumnTransformer(
             [
                 (
@@ -96,11 +98,7 @@ def make_vectorizer_1():
                     ),
                     "last_filter",
                 ),
-                # (
-                #     "last_10_actions",
-                #     CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
-                #     "last_10_actions",
-                # ),
+                ("last_10_actions", CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5), "last_10_actions"),
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
             ]
         ),
@@ -109,20 +107,20 @@ def make_vectorizer_1():
 
 def make_vectorizer_2():
     return make_pipeline(
-        features_eng,
+        FeatureEng(),
         ColumnTransformer(
             [
                 (
                     "numerical",
                     make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), KBinsDiscretizer()),
-                    numerical_features,
+                    numerical_features_py,
                 ),
-                ("numerical_context", LagNumericalFeaturesWithinGroup(), numerical_features + ["clickout_id"]),
-                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
+                ("numerical_context", LagNumericalFeaturesWithinGroup(), numerical_features_py + ["clickout_id"]),
+                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features_py),
                 (
                     "numerical_ranking",
                     make_pipeline(RankFeatures(), StandardScaler()),
-                    numerical_features_for_ranking + ["clickout_id"],
+                    numerical_features_for_ranking_py + ["clickout_id"],
                 ),
                 ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5), "properties"),
                 (
@@ -132,11 +130,7 @@ def make_vectorizer_2():
                     ),
                     "last_filter",
                 ),
-                # (
-                #     "last_10_actions",
-                #     CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
-                #     "last_10_actions",
-                # ),
+                ("last_10_actions", CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5), "last_10_actions"),
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
             ]
         ),
@@ -148,20 +142,20 @@ def make_vectorizer_3():
         return make_pipeline(SimpleImputer(strategy="constant", fill_value=0))
 
     return make_pipeline(
-        features_eng,
+        FeatureEng(),
         ColumnTransformer(
             [
-                ("numerical", make_pipeline(PandasToNpArray(), safe_imputer()), numerical_features),
+                ("numerical", make_pipeline(PandasToNpArray(), safe_imputer()), numerical_features_py),
                 (
                     "numerical_context",
                     make_pipeline(LagNumericalFeaturesWithinGroup(), safe_imputer()),
-                    numerical_features + ["clickout_id"],
+                    numerical_features_py + ["clickout_id"],
                 ),
-                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
+                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features_py),
                 (
                     "numerical_ranking",
                     make_pipeline(RankFeatures(), StandardScaler(), safe_imputer()),
-                    numerical_features_for_ranking + ["clickout_id"],
+                    numerical_features_for_ranking_py + ["clickout_id"],
                 ),
                 (
                     "last_filter",

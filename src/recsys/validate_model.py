@@ -46,19 +46,19 @@ class Model:
             val_pred = self.model.predict_proba(mat_val)[:, 1]
             if validate:
                 train_pred = self.model.predict_proba(mat_train)[:, 1]
-                print(roc_auc_score(df_train["was_clicked"].values, train_pred))
-                print(roc_auc_score(df_val["was_clicked"].values, val_pred))
-                df_val["click_proba"] = val_pred
-                print("MRR val", mrr_fast(df_val, "click_proba"))
+                self.evaluate(df_train, df_val, train_pred, val_pred)
         else:
             val_pred = self.model.predict(mat_val)
             if validate:
                 train_pred = self.model.predict(mat_train)
-                print(roc_auc_score(df_train["was_clicked"].values, train_pred))
-                print(roc_auc_score(df_val["was_clicked"].values, val_pred))
-                df_val["click_proba"] = val_pred
-                print("MRR val", mrr_fast(df_val, "click_proba"))
+                self.evaluate(df_train, df_val, train_pred, val_pred)
         return val_pred
+
+    def evaluate(self, df_train, df_val, train_pred, val_pred):
+        print("Train AUC {:.4f}".format(roc_auc_score(df_train["was_clicked"].values, train_pred)))
+        print("Val AUC {:.4f}".format(roc_auc_score(df_val["was_clicked"].values, val_pred)))
+        df_val["click_proba"] = val_pred
+        print("Val MRR {:.4f}".format(mrr_fast(df_val, "click_proba")))
 
 
 class ModelTrain:

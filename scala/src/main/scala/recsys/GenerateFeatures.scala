@@ -52,13 +52,14 @@ object GenerateFeatures {
   private var lastRefItemByActionType =
     mutable.Map[(UserId, ActionType), ItemId]().withDefaultValue(DummyItem)
 
-  private val itemProperties = readProperties
+  private val itemProperties = readProperties("../data/item_metadata.csv")
+  private val propFreq = propertiesFreq(itemProperties)
 
   def main(args: Array[String]) {
     val taskSupport = new ForkJoinTaskSupport(new ForkJoinPool(8))
 
-    val eventsReader = getCSVReader("/home/pawel/logicai/recsys2019/data/events_sorted.csv")
-    val writer       = getWriter("/home/pawel/logicai/recsys2019/data/events_sorted_trans_scala.csv")
+    val eventsReader = getCSVReader("../data/events_sorted.csv")
+    val writer       = getWriter("../data/events_sorted_trans_scala.csv")
 
     val pb            = new ProgressBar("Calculating features", 19715327)
     var headerWritten = false
@@ -72,7 +73,7 @@ object GenerateFeatures {
         itemsPar.tasksupport = taskSupport
         val itemsFeatures = itemsPar.map(item => extractFeatures(clickoutId, row, item)).toArray
         if (!headerWritten) {
-          writer.writeHeaders(itemsFeatures.head.keys)
+          writer.writeHeaders(itemsFeatures.head.keys.toList.map(normalizeColumnName))
           headerWritten = true
         }
         writer.writeRows(itemsFeatures.map(f => f.values.toArray.map(_.asInstanceOf[AnyRef])))
@@ -84,6 +85,8 @@ object GenerateFeatures {
     pb.close()
     taskSupport.forkJoinPool.shutdown()
   }
+
+  private def normalizeColumnName(colName: String): String = colName.replace(' ','_')
 
   private def updateAccumulators(actionType: String, row: Row): Unit = {
     if (row.actionType == "clickout item") {
@@ -177,28 +180,39 @@ object GenerateFeatures {
       featuresRow(s"${actionType}_item_count") = actionTypesItemCounter(
         (row.userId, item.itemId, actionType)
       )
-      featuresRow(s"${actionType}_last_ref_similarity") =
+      featuresRow(s"${actionType}_last_ref_jaccard") =
         calcItemSim(lastRefItemByActionType((row.userId, actionType)), item.itemId)
+      //      featuresRow(s"${actionType}_last_ref_jaccard_freq") =
+      //        calcItemSim(lastRefItemByActionType((row.userId, actionType)), item.itemId, freq=true)
+      featuresRow(s"${actionType}_same_last_item") = if (lastRefItemByActionType((row.userId, actionType)) == item.itemId) 1 else 0
     }
 
     featuresRow
   }
 
-  private def calcItemSim(itemA: ItemId, itemB: ItemId) = {
+  private def calcItemSim(itemA: ItemId, itemB: ItemId, freq: Boolean=false) = {
     if (itemA == DummyItem) {
       0.0
     } else {
       val itemAProp = itemProperties.getOrElse(itemA, Set[String]())
       val itemBProp = itemProperties.getOrElse(itemB, Set[String]())
-      (itemAProp intersect itemBProp).size.toDouble / ((itemAProp union itemBProp).size + 1)
+
+      val intersection = itemAProp intersect itemBProp
+      val union = itemAProp union itemBProp
+
+      if (freq) {
+        intersection.map(1.0 / propFreq(_)).sum / union.map(1.0 / propFreq(_)).sum
+      } else {
+        intersection.size.toDouble / (union.size + 1)
+      }
     }
   }
 
   private def calcAvgItemSim[K](
-      map: mutable.Map[K, mutable.Set[ItemId]],
-      key: K,
-      item: Item
-  ) = {
+                                 map: mutable.Map[K, mutable.Set[ItemId]],
+                                 key: K,
+                                 item: Item
+                               ) = {
     if (map contains key) {
       val propItem        = itemProperties(item.itemId)
       val prvInteractions = map(key)
@@ -261,8 +275,8 @@ object GenerateFeatures {
 
   private def extractItemReference(rawRow: Record): Int = {
     if (ACTIONS_WITH_ITEM_REF.contains(rawRow.getString("action_type")) & Utils.isAllDigits(
-          rawRow.getString("reference")
-        )) {
+      rawRow.getString("reference")
+    )) {
       rawRow.getInt("reference")
     } else {
       0
@@ -293,8 +307,8 @@ object GenerateFeatures {
     it.iterator()
   }
 
-  private def readProperties = {
-    val itemPropertiesReader = getCSVReader("/home/pawel/logicai/recsys2019/data/item_metadata.csv")
+  private def readProperties(path: String) = {
+    val itemPropertiesReader = getCSVReader(path)
     val itemProperties       = mutable.Map[ItemId, Set[String]]().withDefaultValue(Set[String]())
     for (row <- itemPropertiesReader) {
       val itemId     = row.getInt("item_id")
@@ -302,5 +316,9 @@ object GenerateFeatures {
       itemProperties(itemId) = properties
     }
     itemProperties
+  }
+
+  private def propertiesFreq(properties: mutable.Map[Types.ItemId, Set[String]]) = {
+    properties.values.flatten.groupBy(identity).mapValues(_.size)
   }
 }
