@@ -147,6 +147,8 @@ object GenerateFeatures {
     val j           = item.itemId
     val featuresRow = mutable.LinkedHashMap[String, Any]()
     featuresRow("clickout_id") = clickoutId
+    featuresRow("src") = row.src
+    featuresRow("is_test") = row.isTest
     featuresRow("user_id") = row.userId
     featuresRow("session_id") = row.sessionId
     featuresRow("step") = row.step
@@ -293,7 +295,7 @@ object GenerateFeatures {
       referenceItem = extractItemReference(rawRow),
       referenceOther = extractOtherReference(rawRow),
       src = rawRow.getString("src"),
-      isTest = rawRow.getInt("is_test") == 1,
+      isTest = rawRow.getInt("is_test"),
       impressions = impressions,
       prices = prices,
       items = items

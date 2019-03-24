@@ -15,7 +15,7 @@ case class Row(
     device: String,
     currentFilters: String,
     src: String,
-    isTest: Boolean,
+    isTest: Int,
     impressions: Array[ItemId] = null,
     prices: Array[Price] = null,
     items: Array[Item] = null
