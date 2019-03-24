@@ -105,9 +105,11 @@ def make_vectorizer_1(
     )
 
 
-def make_vectorizer_2(numerical_features=numerical_features_py,
-                      numerical_features_for_ranking=numerical_features_for_ranking_py,
-                      categorical_features=categorical_features_py):
+def make_vectorizer_2(
+    numerical_features=numerical_features_py,
+    numerical_features_for_ranking=numerical_features_for_ranking_py,
+    categorical_features=categorical_features_py,
+):
     return make_pipeline(
         FeatureEng(),
         ColumnTransformer(

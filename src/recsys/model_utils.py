@@ -1,29 +1,17 @@
-import pathlib
-import warnings
-
-import click
 import numpy as np
 import pandas as pd
-import pyarrow.feather as pf
-from lightgbm import LGBMClassifier, LGBMRanker
+from lightgbm import LGBMRanker
 from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast
 from recsys.submission import group_clickouts
 from recsys.utils import group_lengths, reduce_mem_usage, timer
-from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2
-from recsys.vectorizers_scala import make_vectorizer_1_scala
 from scipy.optimize import fmin, fmin_powell
 from sklearn.metrics import roc_auc_score
 
-warnings.filterwarnings("ignore")
-SORTED_TRANS_CSV = pathlib.Path().absolute().parents[1] / "data" / "events_sorted_trans_scala.csv"
-SORTED_TRANS_FEATHER = pathlib.Path().absolute().parents[1] / "data" / "events_sorted_trans.feather"
-
-np.random.seed(0)
-
 
 class Model:
-    def __init__(self, vectorizer, model, weight, is_prob):
+    def __init__(self, name, vectorizer, model, weight, is_prob):
+        self.name = name
         self.vectorizer = vectorizer
         self.model = model
         self.weight = weight
@@ -53,7 +41,14 @@ class Model:
             if validate:
                 train_pred = self.model.predict(mat_train)
                 self.evaluate(df_train, df_val, train_pred, val_pred)
+        self.save_predictions(df_val, val_pred, validate)
         return val_pred
+
+    def save_predictions(self, df_val, val_pred, validate):
+        df_preds = df_val[["user_id", "session_id", "timestamp", "step", "clickout_id", "item_id", "was_clicked"]]
+        df_preds["pred"] = val_pred
+        action = "validate" if validate else "test"
+        df_preds.to_csv(f"predictions/{self.name}_{action}.csv", index=False)
 
     def evaluate(self, df_train, df_val, train_pred, val_pred):
         print("Train AUC {:.4f}".format(roc_auc_score(df_train["was_clicked"].values, train_pred)))
@@ -63,8 +58,9 @@ class Model:
 
 
 class ModelTrain:
-    def __init__(self, models, n_jobs=-2, reduce_df_memory=False, load_feather=False):
+    def __init__(self, models, datapath, n_jobs=-2, reduce_df_memory=False, load_feather=False):
         self.models = models
+        self.datapath = datapath
         self.n_jobs = n_jobs
         self.reduce_df_memory = reduce_df_memory
         self.load_feather = load_feather
@@ -101,12 +97,9 @@ class ModelTrain:
     def load_train_val(self, n_users, n_debug=None, train_on_test_users=True):
         with timer("Reading training data"):
             if n_debug:
-                df_all = pd.read_csv(SORTED_TRANS_CSV, nrows=n_debug)
+                df_all = pd.read_csv(self.datapath, nrows=n_debug)
             else:
-                if self.load_feather:
-                    df_all = pf.read_feather(SORTED_TRANS_FEATHER)
-                else:
-                    df_all = pd.read_csv(SORTED_TRANS_CSV)
+                df_all = pd.read_csv(self.datapath)
                 if self.reduce_df_memory:
                     df_all = reduce_mem_usage(df_all)
                 if n_users:
@@ -124,10 +117,7 @@ class ModelTrain:
 
     def load_train_test(self, n_users, train_on_test_users=True):
         with timer("Reading training and testing data"):
-            if self.load_feather:
-                df_all = pf.read_feather(SORTED_TRANS_FEATHER)
-            else:
-                df_all = pd.read_csv(SORTED_TRANS_CSV)
+            df_all = pd.read_csv(self.datapath)
             if self.reduce_df_memory:
                 df_all = reduce_mem_usage(df_all)
             df_test = df_all[df_all["is_test"] == 1]
@@ -141,38 +131,3 @@ class ModelTrain:
             print("Training on {} users".format(df_all["user_id"].nunique()))
             print("Training data shape", df_all.shape)
         return df_all, df_test
-
-
-def info(action, load_feather, n_jobs, n_users, reduce_df_memory):
-    print(f"n_users={n_users}")
-    print(f"action={action}")
-    print(f"n_jobs={n_jobs}")
-    print(f"reduce_df_memory={reduce_df_memory}")
-    print(f"load_feather={load_feather}")
-
-
-@click.command()
-@click.option("--n_users", type=int, default=None, help="Number of users to user for training")
-@click.option("--n_trees", type=int, default=100, help="Number of trees for lightgbm models")
-@click.option("--n_jobs", type=int, default=-2, help="Number of cores to run models on")
-@click.option("--n_debug", type=int, default=None, help="Number of rows to use for debuging")
-@click.option("--action", type=str, default="validate", help="What to do: validate/submit")
-@click.option("--reduce_df_memory", type=bool, default=True, help="Aggresively reduce DataFrame memory")
-@click.option("--load_feather", type=bool, default=False, help="Use .feather or .csv DataFrame")
-def main(n_users, n_trees, n_jobs, n_debug, action, reduce_df_memory, load_feather):
-    models = [
-        Model(make_vectorizer_1_scala(), LGBMClassifier(n_estimators=n_trees, n_jobs=n_jobs), weight=1.0, is_prob=True),
-        Model(make_vectorizer_1_scala(), LGBMRanker(n_estimators=n_trees, n_jobs=n_jobs), weight=0.2, is_prob=False),
-    ]
-    info(action, load_feather, n_jobs, n_users, reduce_df_memory)
-    trainer = ModelTrain(models=models, n_jobs=n_jobs, reduce_df_memory=reduce_df_memory, load_feather=load_feather)
-    if action == "validate":
-        with timer("validating models"):
-            trainer.validate_models(n_users, n_debug)
-    elif action == "submit":
-        with timer("training full data models"):
-            trainer.submit_models(n_users)
-
-
-if __name__ == "__main__":
-    main()

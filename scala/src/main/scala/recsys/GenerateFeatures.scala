@@ -65,7 +65,7 @@ object GenerateFeatures {
   def main(args: Array[String]) {
 //    val taskSupport = new ForkJoinTaskSupport(new ForkJoinPool(8))
 
-    val eventsReader = getCSVReader("../data/events_sorted_1m.csv")
+    val eventsReader = getCSVReader("../data/events_sorted.csv")
     val writer       = getWriter("../data/events_sorted_trans_scala.csv")
 
     val pb            = new ProgressBar("Calculating features", 19715327)
@@ -149,6 +149,7 @@ object GenerateFeatures {
     featuresRow("clickout_id") = clickoutId
     featuresRow("user_id") = row.userId
     featuresRow("session_id") = row.sessionId
+    featuresRow("step") = row.step
     featuresRow("timestamp") = row.timestamp
     featuresRow("platform") = row.platform
     featuresRow("city") = row.city
@@ -283,6 +284,7 @@ object GenerateFeatures {
       actionType = actionType,
       userId = rawRow.getString("user_id"),
       sessionId = rawRow.getString("session_id"),
+      step = rawRow.getInt("step"),
       timestamp = rawRow.getInt("timestamp"),
       platform = rawRow.getString("platform"),
       city = rawRow.getString("city"),
