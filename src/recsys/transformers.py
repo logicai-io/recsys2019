@@ -2,54 +2,21 @@ import json
 import pathlib
 
 import arrow
-import joblib
 import numpy as np
 import pandas as pd
 from recsys.constants import COUNTRY_CODES
-from recsys.metric import mrr_fast
-from recsys.utils import jaccard, reduce_mem_usage, timer
+from recsys.jaccard_sim import JaccardItemSim
+from recsys.utils import reduce_mem_usage
 from scipy.sparse import csr_matrix
 from sklearn.base import BaseEstimator, TransformerMixin
-from tqdm import tqdm
 
 PATH_TO_IMM = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_map.joblib"
 METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_dense.csv"
 
 
-class JaccardItemSim:
-    def __init__(self):
-        self.imm = joblib.load(PATH_TO_IMM)
-
-    def list_to_item(self, other_items, item):
-        if other_items:
-            return np.mean([jaccard(self.imm[a], self.imm[item]) for a in other_items])
-        else:
-            return 0
-
-    def two_items(self, a, b):
-        if b != 0:
-            return jaccard(self.imm[a], self.imm[b])
-        else:
-            return 0
-
-    def list_to_item_star(self, v):
-        other_items, item = v
-        return self.list_to_item(other_items, item)
-
-    def two_items_star(self, v):
-        a, b = v
-        return self.two_items(a, b)
-
-    def list_to_item_star_chunk(self, vs):
-        return [self.list_to_item_star(v) for v in vs]
-
-    def two_items_star_chunk(self, vs):
-        return [self.two_items_star(v) for v in vs]
-
-
 class FeatureEng(BaseEstimator, TransformerMixin):
-    def __init__(self, path_to_imm=PATH_TO_IMM):
-        self.jacc_sim = JaccardItemSim()
+    def __init__(self):
+        self.jacc_sim = JaccardItemSim(PATH_TO_IMM)
         self.metadata_dense = reduce_mem_usage(pd.read_csv(METADATA_DENSE).fillna(0))
 
     def fit(self, X, y=None):
@@ -60,26 +27,11 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X["country_eq_platform"] = (X["country"].map(COUNTRY_CODES) == X["platform"]).astype(np.int32)
         X["last_event_ts_dict"] = X["last_event_ts"].map(json.loads)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
-
-        jacc_sim = self.jacc_sim
-        with timer("calculating item similarity"):
-            items_to_score = zip(X["item_id"], X["last_item_clickout"].fillna(0).map(int))
-            X["item_similarity_to_last_clicked_item"] = list(tqdm(map(jacc_sim.two_items_star, items_to_score)))
-
-            items_to_score = zip(X["user_item_interactions_list"].map(json.loads), X["item_id"])
-            X["avg_similarity_to_interacted_items"] = list(tqdm(map(jacc_sim.list_to_item_star, items_to_score)))
-
-            items_to_score = zip(X["user_item_session_interactions_list"].map(json.loads), X["item_id"])
-            X["avg_similarity_to_interacted_session_items"] = list(
-                tqdm(map(jacc_sim.list_to_item_star, items_to_score))
-            )
-
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (X["clickout_user_item_impressions"] + 1)
         X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (X["last_poi_item_impressions"] + 1)
         X["properties"] = X["item_id"].map(self.jacc_sim.imm)
         X["properties"].fillna("", inplace=True)
         X = pd.merge(X, self.metadata_dense, how="left", on="item_id")
-
         X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)
         X["is_rank_greater_than_prv_click"] = (X["rank"] > X["last_item_index"]).astype(np.int32)
         X["last_filter"].fillna("", inplace=True)

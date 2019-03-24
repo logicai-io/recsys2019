@@ -213,7 +213,7 @@ accumulators = [
         name="last_item_clickout",
         filter=lambda row: row["action_type"] == "clickout item",
         acc={},
-        updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
+        updater=lambda acc, row: set_key(acc, row["user_id"], tryint(row["reference"])),
         get_stats_func=lambda acc, row, item: acc.get(row["user_id"], 0),
     ),
     # ok
@@ -336,19 +336,20 @@ for acc in accumulators:
 
 
 class FeatureGenerator:
-    def __init__(self, limit, parallel=True):
+    def __init__(self, limit):
         self.limit = limit
         self.jacc_sim = JaccardItemSim(path="../../data/item_metadata_map.joblib")
 
     def calculate_features_per_item(self, clickout_id, item_id, max_price, mean_price, price, rank, row):
         obs = row.copy()
         del obs["impressions"]
+        del obs["impressions_int"]
         del obs["impressions_hash"]
         del obs["prices"]
         del obs["action_type"]
         obs["item_id"] = item_id
         obs["item_id_clicked"] = row["reference"]
-        obs["was_clicked"] = int(row["reference"] == item_id)
+        obs["was_clicked"] = int(int(row["reference"]) == item_id)
         obs["clickout_id"] = clickout_id
         obs["rank"] = rank
         obs["price"] = price
@@ -357,12 +358,12 @@ class FeatureGenerator:
         for acc in accumulators:
             obs[acc.name] = acc.get_stats(row, obs)
 
-        obs["item_similarity_to_last_clicked_item"] = self.jacc_sim.two_items(obs["last_item_clickout"], int(item_id))
+        obs["item_similarity_to_last_clicked_item"] = self.jacc_sim.two_items(obs["last_item_clickout"], item_id)
         obs["avg_similarity_to_interacted_items"] = self.jacc_sim.list_to_item(
-            obs["user_item_interactions_list"], int(item_id)
+            obs["user_item_interactions_list"], item_id
         )
         obs["avg_similarity_to_interacted_session_items"] = self.jacc_sim.list_to_item(
-            obs["user_item_session_interactions_list"], int(item_id)
+            obs["user_item_session_interactions_list"], item_id
         )
 
         return obs
@@ -370,18 +371,16 @@ class FeatureGenerator:
     def generate_features(self):
         inp = open("../../data/events_sorted.csv")
         dr = DictReader(inp)
-        out = open("../../data/events_sorted_trans.csv", "wt")
-        # keeps track of item CTR
-        all_obs = []
+        out = open("../../data/events_sorted_trans_test.csv", "wt")
         first_row = True
         for clickout_id, row in enumerate(tqdm(dr)):
             if self.limit and clickout_id > self.limit:
                 break
-            user_id = row["user_id"]
             row["timestamp"] = int(row["timestamp"])
             if row["action_type"] == "clickout item":
-                row["impressions"] = row["impressions"].split("|")
-                row["impressions_hash"] = "|".join(sorted(row["impressions"]))
+                row["reference"] = tryint(row["reference"])
+                row["impressions_int"] = list(map(int, row["impressions"].split("|")))
+                row["impressions_hash"] = row["impressions"]
                 row["index_clicked"] = (
                     row["impressions"].index(row["reference"]) if row["reference"] in row["impressions"] else None
                 )
@@ -389,7 +388,7 @@ class FeatureGenerator:
                 max_price = max(prices)
                 mean_price = sum(prices) / len(prices)
 
-                for rank, (item_id, price) in enumerate(zip(row["impressions"], prices)):
+                for rank, (item_id, price) in enumerate(zip(row["impressions_int"], prices)):
                     obs = self.calculate_features_per_item(
                         clickout_id, item_id, max_price, mean_price, price, rank, row
                     )
