@@ -105,7 +105,9 @@ def make_vectorizer_1(
     )
 
 
-def make_vectorizer_2():
+def make_vectorizer_2(numerical_features=numerical_features_py,
+                      numerical_features_for_ranking=numerical_features_for_ranking_py,
+                      categorical_features=categorical_features_py):
     return make_pipeline(
         FeatureEng(),
         ColumnTransformer(
@@ -113,14 +115,14 @@ def make_vectorizer_2():
                 (
                     "numerical",
                     make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), KBinsDiscretizer()),
-                    numerical_features_py,
+                    numerical_features,
                 ),
-                ("numerical_context", LagNumericalFeaturesWithinGroup(), numerical_features_py + ["clickout_id"]),
-                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features_py),
+                ("numerical_context", LagNumericalFeaturesWithinGroup(), numerical_features + ["clickout_id"]),
+                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
                 (
                     "numerical_ranking",
                     make_pipeline(RankFeatures(), StandardScaler()),
-                    numerical_features_for_ranking_py + ["clickout_id"],
+                    numerical_features_for_ranking + ["clickout_id"],
                 ),
                 ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5), "properties"),
                 (
