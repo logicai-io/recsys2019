@@ -42,6 +42,22 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         return X
 
 
+class FeatureEngScala(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        pass
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X["country"] = X["city"].map(lambda x: x.split(",")[-1].strip())
+        X["country_eq_platform"] = (X["country"].map(COUNTRY_CODES) == X["platform"]).astype(np.int32)
+        for col in X.columns:
+            if X[col].dtype == np.bool:
+                X[col] = X[col].astype(np.int32)
+        return X
+
+
 class RankFeatures(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self

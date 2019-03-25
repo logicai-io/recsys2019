@@ -10,6 +10,11 @@ Current process
 5. python extract_hotel_dense_features.py
 6. cd ../src/recsys
 7. python generate_training_data.py (or pypy generate_training_data.py which is 2x faster)
+8. cd ../../scala
+9. SBT_OPTS="-Xms512M -Xmx100G -Xss2M -XX:MaxMetaspaceSize=1024M" sbt run
+10. cd ../src/recsys
+11. ./make_predictions.sh
+12. python make_blend.py
 
 Model validation
 ---------------
@@ -40,27 +45,30 @@ python validate_model.py --action submit
 Best submissions
 ---------------
 
-Best model is a result of this command (the parameter of models n_trees is set to 1600.
+Best model is a result of blending of 3 models (see make_blend.py)
+MRR: Validation 0.6066 Leaderboard 0.6686
 
-```bash
-(recsys) pawel@recsys1:~/recsys2019/src/recsys$ python validate_model.py --n_users 1 --n_trees 1600 --action validate
-1600 trees
+Python dataset models
+```
+Train AUC 0.9038
+Val AUC 0.8915
+Val MRR 0.6033
 
-Light GBM
-
-Train 0.8997
-Val   0.8896
-
-Light GBM Rank
-
-Train 0.8593
-Val   0.8688
-
-MRR   0.6052
+Train AUC 0.8631
+Val AUC 0.8724
+Val MRR 0.6046
 ```
 
-Leaderboard result 0.6677
+Scala dataset models
+```
+Train AUC 0.8922
+Val AUC 0.8831
+Val MRR 0.5927
 
+Train AUC 0.8506
+Val AUC 0.8601
+Val MRR 0.5937
+```
 
 Feather
 ---------------

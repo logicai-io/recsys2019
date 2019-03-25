@@ -6,7 +6,8 @@ case class Row(
     actionType: String,
     userId: UserId,
     sessionId: String,
-    timestamp: Integer,
+    step: Int,
+    timestamp: Int,
     referenceItem: ItemId,
     referenceOther: String,
     platform: String,
@@ -14,7 +15,7 @@ case class Row(
     device: String,
     currentFilters: String,
     src: String,
-    isTest: Boolean,
+    isTest: Int,
     impressions: Array[ItemId] = null,
     prices: Array[Price] = null,
     items: Array[Item] = null

@@ -12,4 +12,4 @@ object Types {
   val DummyItem: ItemId = -1
 }
 
-case class Item(itemId: ItemId, price: Price)
+case class Item(itemId: ItemId, price: Price, rank: Int)
