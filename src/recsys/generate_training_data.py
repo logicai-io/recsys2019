@@ -414,8 +414,6 @@ class FeatureGenerator:
         inp = open("../../data/events_sorted.csv")
         dr = DictReader(inp)
         out = open("../../data/events_sorted_trans.csv", "wt")
-        # keeps track of item CTR
-        all_obs = []
         first_row = True
         for clickout_id, row in enumerate(tqdm(dr)):
             if self.limit and clickout_id > self.limit:

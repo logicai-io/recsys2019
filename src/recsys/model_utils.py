@@ -94,7 +94,7 @@ class ModelTrain:
         _, submission_df = group_clickouts(df_test)
         submission_df.to_csv("submission.csv", index=False)
 
-    def load_train_val(self, n_users, n_debug=None, train_on_test_users=True):
+    def load_train_val(self, n_users, n_debug=None):
         with timer("Reading training data"):
             if n_debug:
                 df_all = pd.read_csv(self.datapath, nrows=n_debug)
@@ -106,16 +106,16 @@ class ModelTrain:
                     train_users = set(
                         np.random.choice(df_all[df_all["is_test"] == 0].user_id.unique(), n_users, replace=False)
                     )
-                    if train_on_test_users:
-                        train_users |= set(df_all[df_all["is_test"] == 1].user_id.unique())
-                    df_all = df_all[(df_all.user_id.isin(train_users)) & (df_all.is_test == 0)]
+                    # select a frozen set of users' clickouts for validation
+                    df_all = df_all[(df_all.user_id.isin(train_users)) | (df_all.is_val == 1)]
             print("Training on {} users".format(df_all["user_id"].nunique()))
             print("Training data shape", df_all.shape)
         with timer("splitting timebased"):
-            df_train, df_val = split_by_timestamp(df_all)
+            df_train = df_all[df_all["is_val"] == 0]
+            df_val = df_all[df_all["is_val"] == 1]
         return df_train, df_val
 
-    def load_train_test(self, n_users, train_on_test_users=True):
+    def load_train_test(self, n_users):
         with timer("Reading training and testing data"):
             df_all = pd.read_csv(self.datapath)
             if self.reduce_df_memory:
@@ -125,8 +125,8 @@ class ModelTrain:
                 train_users = set(
                     np.random.choice(df_all[df_all["is_test"] == 0].user_id.unique(), n_users, replace=False)
                 )
-                if train_on_test_users:
-                    train_users |= set(df_all[df_all["is_test"] == 1].user_id.unique())
+                # always include all the users from the test set
+                train_users |= set(df_all[df_all["is_test"] == 1].user_id.unique())
                 df_all = df_all[(df_all.user_id.isin(train_users)) & (df_all.is_test == 0)]
             print("Training on {} users".format(df_all["user_id"].nunique()))
             print("Training data shape", df_all.shape)
