@@ -110,6 +110,13 @@ def tryint(s):
         return 0
 
 
+def diff(seq):
+    new_seq = []
+    for n in range(len(seq) - 1):
+        new_seq.append(seq[n + 1] - seq[n])
+    return new_seq
+
+
 acc_dict = {}
 
 accumulators = [
@@ -134,7 +141,6 @@ accumulators = [
         updater=lambda acc, row: append_to_list(acc, row["user_id"], ACTION_SHORTENER[row["action_type"]]),
         get_stats_func=lambda acc, row, item: "".join(["q"] + acc[row["user_id"]] + ["x"]),
     ),
-    # ok
     StatsAcc(
         name="last_sort_order",
         filter=lambda row: row["action_type"] == "change of sort order",
@@ -142,7 +148,6 @@ accumulators = [
         updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
         get_stats_func=lambda acc, row, item: acc.get(row["user_id"], "UNK"),
     ),
-    # ok
     StatsAcc(
         name="last_filter_selection",
         filter=lambda row: row["action_type"] == "filter selection",
@@ -150,7 +155,6 @@ accumulators = [
         updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
         get_stats_func=lambda acc, row, item: acc.get(row["user_id"], "UNK"),
     ),
-    # ok
     StatsAcc(
         name="last_poi",
         filter=lambda row: row["action_type"] == "search for poi",
@@ -181,16 +185,19 @@ accumulators = [
         filter=lambda row: row["action_type"] == "clickout item",
         acc=defaultdict(list),
         updater=lambda acc, row: append_to_list_not_null(acc, row["user_id"], row["index_clicked"]),
-        # get_stats_func=lambda acc, row, item: " ".join(["q"] + ['D'+str(ind - item["rank"]) for ind in acc[row["user_id"]]] + ["x"])
         get_stats_func=lambda acc, row, item: acc[row["user_id"]][-1] - item["rank"] if acc[row["user_id"]] else -1000,
     ),
-    # StatsAcc(
-    #     name="item_index_history",
-    #     filter=lambda row: row["action_type"] == "clickout item",
-    #     acc=defaultdict(list),
-    #     updater=lambda acc, row: append_to_list_not_null(acc, row["user_id"], row["index_clicked"]),
-    #     get_stats_func=lambda acc, row, item: " ".join(["q"] + ['D'+str(ind - item["rank"]).replace("-","m") for ind in acc[row["user_id"]]] + ["x"])
-    # ),
+    StatsAcc(
+        name="last_item_index_same_view",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc=defaultdict(list),
+        updater=lambda acc, row: append_to_list_not_null(
+            acc, (row["user_id"], row["impressions_raw"]), row["index_clicked"]
+        ),
+        get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["impressions_raw"])][-1] - item["rank"]
+        if acc[(row["user_id"], row["impressions_raw"])]
+        else -1000,
+    ),
     StatsAcc(
         name="last_event_ts",
         filter=lambda row: True,
@@ -200,7 +207,6 @@ accumulators = [
         ),
         get_stats_func=lambda acc, row, item: json.dumps(diff_ts(acc[row["user_id"]], row["timestamp"])),
     ),
-    # ok
     StatsAcc(
         name="clickout_user_item_clicks",
         filter=lambda row: row["action_type"] == "clickout item",
@@ -208,7 +214,6 @@ accumulators = [
         updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
         get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
     ),
-    # ok
     StatsAcc(
         name="last_item_clickout",
         filter=lambda row: row["action_type"] == "clickout item",
@@ -216,7 +221,6 @@ accumulators = [
         updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
         get_stats_func=lambda acc, row, item: acc.get(row["user_id"], 0),
     ),
-    # ok
     StatsAcc(
         name="clickout_item_clicks",
         filter=lambda row: row["action_type"] == "clickout item",
@@ -231,7 +235,6 @@ accumulators = [
         updater=lambda acc, row: increment_key_by_one(acc, (row["reference"], row["platform"])),
         get_stats_func=lambda acc, row, item: acc[(item["item_id"], row["platform"])],
     ),
-    # ok
     StatsAcc(
         name="clickout_item_impressions",
         filter=lambda row: row["action_type"] == "clickout item",
@@ -239,7 +242,6 @@ accumulators = [
         updater=lambda acc, row: increment_keys_by_one(acc, row["impressions"]),
         get_stats_func=lambda acc, row, item: acc[item["item_id"]],
     ),
-    # ok
     StatsAcc(
         name="clickout_user_item_impressions",
         filter=lambda row: row["action_type"] == "clickout item",
@@ -313,7 +315,6 @@ accumulators = [
         updater=lambda acc, row: set_key(acc, row["user_id"], row["current_filters"]),
         get_stats_func=lambda acc, row, item: acc.get(row["user_id"], ""),
     ),
-    # ok
     StatsAcc(
         name="user_item_interactions_list",
         filter=lambda row: row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE,
@@ -321,7 +322,6 @@ accumulators = [
         updater=lambda acc, row: add_to_set(acc, row["user_id"], tryint(row["reference"])),
         get_stats_func=lambda acc, row, item: list(acc.get(row["user_id"], [])),
     ),
-    # ok
     StatsAcc(
         name="user_item_session_interactions_list",
         filter=lambda row: row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE,
@@ -342,10 +342,6 @@ class FeatureGenerator:
 
     def calculate_features_per_item(self, clickout_id, item_id, max_price, mean_price, price, rank, row):
         obs = row.copy()
-        del obs["impressions"]
-        del obs["impressions_hash"]
-        del obs["prices"]
-        del obs["action_type"]
         obs["item_id"] = item_id
         obs["item_id_clicked"] = row["reference"]
         obs["was_clicked"] = int(row["reference"] == item_id)
@@ -357,6 +353,17 @@ class FeatureGenerator:
         for acc in accumulators:
             obs[acc.name] = acc.get_stats(row, obs)
 
+        self.calculate_similarity_features(item_id, obs)
+        self.calculate_indices_features(obs, rank)
+
+        del obs["impressions"]
+        del obs["impressions_hash"]
+        del obs["impressions_raw"]
+        del obs["prices"]
+        del obs["action_type"]
+        return obs
+
+    def calculate_similarity_features(self, item_id, obs):
         obs["item_similarity_to_last_clicked_item"] = self.jacc_sim.two_items(obs["last_item_clickout"], int(item_id))
         obs["avg_similarity_to_interacted_items"] = self.jacc_sim.list_to_item(
             obs["user_item_interactions_list"], int(item_id)
@@ -365,7 +372,27 @@ class FeatureGenerator:
             obs["user_item_session_interactions_list"], int(item_id)
         )
 
-        return obs
+    def calculate_indices_features(self, obs, rank):
+        last_n = 5
+        last_indices_raw = acc_dict["last_item_index_same_view"].acc[(obs["user_id"], obs["impressions_raw"])]
+        last_indices = [-100] * last_n + last_indices_raw
+        last_indices = last_indices[-last_n:]
+        diff_last_indices = diff(last_indices + [rank])
+        for n in range(1, last_n + 1):
+            obs["last_index_{}".format(n)] = last_indices[-n]
+            obs["last_index_diff_{}".format(n)] = diff_last_indices[-n]
+        n_consecutive = FeatureGenerator.calculate_n_consecutive_clicks(last_indices_raw, rank)
+        obs["n_consecutive_clicks"] = n_consecutive
+
+    @staticmethod
+    def calculate_n_consecutive_clicks(last_indices_raw, rank):
+        n_consecutive = 0
+        for n in range(1, len(last_indices_raw) + 1):
+            if last_indices_raw[-n] == rank:
+                n_consecutive += 1
+            else:
+                break
+        return n_consecutive
 
     def generate_features(self):
         inp = open("../../data/events_sorted.csv")
@@ -380,6 +407,7 @@ class FeatureGenerator:
             user_id = row["user_id"]
             row["timestamp"] = int(row["timestamp"])
             if row["action_type"] == "clickout item":
+                row["impressions_raw"] = row["impressions"]
                 row["impressions"] = row["impressions"].split("|")
                 row["impressions_hash"] = "|".join(sorted(row["impressions"]))
                 row["index_clicked"] = (

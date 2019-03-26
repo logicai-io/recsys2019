@@ -47,6 +47,17 @@ numerical_features_py = [
     "n_properties",
     "rating",
     "stars",
+    "last_index_1",
+    "last_index_2",
+    "last_index_3",
+    "last_index_4",
+    "last_index_5",
+    "last_index_diff_1",
+    "last_index_diff_2",
+    "last_index_diff_3",
+    "last_index_diff_4",
+    "last_index_diff_5",
+    "n_consecutive_clicks",
 ]
 numerical_features_for_ranking_py = [
     "price",
@@ -69,6 +80,7 @@ numerical_features_for_ranking_py = [
     "n_properties",
     "rating",
     "stars",
+    "n_consecutive_clicks",
 ]
 categorical_features_py = ["device", "platform", "last_sort_order", "last_filter_selection", "country", "hotel_cat"]
 
