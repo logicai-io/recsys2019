@@ -11,6 +11,7 @@ ACTION_SHORTENER = {
     "clickout item": "b",
     "filter selection": "c",
     "interaction item deals": "d",
+    "interaction item rating": "j",
     "interaction item image": "e",
     "interaction item info": "f",
     "search for destination": "g",
