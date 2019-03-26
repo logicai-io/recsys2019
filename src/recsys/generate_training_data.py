@@ -23,6 +23,7 @@ ACTIONS_WITH_ITEM_REFERENCE = {
     "interaction item info",
     "interaction item image",
     "interaction item deals",
+    "interaction item rating",
     "clickout item",
 }
 
@@ -134,7 +135,6 @@ accumulators = [
         updater=lambda acc, row: append_to_list(acc, row["user_id"], ACTION_SHORTENER[row["action_type"]]),
         get_stats_func=lambda acc, row, item: "".join(["q"] + acc[row["user_id"]] + ["x"]),
     ),
-    # ok
     StatsAcc(
         name="last_sort_order",
         filter=lambda row: row["action_type"] == "change of sort order",
@@ -142,7 +142,6 @@ accumulators = [
         updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
         get_stats_func=lambda acc, row, item: acc.get(row["user_id"], "UNK"),
     ),
-    # ok
     StatsAcc(
         name="last_filter_selection",
         filter=lambda row: row["action_type"] == "filter selection",
@@ -281,6 +280,20 @@ accumulators = [
     StatsAcc(
         name="interaction_deal_freq",
         filter=lambda row: row["action_type"] == "interaction item deals",
+        acc=defaultdict(int),
+        updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
+        get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
+    ),
+    StatsAcc(
+        name="was_interaction_rating",
+        filter=lambda row: row["action_type"] == "interaction item rating",
+        acc={},
+        updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
+        get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
+    ),
+    StatsAcc(
+        name="interaction_rating_freq",
+        filter=lambda row: row["action_type"] == "interaction item rating",
         acc=defaultdict(int),
         updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
         get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
