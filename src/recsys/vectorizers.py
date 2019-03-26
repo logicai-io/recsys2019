@@ -47,6 +47,17 @@ numerical_features = [
     "n_properties",
     "rating",
     "stars",
+    "last_index_1",
+    "last_index_2",
+    "last_index_3",
+    "last_index_4",
+    "last_index_5",
+    "last_index_diff_1",
+    "last_index_diff_2",
+    "last_index_diff_3",
+    "last_index_diff_4",
+    "last_index_diff_5",
+    "n_consecutive_clicks",
 ]
 numerical_features_for_ranking = [
     "price",
@@ -69,6 +80,7 @@ numerical_features_for_ranking = [
     "n_properties",
     "rating",
     "stars",
+    "n_consecutive_clicks",
 ]
 categorical_features = ["device", "platform", "last_sort_order", "last_filter_selection", "country", "hotel_cat"]
 
@@ -96,11 +108,7 @@ def make_vectorizer_1():
                     ),
                     "last_filter",
                 ),
-                # (
-                #     "last_10_actions",
-                #     CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
-                #     "last_10_actions",
-                # ),
+                ("last_10_actions", CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5), "last_10_actions"),
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
             ]
         ),
@@ -132,11 +140,7 @@ def make_vectorizer_2():
                     ),
                     "last_filter",
                 ),
-                # (
-                #     "last_10_actions",
-                #     CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5),
-                #     "last_10_actions",
-                # ),
+                ("last_10_actions", CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5), "last_10_actions"),
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
             ]
         ),
