@@ -46,28 +46,17 @@ Best submissions
 ---------------
 
 Best model is a result of blending of 3 models (see make_blend.py)
-MRR: Validation 0.6066 Leaderboard 0.6686
+MRR: Validation 0.6088 Leaderboard 0.6689
 
 Python dataset models
 ```
-Train AUC 0.9038
-Val AUC 0.8915
-Val MRR 0.6033
-
-Train AUC 0.8631
-Val AUC 0.8724
-Val MRR 0.6046
-```
-
-Scala dataset models
-```
-Train AUC 0.8922
-Val AUC 0.8831
-Val MRR 0.5927
-
-Train AUC 0.8506
-Val AUC 0.8601
-Val MRR 0.5937
+Train AUC 0.9060
+Val AUC 0.8937
+Val MRR 0.6060
+Train AUC 0.8655
+Val AUC 0.8741
+Val MRR 0.6069
+Ensemble MRR 0.6088
 ```
 
 Feather
