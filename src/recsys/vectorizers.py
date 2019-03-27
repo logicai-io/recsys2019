@@ -81,8 +81,6 @@ numerical_features_for_ranking_py = [
 ]
 categorical_features_py = ["device", "platform", "last_sort_order", "last_filter_selection", "country", "hotel_cat"]
 
-feature_eng = FeatureEng()
-
 
 def make_vectorizer_1(
         categorical_features=categorical_features_py,
@@ -90,7 +88,7 @@ def make_vectorizer_1(
         numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
     return make_pipeline(
-        feature_eng,
+        FeatureEng(),
         ColumnTransformer(
             [
                 (
@@ -124,7 +122,7 @@ def make_vectorizer_2(
         categorical_features=categorical_features_py,
 ):
     return make_pipeline(
-        feature_eng,
+        FeatureEng(),
         ColumnTransformer(
             [
                 (
