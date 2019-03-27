@@ -5,7 +5,6 @@ import arrow
 import numpy as np
 import pandas as pd
 from recsys.constants import COUNTRY_CODES
-from recsys.jaccard_sim import JaccardItemSim
 from recsys.utils import reduce_mem_usage
 from scipy.sparse import csr_matrix
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -16,7 +15,6 @@ METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_
 
 class FeatureEng(BaseEstimator, TransformerMixin):
     def __init__(self):
-        self.jacc_sim = JaccardItemSim(PATH_TO_IMM)
         self.metadata_dense = reduce_mem_usage(pd.read_csv(METADATA_DENSE).fillna(0))
 
     def fit(self, X, y=None):
@@ -29,8 +27,7 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (X["clickout_user_item_impressions"] + 1)
         X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (X["last_poi_item_impressions"] + 1)
-        X["properties"] = X["item_id"].map(self.jacc_sim.imm)
-        X["properties"].fillna("", inplace=True)
+        X["properties"] = X["item_id"].values
         X = pd.merge(X, self.metadata_dense, how="left", on="item_id")
         X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)
         X["is_rank_greater_than_prv_click"] = (X["rank"] > X["last_item_index"]).astype(np.int32)
