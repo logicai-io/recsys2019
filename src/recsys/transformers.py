@@ -115,3 +115,28 @@ class PandasToNpArray(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         return X.values.astype(np.float)
+
+
+class MinimizeNNZ(BaseEstimator, TransformerMixin):
+    """
+    Offset the values so that the most frequent is offset to 0 if it is the most common one
+    """
+
+    def fit(self, X, *args):
+        self.offsets = []
+        for col in X.columns:
+            v = X[col]
+            dom = v.value_counts().index[0]
+            vmin = v.min()
+            vmax = v.max()
+            if dom == vmax or dom == vmin:
+                self.offsets.append(-dom)
+            else:
+                self.offsets.append(0)
+        return self
+
+    def transform(self, X):
+        for col, offset in zip(X.columns, self.offsets):
+            if offset != 0:
+                X[col] += offset
+        return X

@@ -1,14 +1,5 @@
-import joblib
-from recsys.lazy_count_vectorizer import LazyCountVectorizer
-from recsys.transformers import (
-    FeatureEng,
-    LagNumericalFeaturesWithinGroup,
-    PandasToNpArray,
-    PandasToRecords,
-    RankFeatures,
-    ToCSR,
-    PATH_TO_IMM,
-)
+from recsys.transformers import (FeatureEng, LagNumericalFeaturesWithinGroup, MinimizeNNZ, PandasToNpArray,
+                                 PandasToRecords, RankFeatures)
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
@@ -94,11 +85,10 @@ feature_eng = FeatureEng()
 
 
 def make_vectorizer_1(
-    categorical_features=categorical_features_py,
-    numerical_features=numerical_features_py,
-    numerical_features_for_ranking=numerical_features_for_ranking_py,
+        categorical_features=categorical_features_py,
+        numerical_features=numerical_features_py,
+        numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
-    properties_map = joblib.load(PATH_TO_IMM)
     return make_pipeline(
         feature_eng,
         ColumnTransformer(
@@ -108,9 +98,11 @@ def make_vectorizer_1(
                     make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), StandardScaler()),
                     numerical_features,
                 ),
-                ("numerical_context", LagNumericalFeaturesWithinGroup(), numerical_features + ["clickout_id"]),
+                ("numerical_context", make_pipeline(LagNumericalFeaturesWithinGroup(), MinimizeNNZ()),
+                 numerical_features + ["clickout_id"]),
                 ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
-                ("numerical_ranking", RankFeatures(), numerical_features_for_ranking + ["clickout_id"]),
+                ("numerical_ranking", make_pipeline(RankFeatures(), MinimizeNNZ()),
+                 numerical_features_for_ranking + ["clickout_id"]),
                 ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=2), "properties"),
                 (
                     "last_filter",
@@ -127,11 +119,10 @@ def make_vectorizer_1(
 
 
 def make_vectorizer_2(
-    numerical_features=numerical_features_py,
-    numerical_features_for_ranking=numerical_features_for_ranking_py,
-    categorical_features=categorical_features_py,
+        numerical_features=numerical_features_py,
+        numerical_features_for_ranking=numerical_features_for_ranking_py,
+        categorical_features=categorical_features_py,
 ):
-    properties_map = joblib.load(PATH_TO_IMM)
     return make_pipeline(
         feature_eng,
         ColumnTransformer(
@@ -141,11 +132,12 @@ def make_vectorizer_2(
                     make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), KBinsDiscretizer()),
                     numerical_features,
                 ),
-                ("numerical_context", LagNumericalFeaturesWithinGroup(), numerical_features + ["clickout_id"]),
+                ("numerical_context", make_pipeline(LagNumericalFeaturesWithinGroup(), MinimizeNNZ()),
+                 numerical_features + ["clickout_id"]),
                 ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
                 (
                     "numerical_ranking",
-                    make_pipeline(RankFeatures(), StandardScaler()),
+                    make_pipeline(RankFeatures(), MinimizeNNZ()),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
                 ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=2), "properties"),
