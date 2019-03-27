@@ -10,16 +10,18 @@ from scipy.sparse import load_npz, save_npz
 
 
 class VectorizeChunks:
-    def __init__(self, vectorizer, input_files, output_folder, n_jobs=-2):
+    def __init__(self, vectorizer, input_files, output_folder, join_only=False, n_jobs=-2):
         self.vectorizer = vectorizer
         self.input_files = input_files
         self.output_folder = output_folder
+        self.join_only = join_only
         self.n_jobs = n_jobs
 
     def vectorize_all(self):
         # fit vectorizers using the last chunk (I guess the test distribution is more important than training)
-        df = pd.read_csv(sorted(glob.glob(self.input_files))[-1])
-        self.vectorizer.fit(df)
+        if not self.join_only:
+            df = pd.read_csv(sorted(glob.glob(self.input_files))[-1])
+            self.vectorizer.fit(df)
         filenames = Parallel(n_jobs=self.n_jobs)(
             delayed(self.vectorize_one)(fn) for fn in sorted(glob.glob(self.input_files))
         )
@@ -28,30 +30,27 @@ class VectorizeChunks:
         self.save_to_one_flie_csrs(csr_fns)
 
     def save_to_one_file_metadata(self, fns):
-        dfs = [pd.read_hdf(fn, key="data") for fn in fns]
+        dfs = [pd.read_hdf(os.path.join(self.output_folder, "chunks", fn), key="data") for fn in fns]
         df = pd.concat(dfs, axis=0)
         df.to_hdf(os.path.join(self.output_folder, "events_sorted_trans.h5"), key="data", mode="w")
+        gc.collect()
 
     def save_to_one_flie_csrs(self, fns):
         mats = [load_npz(os.path.join(self.output_folder, "chunks", fn)) for fn in fns]
         mat = sparse.vstack(mats)
         save_npz(os.path.join(self.output_folder, "events_sorted_trans_features.npz"), mat)
-
-    def load_chunks(self, filenames):
-        dfs = []
-        mats = []
-        for fn_csv, fn_npz in filenames:
-            dfs.append(pd.read_csv(os.path.join(self.output_folder, "chunks", fn_csv)))
-            mats.append(load_npz(os.path.join(self.output_folder, "chunks", fn_npz)))
-        return dfs, mats
+        gc.collect()
 
     def vectorize_one(self, fn):
         print(fn)
-        df = pd.read_csv(fn)
-        mat = self.vectorizer.transform(df)
-
         fname_h5 = fn.split("/")[-1].replace(".csv", ".h5")
         fname_npz = fn.split("/")[-1].replace(".csv", ".npz")
+
+        if self.join_only:
+            return (fname_h5, fname_npz)
+
+        df = pd.read_csv(fn)
+        mat = self.vectorizer.transform(df)
 
         df[
             [
@@ -80,7 +79,8 @@ if __name__ == "__main__":
         vectorizer=make_vectorizer_1(),
         input_files="../../data/events_sorted_trans_chunks/raw_csv/events_sorted_trans_*.csv",
         output_folder="../../data/events_sorted_trans_chunks/vectorizer_1/",
-        n_jobs=12,
+        join_only=True,
+        n_jobs=16,
     )
     vectorize_chunks.vectorize_all()
 
@@ -88,6 +88,6 @@ if __name__ == "__main__":
         vectorizer=make_vectorizer_2(),
         input_files="../../data/events_sorted_trans_chunks/raw_csv/events_sorted_trans_*.csv",
         output_folder="../../data/events_sorted_trans_chunks/vectorizer_2/",
-        n_jobs=12,
+        n_jobs=16,
     )
     vectorize_chunks.vectorize_all()
