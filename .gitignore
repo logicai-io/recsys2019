@@ -117,5 +117,6 @@ src/recsys/*.ipynb
 *.joblib
 *.parquet
 *.feather
+*.npz
 
 notebooks_temp

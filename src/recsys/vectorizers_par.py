@@ -10,8 +10,8 @@ from recsys.transformers import (
     PATH_TO_IMM,
 )
 from sklearn.compose import ColumnTransformer
-from sklearn.feature_extraction import DictVectorizer
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction import DictVectorizer, FeatureHasher
+from sklearn.feature_extraction.text import CountVectorizer, HashingVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
@@ -98,7 +98,6 @@ def make_vectorizer_1(
     numerical_features=numerical_features_py,
     numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
-    properties_map = joblib.load(PATH_TO_IMM)
     return make_pipeline(
         feature_eng,
         ColumnTransformer(
@@ -109,22 +108,26 @@ def make_vectorizer_1(
                     numerical_features,
                 ),
                 ("numerical_context", LagNumericalFeaturesWithinGroup(), numerical_features + ["clickout_id"]),
-                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
+                ("categorical", make_pipeline(PandasToRecords(), FeatureHasher(n_features=2048)), categorical_features),
                 ("numerical_ranking", RankFeatures(), numerical_features_for_ranking + ["clickout_id"]),
                 (
                     "properties",
-                    LazyCountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5, document_map=properties_map),
+                    HashingVectorizer(tokenizer=lambda x: x, lowercase=False, n_features=2048),
                     "properties",
                 ),
                 (
                     "last_filter",
-                    CountVectorizer(
-                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=5
+                    HashingVectorizer(
+                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), n_features=2048
                     ),
                     "last_filter",
                 ),
-                ("last_10_actions", CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5), "last_10_actions"),
-                ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
+                (
+                    "last_10_actions",
+                    HashingVectorizer(ngram_range=(1, 5), tokenizer=list, n_features=2048),
+                    "last_10_actions",
+                ),
+                ("last_event_ts_dict", FeatureHasher(n_features=2048), "last_event_ts_dict"),
             ]
         ),
     )
@@ -146,7 +149,7 @@ def make_vectorizer_2(
                     numerical_features,
                 ),
                 ("numerical_context", LagNumericalFeaturesWithinGroup(), numerical_features + ["clickout_id"]),
-                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
+                ("categorical", make_pipeline(PandasToRecords(), FeatureHasher(n_features=2048)), categorical_features),
                 (
                     "numerical_ranking",
                     make_pipeline(RankFeatures(), StandardScaler()),
@@ -154,18 +157,22 @@ def make_vectorizer_2(
                 ),
                 (
                     "properties",
-                    LazyCountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5, document_map=properties_map),
+                    HashingVectorizer(tokenizer=lambda x: x, lowercase=False, n_features=2048),
                     "properties",
                 ),
                 (
                     "last_filter",
-                    CountVectorizer(
-                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=5
+                    HashingVectorizer(
+                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), n_features=2048
                     ),
                     "last_filter",
                 ),
-                ("last_10_actions", CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5), "last_10_actions"),
-                ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
+                (
+                    "last_10_actions",
+                    HashingVectorizer(ngram_range=(1, 5), tokenizer=list, n_features=128),
+                    "last_10_actions",
+                ),
+                ("last_event_ts_dict", FeatureHasher(n_features=2048), "last_event_ts_dict"),
             ]
         ),
     )

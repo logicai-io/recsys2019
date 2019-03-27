@@ -2,6 +2,7 @@ import json
 import pathlib
 
 import arrow
+import joblib
 import numpy as np
 import pandas as pd
 from recsys.constants import COUNTRY_CODES
@@ -15,6 +16,7 @@ METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_
 
 class FeatureEng(BaseEstimator, TransformerMixin):
     def __init__(self):
+        self.imm = joblib.load(PATH_TO_IMM)
         self.metadata_dense = reduce_mem_usage(pd.read_csv(METADATA_DENSE).fillna(0))
 
     def fit(self, X, y=None):
@@ -27,7 +29,7 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (X["clickout_user_item_impressions"] + 1)
         X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (X["last_poi_item_impressions"] + 1)
-        X["properties"] = X["item_id"].values
+        X["properties"] = [str(x) for x in X["item_id"].map(self.imm)]
         X = pd.merge(X, self.metadata_dense, how="left", on="item_id")
         X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)
         X["is_rank_greater_than_prv_click"] = (X["rank"] > X["last_item_index"]).astype(np.int32)

@@ -26,7 +26,7 @@ class Model:
         with timer("vectorizing train"):
             mat_train = self.vectorizer.fit_transform(df_train)
             print("Train shape", mat_train.shape)
-        with timer('vectorinzg val'):
+        with timer("vectorinzg val"):
             mat_val = self.vectorizer.transform(df_val)
             print("Val shape", mat_val.shape)
 
@@ -37,7 +37,7 @@ class Model:
                 )
             else:
                 self.model.fit(mat_train, df_train["was_clicked"].values)
-        
+
         if self.is_prob:
             val_pred = self.model.predict_proba(mat_val)[:, 1]
             if validate:
@@ -142,4 +142,3 @@ class ModelTrain:
             print("Training on {} users".format(df_all["user_id"].nunique()))
             print("Training data shape", df_all.shape)
         return df_all, df_test
-
