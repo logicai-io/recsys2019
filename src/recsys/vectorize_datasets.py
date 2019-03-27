@@ -2,11 +2,11 @@ import gc
 import glob
 import os
 
+import h5sparse
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2
-from scipy import sparse
 from scipy.sparse import load_npz, save_npz
 
 
@@ -38,17 +38,19 @@ class VectorizeChunks:
         gc.collect()
 
     def save_to_one_flie_csrs(self, fns):
-        matc = None
+        h5f = h5sparse.File(os.path.join(self.output_folder, "events_sorted_trans_features.h5"))
+        first = True
         for fn in fns:
             print(fn)
-            mat = load_npz(os.path.join(self.output_folder, "chunks", fn)).astype(np.float16)
-            if matc is not None:
-                matc = sparse.vstack([matc, mat])
+            mat = load_npz(os.path.join(self.output_folder, "chunks", fn)).astype(np.float32)
+            if first:
+                h5f.create_dataset('matrix', data=mat, chunks=(1000000,),
+                                   maxshape=(None,))
+                first = False
             else:
-                matc = mat
+                h5f['matrix'].append(mat)
             gc.collect()
-        save_npz(os.path.join(self.output_folder, "events_sorted_trans_features.npz"), matc.astype(np.float32))
-        gc.collect()
+        h5f.close()
 
     def vectorize_one(self, fn):
         print(fn)
