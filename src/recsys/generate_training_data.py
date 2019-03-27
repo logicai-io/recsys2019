@@ -415,7 +415,9 @@ class FeatureGenerator:
         dr = DictReader(inp)
         out = open("../../data/events_sorted_trans.csv", "wt")
         first_row = True
-        for clickout_id, row in enumerate(tqdm(dr)):
+        for clickout_id, row in enumerate(dr):
+            if clickout_id % 100000 == 0:
+                print(clickout_id)
             if self.limit and clickout_id > self.limit:
                 break
             user_id = row["user_id"]

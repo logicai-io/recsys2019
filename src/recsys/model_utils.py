@@ -25,8 +25,10 @@ class Model:
     def fit_and_predict(self, df_train, df_val, validate=False):
         with timer('vectorizing train'):
             mat_train = self.vectorizer.fit_transform(df_train)
+            print("Train shape", mat_train.shape)
         with timer('vectorinzg val'):
             mat_val = self.vectorizer.transform(df_val)
+            print("Val shape", mat_val.shape)
 
         with timer('fitting model'):
             if isinstance(self.model, LGBMRanker):
@@ -35,6 +37,7 @@ class Model:
                 )
             else:
                 self.model.fit(mat_train, df_train["was_clicked"].values)
+        
         if self.is_prob:
             val_pred = self.model.predict_proba(mat_val)[:, 1]
             if validate:
@@ -119,6 +122,8 @@ class ModelTrain:
         with timer("splitting timebased"):
             df_train = df_all[df_all["is_val"] == 0]
             df_val = df_all[df_all["is_val"] == 1]
+            print("df_train shape", df_train.shape)
+            print("df_val shape", df_val.shape)
         return df_train, df_val
 
     def load_train_test(self, n_users):
@@ -137,3 +142,4 @@ class ModelTrain:
             print("Training on {} users".format(df_all["user_id"].nunique()))
             print("Training data shape", df_all.shape)
         return df_all, df_test
+
