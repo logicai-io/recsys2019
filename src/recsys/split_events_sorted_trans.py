@@ -17,7 +17,6 @@ reader = DictReader(open("../../data/events_sorted_trans.csv"))
 for i, row in tqdm(enumerate(reader)):
     if i == 0:
         for output in outputs:
-            print(row.keys())
             output.fieldnames = row.keys()
             output.writeheader()
     find = int(row["clickout_id"]) % 30

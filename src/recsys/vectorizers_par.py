@@ -138,7 +138,6 @@ def make_vectorizer_2(
     numerical_features_for_ranking=numerical_features_for_ranking_py,
     categorical_features=categorical_features_py,
 ):
-    properties_map = joblib.load(PATH_TO_IMM)
     return make_pipeline(
         feature_eng,
         ColumnTransformer(
