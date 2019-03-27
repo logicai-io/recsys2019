@@ -2,6 +2,7 @@ import gc
 import glob
 import os
 
+import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2
@@ -21,6 +22,7 @@ class VectorizeChunks:
         # fit vectorizers using the last chunk (I guess the test distribution is more important than training)
         if not self.join_only:
             df = pd.read_csv(sorted(glob.glob(self.input_files))[-1])
+            self.vectorizer = self.vectorizer()
             self.vectorizer.fit(df)
         filenames = Parallel(n_jobs=self.n_jobs)(
             delayed(self.vectorize_one)(fn) for fn in sorted(glob.glob(self.input_files))
@@ -36,9 +38,16 @@ class VectorizeChunks:
         gc.collect()
 
     def save_to_one_flie_csrs(self, fns):
-        mats = [load_npz(os.path.join(self.output_folder, "chunks", fn)) for fn in fns]
-        mat = sparse.vstack(mats)
-        save_npz(os.path.join(self.output_folder, "events_sorted_trans_features.npz"), mat)
+        matc = None
+        for fn in fns:
+            print(fn)
+            mat = load_npz(os.path.join(self.output_folder, "chunks", fn)).astype(np.float16)
+            if matc is not None:
+                matc = sparse.vstack([matc, mat])
+            else:
+                matc = mat
+            gc.collect()
+        save_npz(os.path.join(self.output_folder, "events_sorted_trans_features.npz"), matc.astype(np.float32))
         gc.collect()
 
     def vectorize_one(self, fn):
@@ -76,18 +85,17 @@ class VectorizeChunks:
 
 if __name__ == "__main__":
     vectorize_chunks = VectorizeChunks(
-        vectorizer=make_vectorizer_1(),
+        vectorizer=lambda: make_vectorizer_1(),
         input_files="../../data/events_sorted_trans_chunks/raw_csv/events_sorted_trans_*.csv",
         output_folder="../../data/events_sorted_trans_chunks/vectorizer_1/",
-        join_only=True,
-        n_jobs=16,
+        n_jobs=12,
     )
     vectorize_chunks.vectorize_all()
 
     vectorize_chunks = VectorizeChunks(
-        vectorizer=make_vectorizer_2(),
+        vectorizer=lambda: make_vectorizer_2(),
         input_files="../../data/events_sorted_trans_chunks/raw_csv/events_sorted_trans_*.csv",
         output_folder="../../data/events_sorted_trans_chunks/vectorizer_2/",
-        n_jobs=16,
+        n_jobs=12,
     )
     vectorize_chunks.vectorize_all()
