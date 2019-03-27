@@ -23,14 +23,14 @@ class Model:
         return df["pred_norm"].values
 
     def fit_and_predict(self, df_train, df_val, validate=False):
-        with timer('vectorizing train'):
+        with timer("vectorizing train"):
             mat_train = self.vectorizer.fit_transform(df_train)
             print("Train shape", mat_train.shape)
         with timer('vectorinzg val'):
             mat_val = self.vectorizer.transform(df_val)
             print("Val shape", mat_val.shape)
 
-        with timer('fitting model'):
+        with timer("fitting model"):
             if isinstance(self.model, LGBMRanker):
                 self.model.fit(
                     mat_train, df_train["was_clicked"].values, group=group_lengths(df_train["clickout_id"].values)
@@ -44,10 +44,10 @@ class Model:
                 train_pred = self.model.predict_proba(mat_train)[:, 1]
                 self.evaluate(df_train, df_val, train_pred, val_pred)
         else:
-            print('Predicting validation')
+            print("Predicting validation")
             val_pred = self.model.predict(mat_val)
             if validate:
-                print('Predicting train')
+                print("Predicting train")
                 train_pred = self.model.predict(mat_train)
                 self.evaluate(df_train, df_val, train_pred, val_pred)
         self.save_predictions(df_val, val_pred, validate)

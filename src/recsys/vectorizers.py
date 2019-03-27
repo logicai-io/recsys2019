@@ -1,3 +1,5 @@
+import joblib
+from recsys.lazy_count_vectorizer import LazyCountVectorizer
 from recsys.transformers import (
     FeatureEng,
     LagNumericalFeaturesWithinGroup,
@@ -5,6 +7,7 @@ from recsys.transformers import (
     PandasToRecords,
     RankFeatures,
     ToCSR,
+    PATH_TO_IMM,
 )
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
@@ -87,14 +90,17 @@ numerical_features_for_ranking_py = [
 ]
 categorical_features_py = ["device", "platform", "last_sort_order", "last_filter_selection", "country", "hotel_cat"]
 
+feature_eng = FeatureEng()
+
 
 def make_vectorizer_1(
     categorical_features=categorical_features_py,
     numerical_features=numerical_features_py,
     numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
+    properties_map = joblib.load(PATH_TO_IMM)
     return make_pipeline(
-        FeatureEng(),
+        feature_eng,
         ColumnTransformer(
             [
                 (
@@ -105,7 +111,11 @@ def make_vectorizer_1(
                 ("numerical_context", LagNumericalFeaturesWithinGroup(), numerical_features + ["clickout_id"]),
                 ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
                 ("numerical_ranking", RankFeatures(), numerical_features_for_ranking + ["clickout_id"]),
-                ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5), "properties"),
+                (
+                    "properties",
+                    LazyCountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5, document_map=properties_map),
+                    "properties",
+                ),
                 (
                     "last_filter",
                     CountVectorizer(
@@ -125,8 +135,9 @@ def make_vectorizer_2(
     numerical_features_for_ranking=numerical_features_for_ranking_py,
     categorical_features=categorical_features_py,
 ):
+    properties_map = joblib.load(PATH_TO_IMM)
     return make_pipeline(
-        FeatureEng(),
+        feature_eng,
         ColumnTransformer(
             [
                 (
@@ -141,7 +152,11 @@ def make_vectorizer_2(
                     make_pipeline(RankFeatures(), StandardScaler()),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
-                ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5), "properties"),
+                (
+                    "properties",
+                    LazyCountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5, document_map=properties_map),
+                    "properties",
+                ),
                 (
                     "last_filter",
                     CountVectorizer(
