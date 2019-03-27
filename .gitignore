@@ -118,5 +118,6 @@ src/recsys/*.ipynb
 *.parquet
 *.feather
 *.npz
+*.h5
 
 notebooks_temp
