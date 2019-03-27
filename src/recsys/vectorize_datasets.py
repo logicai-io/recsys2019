@@ -1,5 +1,6 @@
 import glob
 import os
+import gc
 
 import pandas as pd
 from joblib import Parallel, delayed
@@ -17,12 +18,13 @@ class VectorizeChunks:
 
     def vectorize_all(self):
         # fit vectorizers using the first chunk
-        df = pd.read_csv(glob.glob(self.input_files)[0])
+        df = pd.read_csv(sorted(glob.glob(self.input_files))[-1])
         self.vectorizer.fit(df)
 
-        filenames = Parallel(n_jobs=self.n_jobs, backend="threading")(
-            delayed(self.vectorize_one)(fn) for fn in glob.glob(self.input_files)
+        filenames = Parallel(n_jobs=self.n_jobs)(                                         
+            delayed(self.vectorize_one)(fn) for fn in sorted(glob.glob(self.input_files))
         )
+        #filenames = [self.vectorize_one(fn) for fn in sorted(glob.glob(self.input_files))]
         dfs, mats = self.load_chunks(filenames)
         self.save_to_one_file(dfs, mats)
 
@@ -65,6 +67,8 @@ class VectorizeChunks:
 
         save_npz(os.path.join(self.output_folder, "chunks", fname_npz), mat)
 
+        gc.collect()
+
         return (fname_csv, fname_npz)
 
 
@@ -72,15 +76,15 @@ if __name__ == "__main__":
     vectorize_chunks = VectorizeChunks(
         vectorizer=make_vectorizer_1(),
         input_files="../../data/events_sorted_trans_chunks/raw_csv/events_sorted_trans_*.csv",
-        output_folder="../../data/events_sorted_trans_chunks/vectorizer_1/",
-        n_jobs=8,
+        output_folder="../../data/events_sorted_trans_chunks/vectorizer_1_parallel/",
+        n_jobs=12,
     )
     vectorize_chunks.vectorize_all()
 
-    vectorize_chunks = VectorizeChunks(
-        vectorizer=make_vectorizer_2(),
-        input_files="../../data/events_sorted_trans_chunks/raw_csv/events_sorted_trans_*.csv",
-        output_folder="../../data/events_sorted_trans_chunks/vectorizer_2/",
-        n_jobs=8,
-    )
-    vectorize_chunks.vectorize_all()
+    #vectorize_chunks = VectorizeChunks(
+    #    vectorizer=make_vectorizer_2(),
+    #    input_files="../../data/events_sorted_trans_chunks/raw_csv/events_sorted_trans_*.csv",
+    #    output_folder="../../data/events_sorted_trans_chunks/vectorizer_2/",
+    #    n_jobs=16,
+    #)
+    #vectorize_chunks.vectorize_all()
