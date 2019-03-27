@@ -16,25 +16,22 @@ METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_
 
 class FeatureEng(BaseEstimator, TransformerMixin):
     def __init__(self):
-        self.imm = None
-        self.metadata_dense = None
+        pass
 
     def fit(self, X, y=None):
         return self
 
     def transform(self, X):
-        if self.imm is None:
-            self.imm = joblib.load(PATH_TO_IMM)
-        if self.metadata_dense is None:
-            self.metadata_dense = reduce_mem_usage(pd.read_csv(METADATA_DENSE).fillna(0))
+        imm = joblib.load(PATH_TO_IMM)
+        metadata_dense = reduce_mem_usage(pd.read_csv(METADATA_DENSE).fillna(0))
         X["country"] = X["city"].map(lambda x: x.split(",")[-1].strip())
         X["country_eq_platform"] = (X["country"].map(COUNTRY_CODES) == X["platform"]).astype(np.int32)
         X["last_event_ts_dict"] = X["last_event_ts"].map(json.loads)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (X["clickout_user_item_impressions"] + 1)
         X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (X["last_poi_item_impressions"] + 1)
-        X["properties"] = [str(x) for x in X["item_id"].map(self.imm)]
-        X = pd.merge(X, self.metadata_dense, how="left", on="item_id")
+        X["properties"] = [str(x) for x in X["item_id"].map(imm)]
+        X = pd.merge(X, metadata_dense, how="left", on="item_id")
         X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)
         X["is_rank_greater_than_prv_click"] = (X["rank"] > X["last_item_index"]).astype(np.int32)
         X["last_filter"].fillna("", inplace=True)
