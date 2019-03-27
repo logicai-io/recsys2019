@@ -111,19 +111,15 @@ def make_vectorizer_1(
                 ("numerical_context", LagNumericalFeaturesWithinGroup(), numerical_features + ["clickout_id"]),
                 ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
                 ("numerical_ranking", RankFeatures(), numerical_features_for_ranking + ["clickout_id"]),
-                (
-                    "properties",
-                    LazyCountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5, document_map=properties_map),
-                    "properties",
-                ),
+                ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=2), "properties"),
                 (
                     "last_filter",
                     CountVectorizer(
-                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=5
+                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=2
                     ),
                     "last_filter",
                 ),
-                ("last_10_actions", CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5), "last_10_actions"),
+                ("last_10_actions", CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=2), "last_10_actions"),
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
             ]
         ),
@@ -152,19 +148,15 @@ def make_vectorizer_2(
                     make_pipeline(RankFeatures(), StandardScaler()),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
-                (
-                    "properties",
-                    LazyCountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=5, document_map=properties_map),
-                    "properties",
-                ),
+                ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=2), "properties"),
                 (
                     "last_filter",
                     CountVectorizer(
-                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=5
+                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=2
                     ),
                     "last_filter",
                 ),
-                ("last_10_actions", CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=5), "last_10_actions"),
+                ("last_10_actions", CountVectorizer(ngram_range=(1, 5), tokenizer=list, min_df=2), "last_10_actions"),
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
             ]
         ),

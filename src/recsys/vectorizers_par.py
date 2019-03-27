@@ -1,17 +1,13 @@
-import joblib
-from recsys.lazy_count_vectorizer import LazyCountVectorizer
 from recsys.transformers import (
     FeatureEng,
     LagNumericalFeaturesWithinGroup,
     PandasToNpArray,
     PandasToRecords,
     RankFeatures,
-    ToCSR,
-    PATH_TO_IMM,
 )
 from sklearn.compose import ColumnTransformer
-from sklearn.feature_extraction import DictVectorizer, FeatureHasher
-from sklearn.feature_extraction.text import CountVectorizer, HashingVectorizer
+from sklearn.feature_extraction import FeatureHasher
+from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
@@ -102,14 +98,14 @@ def make_vectorizer_1(
         feature_eng,
         ColumnTransformer(
             [
-                (
-                    "numerical",
-                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), StandardScaler()),
-                    numerical_features,
-                ),
-                ("numerical_context", LagNumericalFeaturesWithinGroup(), numerical_features + ["clickout_id"]),
-                ("categorical", make_pipeline(PandasToRecords(), FeatureHasher(n_features=2048)), categorical_features),
-                ("numerical_ranking", RankFeatures(), numerical_features_for_ranking + ["clickout_id"]),
+                # (
+                #     "numerical",
+                #     make_pipeline(PandasToNpArray(), SimpleImputer(strategy="constant", fill_value=-1000)),
+                #     numerical_features,
+                # ),
+                # ("numerical_context", LagNumericalFeaturesWithinGroup(), numerical_features + ["clickout_id"]),
+                # ("categorical", make_pipeline(PandasToRecords(), FeatureHasher(n_features=2048)), categorical_features),
+                # ("numerical_ranking", RankFeatures(), numerical_features_for_ranking + ["clickout_id"]),
                 (
                     "properties",
                     HashingVectorizer(tokenizer=lambda x: x, lowercase=False, n_features=2048),
@@ -124,7 +120,7 @@ def make_vectorizer_1(
                 ),
                 (
                     "last_10_actions",
-                    HashingVectorizer(ngram_range=(1, 5), tokenizer=list, n_features=2048),
+                    HashingVectorizer(ngram_range=(1, 5), tokenizer=list, n_features=4096),
                     "last_10_actions",
                 ),
                 ("last_event_ts_dict", FeatureHasher(n_features=2048), "last_event_ts_dict"),
@@ -144,16 +140,14 @@ def make_vectorizer_2(
             [
                 (
                     "numerical",
-                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), KBinsDiscretizer()),
+                    make_pipeline(
+                        PandasToNpArray(), SimpleImputer(strategy="constant", fill_value=-1000), KBinsDiscretizer()
+                    ),
                     numerical_features,
                 ),
                 ("numerical_context", LagNumericalFeaturesWithinGroup(), numerical_features + ["clickout_id"]),
                 ("categorical", make_pipeline(PandasToRecords(), FeatureHasher(n_features=2048)), categorical_features),
-                (
-                    "numerical_ranking",
-                    make_pipeline(RankFeatures(), StandardScaler()),
-                    numerical_features_for_ranking + ["clickout_id"],
-                ),
+                ("numerical_ranking", make_pipeline(RankFeatures()), numerical_features_for_ranking + ["clickout_id"]),
                 (
                     "properties",
                     HashingVectorizer(tokenizer=lambda x: x, lowercase=False, n_features=2048),
@@ -168,7 +162,7 @@ def make_vectorizer_2(
                 ),
                 (
                     "last_10_actions",
-                    HashingVectorizer(ngram_range=(1, 5), tokenizer=list, n_features=128),
+                    HashingVectorizer(ngram_range=(1, 5), tokenizer=list, n_features=4096),
                     "last_10_actions",
                 ),
                 ("last_event_ts_dict", FeatureHasher(n_features=2048), "last_event_ts_dict"),
