@@ -44,7 +44,7 @@ class VectorizeChunks:
             print(fn)
             mat = load_npz(os.path.join(self.output_folder, "chunks", fn)).astype(np.float32)
             if first:
-                h5f.create_dataset('matrix', data=mat, chunks=(1000000,),
+                h5f.create_dataset('matrix', data=mat, chunks=(10000000,),
                                    maxshape=(None,))
                 first = False
             else:
@@ -86,18 +86,18 @@ class VectorizeChunks:
 
 
 if __name__ == "__main__":
-    vectorize_chunks = VectorizeChunks(
-        vectorizer=lambda: make_vectorizer_1(),
-        input_files="../../data/events_sorted_trans_chunks/raw_csv/events_sorted_trans_*.csv",
-        output_folder="../../data/events_sorted_trans_chunks/vectorizer_1/",
-        n_jobs=12,
-    )
-    vectorize_chunks.vectorize_all()
+    #vectorize_chunks = VectorizeChunks(
+    #    vectorizer=lambda: make_vectorizer_1(),
+    #    input_files="../../data/events_sorted_trans_chunks/raw_csv/events_sorted_trans_*.csv",
+    #    output_folder="../../data/events_sorted_trans_chunks/vectorizer_1/",
+    #    n_jobs=10,
+    #)
+    #vectorize_chunks.vectorize_all()
 
     vectorize_chunks = VectorizeChunks(
         vectorizer=lambda: make_vectorizer_2(),
         input_files="../../data/events_sorted_trans_chunks/raw_csv/events_sorted_trans_*.csv",
         output_folder="../../data/events_sorted_trans_chunks/vectorizer_2/",
-        n_jobs=12,
+        n_jobs=10,
     )
     vectorize_chunks.vectorize_all()
