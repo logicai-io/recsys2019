@@ -14,10 +14,11 @@ with timer('reading data'):
               'matrix'][:]
 
 with timer('splitting data'):
-    train_users = set(meta[meta["is_test"] == 1].user_id.unique())
-    train_ind = \
-        np.where((meta.user_id.isin(train_users)) & (meta.src == "test") & (meta.is_test == 0) & (meta.is_val == 0))[0]
-    val_ind = np.where(meta.is_val == 1)[0]
+    # train_users = set(meta[meta["is_test"] == 1].user_id.unique())
+    # train_ind = \
+    #     np.where((meta.user_id.isin(train_users)) & (meta.src == "test") & (meta.is_test == 0) & (meta.is_val == 0))[0]
+    train_ind = np.where((meta.is_val == 0) & (meta.is_test == 0))[0]
+    val_ind = np.where((meta.is_val == 1) & (meta.is_test == 0))[0]
     print(f"Train shape {train_ind.shape[0]} Val shape {val_ind.shape[0]}")
     meta_train = meta.iloc[train_ind]
     meta_val = meta.iloc[val_ind]
