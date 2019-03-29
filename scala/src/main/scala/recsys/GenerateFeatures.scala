@@ -9,8 +9,6 @@ import recsys.Types._
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
-import scala.collection.parallel.ForkJoinTaskSupport
-import scala.concurrent.forkjoin.ForkJoinPool
 
 object GenerateFeatures {
 
@@ -26,7 +24,7 @@ object GenerateFeatures {
     "search for poi"
   )
 
-  val ACTIONS_WITH_ITEM_REF: mutable.Set[String] = mutable.Set(
+  val ACTIONS_WITH_ITEM_REF = List(
     "search for item",
     "interaction item info",
     "interaction item image",
@@ -45,9 +43,9 @@ object GenerateFeatures {
   private var lastFilter = mutable.Map[UserId, String]().withDefaultValue("unk")
   private var lastPoi    = mutable.Map[UserId, String]().withDefaultValue("unk")
   private var itemsWithUserInteractionsSet =
-    mutable.Map[UserId, mutable.Set[ItemId]]()
+    mutable.Map[UserId, mutable.ArrayBuffer[ItemId]]()
   private var itemsWithUserSessionInteractionsSet =
-    mutable.Map[(UserId, SessionId), mutable.Set[ItemId]]()
+    mutable.Map[(UserId, SessionId), mutable.ArrayBuffer[ItemId]]()
   private var actionTypesTimestamps =
     mutable.Map[(UserId, ActionType), Timestamp]()
   private var actionTypesItemTimestamps =
@@ -60,12 +58,12 @@ object GenerateFeatures {
     mutable.Map[(UserId, ActionType), ItemId]().withDefaultValue(DummyItem)
 
   private val itemProperties = readProperties("../data/item_metadata.csv")
-  private val propFreq       = propertiesFreq(itemProperties)
+//  private val propFreq       = propertiesFreq(itemProperties)
 
   def main(args: Array[String]) {
 //    val taskSupport = new ForkJoinTaskSupport(new ForkJoinPool(8))
 
-    val eventsReader = getCSVReader("../data/events_sorted.csv")
+    val eventsReader = getCSVReader("../data/events_sorted_250k.csv")
     val writer       = getWriter("../data/events_sorted_trans_scala.csv")
 
     val pb            = new ProgressBar("Calculating features", 19715327)
@@ -79,7 +77,7 @@ object GenerateFeatures {
 //        val itemsPar = row.items.par
 //        itemsPar.tasksupport = taskSupport
         val itemsFeatures =
-          row.items.map(item => extractFeatures(clickoutId, row, item)).toArray
+          row.items.map(item => extractFeatures(clickoutId, row, item))
         if (!headerWritten) {
           writer.writeHeaders(
             itemsFeatures.head.keys.toList.map(normalizeColumnName)
@@ -230,30 +228,37 @@ object GenerateFeatures {
     if (itemA == DummyItem) {
       0.0
     } else {
-      val itemAProp = itemProperties.getOrElse(itemA, Set[String]())
-      val itemBProp = itemProperties.getOrElse(itemB, Set[String]())
-
-      val intersection = itemAProp intersect itemBProp
-      val union        = itemAProp union itemBProp
-
-      if (freq) {
-        intersection
-          .map(1.0 / propFreq(_))
-          .sum / union.map(1.0 / propFreq(_)).sum
+      val itemAProp = itemProperties.getOrElse(itemA, Set[Int]())
+      if (itemAProp.nonEmpty) {
+        val itemBProp = itemProperties.getOrElse(itemB, Set[Int]())
+        if (itemBProp.nonEmpty) {
+          val intersection = itemAProp intersect itemBProp
+          val union        = itemAProp union itemBProp
+          if (freq) {
+            //        intersection
+            //          .map(1.0 / propFreq(_))
+            //          .sum / union.map(1.0 / propFreq(_)).sum
+            0.0
+          } else {
+            intersection.size.toDouble / (union.size + 1)
+          }
+        } else {
+          0.0
+        }
       } else {
-        intersection.size.toDouble / (union.size + 1)
+        0.0
       }
     }
   }
 
   private def calcAvgItemSim[K](
-      map: mutable.Map[K, mutable.Set[ItemId]],
+      map: mutable.Map[K, mutable.ArrayBuffer[ItemId]],
       key: K,
       item: Item
   ) = {
     if (map contains key) {
       val propItem        = itemProperties(item.itemId)
-      val prvInteractions = map(key)
+      val prvInteractions = map(key).distinct
       if (propItem.nonEmpty & prvInteractions.nonEmpty) {
         val sim = prvInteractions.map(itemProperties).map { prvItem =>
           prvItem.intersect(propItem).size.toDouble / (prvItem
@@ -270,14 +275,14 @@ object GenerateFeatures {
   }
 
   private def updateOrCreateSetMap[K, V](
-      map: mutable.Map[K, mutable.Set[V]],
+      map: mutable.Map[K, mutable.ArrayBuffer[V]],
       key: K,
       value: V
-  ) = {
+  ): Unit = {
     if (!map.contains(key)) {
-      map(key) = mutable.Set[V]()
+      map(key) = mutable.ArrayBuffer[V]()
     }
-    map(key).add(value)
+    map(key).append(value)
   }
 
   private def extractRowObj(rawRow: Record, actionType: String) = {
@@ -359,11 +364,17 @@ object GenerateFeatures {
   private def readProperties(path: String) = {
     val itemPropertiesReader = getCSVReader(path)
     val itemProperties =
-      mutable.Map[ItemId, Set[String]]().withDefaultValue(Set[String]())
+      mutable.OpenHashMap[ItemId, mutable.BitSet]().withDefaultValue(mutable.BitSet())
+    val propMap = mutable.Map[String, Int]()
     for (row <- itemPropertiesReader) {
       val itemId     = row.getInt("item_id")
-      val properties = row.getString("properties").split('|').toSet
-      itemProperties(itemId) = properties
+      val properties = row.getString("properties").split('|')
+      for (prop <- properties) {
+        if (!propMap.contains(prop)) {
+          propMap(prop) = propMap.size
+        }
+      }
+      itemProperties(itemId) = mutable.BitSet(properties.map(propMap): _*)
     }
     itemProperties
   }

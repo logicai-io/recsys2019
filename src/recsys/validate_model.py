@@ -40,14 +40,14 @@ def main(data, n_users, n_trees, n_jobs, n_debug, action, reduce_df_memory, load
                 "data_py_lgbclas",
                 make_vectorizer_1(),
                 LGBMClassifier(n_estimators=n_trees, n_jobs=n_jobs),
-                weight=0.715625,   
+                weight=0.715,
                 is_prob=True,
             ),
             Model(
                 "data_py_lgbrank",
                 make_vectorizer_2(),
                 LGBMRanker(n_estimators=n_trees, n_jobs=n_jobs),
-                weight=0.22731734,
+                weight=0.227,
                 is_prob=False,
             ),
         ]

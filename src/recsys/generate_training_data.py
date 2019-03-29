@@ -11,6 +11,7 @@ ACTION_SHORTENER = {
     "clickout item": "b",
     "filter selection": "c",
     "interaction item deals": "d",
+    "interaction item rating": "j",
     "interaction item image": "e",
     "interaction item info": "f",
     "search for destination": "g",
@@ -23,6 +24,7 @@ ACTIONS_WITH_ITEM_REFERENCE = {
     "interaction item info",
     "interaction item image",
     "interaction item deals",
+    "interaction item rating",
     "clickout item",
 }
 
@@ -288,6 +290,20 @@ accumulators = [
         get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
     ),
     StatsAcc(
+        name="was_interaction_rating",
+        filter=lambda row: row["action_type"] == "interaction item rating",
+        acc={},
+        updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
+        get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
+    ),
+    StatsAcc(
+        name="interaction_rating_freq",
+        filter=lambda row: row["action_type"] == "interaction item rating",
+        acc=defaultdict(int),
+        updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
+        get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
+    ),
+    StatsAcc(
         name="was_interaction_info",
         filter=lambda row: row["action_type"] == "interaction item info",
         acc={},
@@ -398,10 +414,10 @@ class FeatureGenerator:
         inp = open("../../data/events_sorted.csv")
         dr = DictReader(inp)
         out = open("../../data/events_sorted_trans.csv", "wt")
-        # keeps track of item CTR
-        all_obs = []
         first_row = True
-        for clickout_id, row in enumerate(tqdm(dr)):
+        for clickout_id, row in enumerate(dr):
+            if clickout_id % 100000 == 0:
+                print(clickout_id)
             if self.limit and clickout_id > self.limit:
                 break
             user_id = row["user_id"]

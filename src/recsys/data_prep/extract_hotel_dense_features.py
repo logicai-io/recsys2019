@@ -36,7 +36,7 @@ def normalize_feature_name(name):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv("item_metadata.csv")
+    df = pd.read_csv("../../../data/item_metadata.csv")
     df["properties"] = df["properties"].str.split("|").map(set)
     df["n_properties"] = df["properties"].map(len)
     df["rating"] = densify(RATING_MAP, df["properties"])
@@ -44,4 +44,4 @@ if __name__ == "__main__":
     df["hotel_cat"] = densify(HOTEL_CAT, df["properties"])
     for f in IMPORTANT_FEATURES:
         df[normalize_feature_name(f)] = df["properties"].map(lambda p: f in p).astype(np.int)
-    df.drop("properties", axis=1).to_csv("item_metadata_dense.csv", index=False)
+    df.drop("properties", axis=1).to_csv("../../../data/item_metadata_dense.csv", index=False)

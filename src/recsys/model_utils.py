@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from lightgbm import LGBMRanker
-from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast
 from recsys.submission import group_clickouts
 from recsys.utils import group_lengths, reduce_mem_usage, timer
@@ -23,22 +22,31 @@ class Model:
         return df["pred_norm"].values
 
     def fit_and_predict(self, df_train, df_val, validate=False):
-        mat_train = self.vectorizer.fit_transform(df_train)
-        mat_val = self.vectorizer.transform(df_val)
-        if isinstance(self.model, LGBMRanker):
-            self.model.fit(
-                mat_train, df_train["was_clicked"].values, group=group_lengths(df_train["clickout_id"].values)
-            )
-        else:
-            self.model.fit(mat_train, df_train["was_clicked"].values)
+        with timer("vectorizing train"):
+            mat_train = self.vectorizer.fit_transform(df_train)
+            print("Train shape", mat_train.shape)
+        with timer("vectorinzg val"):
+            mat_val = self.vectorizer.transform(df_val)
+            print("Val shape", mat_val.shape)
+
+        with timer("fitting model"):
+            if isinstance(self.model, LGBMRanker):
+                self.model.fit(
+                    mat_train, df_train["was_clicked"].values, group=group_lengths(df_train["clickout_id"].values)
+                )
+            else:
+                self.model.fit(mat_train, df_train["was_clicked"].values)
+
         if self.is_prob:
             val_pred = self.model.predict_proba(mat_val)[:, 1]
             if validate:
                 train_pred = self.model.predict_proba(mat_train)[:, 1]
                 self.evaluate(df_train, df_val, train_pred, val_pred)
         else:
+            print("Predicting validation")
             val_pred = self.model.predict(mat_val)
             if validate:
+                print("Predicting train")
                 train_pred = self.model.predict(mat_train)
                 self.evaluate(df_train, df_val, train_pred, val_pred)
         self.save_predictions(df_val, val_pred, validate)
@@ -94,7 +102,7 @@ class ModelTrain:
         _, submission_df = group_clickouts(df_test)
         submission_df.to_csv("submission.csv", index=False)
 
-    def load_train_val(self, n_users, n_debug=None, train_on_test_users=True):
+    def load_train_val(self, n_users, n_debug=None):
         with timer("Reading training data"):
             if n_debug:
                 df_all = pd.read_csv(self.datapath, nrows=n_debug)
@@ -106,16 +114,18 @@ class ModelTrain:
                     train_users = set(
                         np.random.choice(df_all[df_all["is_test"] == 0].user_id.unique(), n_users, replace=False)
                     )
-                    if train_on_test_users:
-                        train_users |= set(df_all[df_all["is_test"] == 1].user_id.unique())
-                    df_all = df_all[(df_all.user_id.isin(train_users)) & (df_all.is_test == 0)]
+                    # select a frozen set of users' clickouts for validation
+                    df_all = df_all[(df_all.user_id.isin(train_users)) | (df_all.is_val == 1)]
             print("Training on {} users".format(df_all["user_id"].nunique()))
             print("Training data shape", df_all.shape)
         with timer("splitting timebased"):
-            df_train, df_val = split_by_timestamp(df_all)
+            df_train = df_all[df_all["is_val"] == 0]
+            df_val = df_all[df_all["is_val"] == 1]
+            print("df_train shape", df_train.shape)
+            print("df_val shape", df_val.shape)
         return df_train, df_val
 
-    def load_train_test(self, n_users, train_on_test_users=True):
+    def load_train_test(self, n_users):
         with timer("Reading training and testing data"):
             df_all = pd.read_csv(self.datapath)
             if self.reduce_df_memory:
@@ -125,8 +135,8 @@ class ModelTrain:
                 train_users = set(
                     np.random.choice(df_all[df_all["is_test"] == 0].user_id.unique(), n_users, replace=False)
                 )
-                if train_on_test_users:
-                    train_users |= set(df_all[df_all["is_test"] == 1].user_id.unique())
+                # always include all the users from the test set
+                train_users |= set(df_all[df_all["is_test"] == 1].user_id.unique())
                 df_all = df_all[(df_all.user_id.isin(train_users)) & (df_all.is_test == 0)]
             print("Training on {} users".format(df_all["user_id"].nunique()))
             print("Training data shape", df_all.shape)
