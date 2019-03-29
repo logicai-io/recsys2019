@@ -34,21 +34,20 @@ class VectorizeChunks:
     def save_to_one_file_metadata(self, fns):
         dfs = [pd.read_hdf(os.path.join(self.output_folder, "chunks", fn), key="data") for fn in fns]
         df = pd.concat(dfs, axis=0)
-        df.to_hdf(os.path.join(self.output_folder, "events_sorted_trans.h5"), key="data", mode="w")
+        df.to_hdf(os.path.join(self.output_folder, "meta.h5"), key="data", mode="w")
         gc.collect()
 
     def save_to_one_flie_csrs(self, fns):
-        h5f = h5sparse.File(os.path.join(self.output_folder, "events_sorted_trans_features.h5"))
+        h5f = h5sparse.File(os.path.join(self.output_folder, "Xcsr.h5"))
         first = True
         for fn in fns:
             print(fn)
             mat = load_npz(os.path.join(self.output_folder, "chunks", fn)).astype(np.float32)
             if first:
-                h5f.create_dataset('matrix', data=mat, chunks=(10000000,),
-                                   maxshape=(None,))
+                h5f.create_dataset("matrix", data=mat, chunks=(10000000,), maxshape=(None,))
                 first = False
             else:
-                h5f['matrix'].append(mat)
+                h5f["matrix"].append(mat)
             gc.collect()
         h5f.close()
 
@@ -86,18 +85,18 @@ class VectorizeChunks:
 
 
 if __name__ == "__main__":
-    #vectorize_chunks = VectorizeChunks(
-    #    vectorizer=lambda: make_vectorizer_1(),
-    #    input_files="../../data/events_sorted_trans_chunks/raw_csv/events_sorted_trans_*.csv",
-    #    output_folder="../../data/events_sorted_trans_chunks/vectorizer_1/",
-    #    n_jobs=10,
-    #)
-    #vectorize_chunks.vectorize_all()
+    vectorize_chunks = VectorizeChunks(
+        vectorizer=lambda: make_vectorizer_1(),
+        input_files="../../data/proc/raw_csv/*.csv",
+        output_folder="../../data/proc/vectorizer_1/",
+        n_jobs=10,
+    )
+    vectorize_chunks.vectorize_all()
 
     vectorize_chunks = VectorizeChunks(
         vectorizer=lambda: make_vectorizer_2(),
-        input_files="../../data/events_sorted_trans_chunks/raw_csv/events_sorted_trans_*.csv",
-        output_folder="../../data/events_sorted_trans_chunks/vectorizer_2/",
+        input_files="../../data/proc/raw_csv/*.csv",
+        output_folder="../../data/proc/vectorizer_2/",
         n_jobs=10,
     )
     vectorize_chunks.vectorize_all()

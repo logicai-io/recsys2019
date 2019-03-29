@@ -1,6 +1,6 @@
 #!/bin/sh
 
-python validate_model.py --data python --n_users 1 --n_trees 1600 --action validate
-python validate_model.py --data scala --n_users 1 --n_trees 1600 --action validate
-python validate_model.py --data python --n_users 1 --n_trees 1600 --action submit
-python validate_model.py --data scala --n_users 1 --n_trees 1600 --action submit
+python model_1_val.py
+python model_1_submit.py
+python model_2_val.py
+python model_2_submit.py

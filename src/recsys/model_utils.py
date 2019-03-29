@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from lightgbm import LGBMRanker
-from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast
 from recsys.submission import group_clickouts
 from recsys.utils import group_lengths, reduce_mem_usage, timer

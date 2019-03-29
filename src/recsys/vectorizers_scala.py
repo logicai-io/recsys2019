@@ -1,18 +1,15 @@
 from recsys.transformers import (
-    FeatureEng,
+    FeatureEngScala,
     LagNumericalFeaturesWithinGroup,
     PandasToNpArray,
     PandasToRecords,
     RankFeatures,
-    ToCSR,
-    FeatureEngScala,
 )
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
-from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
+from sklearn.preprocessing import StandardScaler
 
 numerical_features_scala = [
     "item_id",

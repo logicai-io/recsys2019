@@ -21,12 +21,10 @@ test = pd.read_csv("../data/test.csv")
 
 train.shape
 
-train['action_type'].value_counts()
+train["action_type"].value_counts()
 
 train.dtypes
 
-np.percentile(train.timestamp,1)
+np.percentile(train.timestamp, 1)
 
 test.reference.isnull().value_counts()
-
-

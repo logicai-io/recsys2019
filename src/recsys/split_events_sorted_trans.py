@@ -5,10 +5,7 @@ from tqdm import tqdm
 header = []
 
 outputs = [
-    DictWriter(
-        open("../../data/events_sorted_trans_chunks/raw_csv/events_sorted_trans_{:04d}.csv".format(chunk_id), "wt"),
-        fieldnames=header,
-    )
+    DictWriter(open("../../data/proc/raw_csv/{:04d}.csv".format(chunk_id), "wt"), fieldnames=header)
     for chunk_id in range(30)
 ]
 
