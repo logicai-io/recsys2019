@@ -38,7 +38,9 @@ class VectorizeChunks:
         gc.collect()
 
     def save_to_one_flie_csrs(self, fns):
-        h5f = h5sparse.File(os.path.join(self.output_folder, "Xcsr.h5"))
+        save_as = os.path.join(self.output_folder, "Xcsr.h5")
+        os.unlink(save_as)
+        h5f = h5sparse.File(save_as)
         first = True
         for fn in fns:
             print(fn)
@@ -62,6 +64,8 @@ class VectorizeChunks:
         df = pd.read_csv(fn)
         mat = self.vectorizer.transform(df)
 
+        hdf_save_path = os.path.join(self.output_folder, "chunks", fname_h5)
+        os.unlink(hdf_save_path)
         df[
             [
                 "user_id",
@@ -75,9 +79,11 @@ class VectorizeChunks:
                 "is_val",
                 "was_clicked",
             ]
-        ].to_hdf(os.path.join(self.output_folder, "chunks", fname_h5), key="data", mode="w")
+        ].to_hdf(hdf_save_path, key="data", mode="w")
 
-        save_npz(os.path.join(self.output_folder, "chunks", fname_npz), mat)
+        npz_save_path = os.path.join(self.output_folder, "chunks", fname_npz)
+        os.unlink(npz_save_path)
+        save_npz(npz_save_path, mat)
 
         gc.collect()
 
