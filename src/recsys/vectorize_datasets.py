@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2
-from scipy import sparse
 from scipy.sparse import load_npz, save_npz
 
 
@@ -25,13 +24,9 @@ class VectorizeChunks:
             df = pd.read_csv(sorted(glob.glob(self.input_files))[-1])
             self.vectorizer = self.vectorizer()
             self.vectorizer.fit(df)
-
-        # filenames = Parallel(n_jobs=self.n_jobs)(
-        #     delayed(self.vectorize_one)(fn) for fn in sorted(glob.glob(self.input_files))
-        # )
-
-        filenames = [self.vectorize_one(fn) for fn in sorted(glob.glob(self.input_files))]
-
+        filenames = Parallel(n_jobs=self.n_jobs)(
+            delayed(self.vectorize_one)(fn) for fn in sorted(glob.glob(self.input_files))
+        )
         metadata_fns, csr_fns = list(zip(*filenames))
         self.save_to_one_file_metadata(metadata_fns)
         self.save_to_one_flie_csrs(csr_fns)
@@ -39,15 +34,11 @@ class VectorizeChunks:
     def save_to_one_file_metadata(self, fns):
         dfs = [pd.read_hdf(os.path.join(self.output_folder, "chunks", fn), key="data") for fn in fns]
         df = pd.concat(dfs, axis=0)
-        save_as = os.path.join(self.output_folder, "meta.h5")
-        os.unlink(save_as)
-        df.to_hdf(save_as, key="data", mode="w")
+        df.to_hdf(os.path.join(self.output_folder, "meta.h5"), key="data", mode="w")
         gc.collect()
 
     def save_to_one_flie_csrs(self, fns):
-        save_as = os.path.join(self.output_folder, "Xcsr.h5")
-        os.unlink(save_as)
-        h5f = h5sparse.File(save_as)
+        h5f = h5sparse.File(os.path.join(self.output_folder, "Xcsr.h5"))
         first = True
         for fn in fns:
             print(fn)
@@ -69,12 +60,7 @@ class VectorizeChunks:
             return (fname_h5, fname_npz)
 
         df = pd.read_csv(fn)
-        df["clickout_id_hash"] = df["clickout_id"].map(lambda x: hash(x) % self.n_jobs)
-
-        df_chunks = [ch for _, ch in df.groupby("clickout_id_hash")]
-
-        sparse_csr_chunks = Parallel(n_jobs=self.n_jobs)(delayed(self.vectorizer.transform)(ch) for ch in df_chunks)
-        mat = sparse.vstack(*sparse_csr_chunks)
+        mat = self.vectorizer.transform(df)
 
         df[
             [
@@ -90,6 +76,7 @@ class VectorizeChunks:
                 "was_clicked",
             ]
         ].to_hdf(os.path.join(self.output_folder, "chunks", fname_h5), key="data", mode="w")
+
         save_npz(os.path.join(self.output_folder, "chunks", fname_npz), mat)
 
         gc.collect()
@@ -102,14 +89,14 @@ if __name__ == "__main__":
         vectorizer=lambda: make_vectorizer_1(),
         input_files="../../data/proc/raw_csv/*.csv",
         output_folder="../../data/proc/vectorizer_1/",
-        n_jobs=28,
+        n_jobs=10,
     )
     vectorize_chunks.vectorize_all()
 
-    # vectorize_chunks = VectorizeChunks(
-    #     vectorizer=lambda: make_vectorizer_2(),
-    #     input_files="../../data/proc/raw_csv/*.csv",
-    #     output_folder="../../data/proc/vectorizer_2/",
-    #     n_jobs=10,
-    # )
-    # vectorize_chunks.vectorize_all()
+    vectorize_chunks = VectorizeChunks(
+        vectorizer=lambda: make_vectorizer_2(),
+        input_files="../../data/proc/raw_csv/*.csv",
+        output_folder="../../data/proc/vectorizer_2/",
+        n_jobs=10,
+    )
+    vectorize_chunks.vectorize_all()
