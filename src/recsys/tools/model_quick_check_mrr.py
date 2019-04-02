@@ -51,47 +51,16 @@ def main(src, limit):
 
     numerical_cols_rank = [c + "_rank" for c in numerical_cols]
 
-    model = LGBMRanker()
+    model = LGBMRankerMRR()
     model.fit(train[numerical_cols + numerical_cols_rank], train["was_clicked"],
               group=group_lengths(train["clickout_id"].values))
-
-    # fimp = pd.DataFrame(
-    #     {"feature": numerical_cols + numerical_cols_rank, "importance": model.booster_.feature_importance()}
-    # )
-    # fimp.sort_values("importance", ascending=False, inplace=True)
-    # print(fimp)
-    #
-    # fimp = pd.DataFrame(
-    #     {"feature": numerical_cols + numerical_cols_rank, "importance": model.booster_.feature_importance("gain")}
-    # )
-    # fimp.sort_values("importance", ascending=False, inplace=True)
-    # print(fimp)
 
     train["pred"] = model.predict(train[numerical_cols + numerical_cols_rank])
     print("Train:", mrr_fast(train, "pred"))
     test["pred"] = model.predict(test[numerical_cols + numerical_cols_rank])
     print("Test:", mrr_fast(test, "pred"))
 
-    # model = LGBMRankerMRR()
-    # model.fit(train[numerical_cols + numerical_cols_rank], train["was_clicked"],
-    #           group=group_lengths(train["clickout_id"].values))
-    #
-    # fimp = pd.DataFrame(
-    #     {"feature": numerical_cols + numerical_cols_rank, "importance": model.booster_.feature_importance()}
-    # )
-    # fimp.sort_values("importance", ascending=False, inplace=True)
-    # print(fimp)
-    #
-    # fimp = pd.DataFrame(
-    #     {"feature": numerical_cols + numerical_cols_rank, "importance": model.booster_.feature_importance("gain")}
-    # )
-    # fimp.sort_values("importance", ascending=False, inplace=True)
-    # print(fimp)
-
-    # train["pred"] = model.predict(train[numerical_cols + numerical_cols_rank])
-    # print("Train:", mrr_fast(train, "pred"))
-    # test["pred"] = model.predict(test[numerical_cols + numerical_cols_rank])
-    # print("Test:", mrr_fast(test, "pred"))
+    # print(test["pred"])
 
 
 if __name__ == "__main__":
