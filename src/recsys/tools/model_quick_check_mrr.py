@@ -6,6 +6,8 @@ from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast
 from recsys.utils import group_lengths
 from tqdm import tqdm
+import warnings
+warnings.filterwarnings('ignore')
 
 
 def augment_df(df, cols):
@@ -51,7 +53,7 @@ def main(src, limit):
 
     numerical_cols_rank = [c + "_rank" for c in numerical_cols]
 
-    model = LGBMRankerMRR()
+    model = LGBMRankerMRR(learning_rate=0.1)
     model.fit(train[numerical_cols + numerical_cols_rank], train["was_clicked"],
               group=group_lengths(train["clickout_id"].values))
 

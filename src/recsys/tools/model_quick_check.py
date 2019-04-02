@@ -6,6 +6,8 @@ from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast
 from recsys.utils import group_lengths
 from tqdm import tqdm
+import warnings
+warnings.filterwarnings('ignore')
 
 
 def augment_df(df, cols):
