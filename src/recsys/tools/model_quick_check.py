@@ -1,7 +1,7 @@
 import click
 import numpy as np
 import pandas as pd
-from lightgbm import LGBMClassifier
+from lightgbm import LGBMClassifier, LGBMRanker
 from tqdm import tqdm
 
 from recsys.df_utils import split_by_timestamp
@@ -51,7 +51,7 @@ def main(src, limit):
 
     numerical_cols_rank = [c + "_rank" for c in numerical_cols]
 
-    model = LGBMClassifier()
+    model = LGBMRanker()
     model.fit(train[numerical_cols + numerical_cols_rank], train["was_clicked"])
 
     fimp = pd.DataFrame(

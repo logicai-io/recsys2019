@@ -25,7 +25,7 @@ with timer("splitting data"):
     gc.collect()
 
 with timer("model fitting"):
-    model = LGBMRanker(n_estimators=100, n_jobs=-2)
+    model = LGBMRanker(n_estimators=1600, num_leaves=62, n_jobs=-2)
     val_pred = np.ones(X_val.shape[0])*-1
     train_pred = np.ones(X_train.shape[0])*-1
     print("Training unique models")
@@ -35,9 +35,9 @@ with timer("model fitting"):
         model.fit(X_train[tr_group_ind, :],
                   meta_train["was_clicked"].values[tr_group_ind],
                   group=group_lengths(meta_train["clickout_id"].values[tr_group_ind]))
-        val_pred[tr_group_ind] = model.predict(X_val[va_group_ind, :])
-        train_pred[tr_group_ind] = model.predict(X_train[tr_group_ind, :])
-    print("Train AUC {:.4f}".format(roc_auc_score(meta_train["was_clicked"].values, train_pred)))
+        val_pred[va_group_ind] = model.predict(X_val[va_group_ind, :])
+        # train_pred[tr_group_ind] = model.predict(X_train[tr_group_ind, :])
+    # print("Train AUC {:.4f}".format(roc_auc_score(meta_train["was_clicked"].values, train_pred)))
     print("Val AUC {:.4f}".format(roc_auc_score(meta_val["was_clicked"].values, val_pred)))
     meta_val["click_proba"] = val_pred
     print("Val MRR {:.4f}".format(mrr_fast(meta_val, "click_proba")))
