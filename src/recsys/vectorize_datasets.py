@@ -66,6 +66,9 @@ class VectorizeChunks:
             [
                 "user_id",
                 "session_id",
+                "platform",
+                "device",
+                "city",
                 "timestamp",
                 "step",
                 "clickout_id",
