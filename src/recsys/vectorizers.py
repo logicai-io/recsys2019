@@ -60,6 +60,12 @@ numerical_features_py = [
     "last_index_diff_4",
     "last_index_diff_5",
     "n_consecutive_clicks",
+    "user_rank_preference",
+    "user_session_rank_preference",
+    "user_impression_rank_preference",
+    "avg_price_similarity",
+    "avg_price_similarity_to_interacted_items",
+    "avg_price_similarity_to_interacted_session_items",
 ]
 numerical_features_for_ranking_py = [
     "price",
@@ -84,6 +90,12 @@ numerical_features_for_ranking_py = [
     "rating",
     "stars",
     "n_consecutive_clicks",
+    "user_rank_preference",
+    "user_session_rank_preference",
+    "user_impression_rank_preference",
+    "avg_price_similarity",
+    "avg_price_similarity_to_interacted_items",
+    "avg_price_similarity_to_interacted_session_items",
 ]
 categorical_features_py = ["device", "platform", "last_sort_order", "last_filter_selection", "country", "hotel_cat"]
 
@@ -123,6 +135,8 @@ def make_vectorizer_1(
                 ),
                 ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
+                # ("user_rank_dict", DictVectorizer(), "user_rank_dict"),
+                # ("user_session_rank_dict", DictVectorizer(), "user_session_rank_dict"),
             ]
         ),
     )

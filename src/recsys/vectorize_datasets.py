@@ -38,7 +38,9 @@ class VectorizeChunks:
         gc.collect()
 
     def save_to_one_flie_csrs(self, fns):
-        h5f = h5sparse.File(os.path.join(self.output_folder, "Xcsr.h5"))
+        save_as = os.path.join(self.output_folder, "Xcsr.h5")
+        os.unlink(save_as)
+        h5f = h5sparse.File(save_as)
         first = True
         for fn in fns:
             print(fn)
@@ -96,10 +98,10 @@ if __name__ == "__main__":
     )
     vectorize_chunks.vectorize_all()
 
-    vectorize_chunks = VectorizeChunks(
-        vectorizer=lambda: make_vectorizer_2(),
-        input_files="../../data/proc/raw_csv/*.csv",
-        output_folder="../../data/proc/vectorizer_2/",
-        n_jobs=10,
-    )
-    vectorize_chunks.vectorize_all()
+    # vectorize_chunks = VectorizeChunks(
+    #     vectorizer=lambda: make_vectorizer_2(),
+    #     input_files="../../data/proc/raw_csv/*.csv",
+    #     output_folder="../../data/proc/vectorizer_2/",
+    #     n_jobs=10,
+    # )
+    # vectorize_chunks.vectorize_all()

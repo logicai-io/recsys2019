@@ -3,7 +3,7 @@ from collections import defaultdict
 from csv import DictReader, DictWriter
 
 import click
-from recsys.jaccard_sim import JaccardItemSim
+from recsys.jaccard_sim import JaccardItemSim, ItemPriceSim
 from tqdm import tqdm
 
 ACTION_SHORTENER = {
@@ -345,6 +345,54 @@ accumulators = [
         updater=lambda acc, row: add_to_set(acc, (row["user_id"], row["session_id"]), tryint(row["reference"])),
         get_stats_func=lambda acc, row, item: list(acc.get((row["user_id"], row["session_id"]), [])),
     ),
+    StatsAcc(
+        name="user_rank_preference",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc=defaultdict(int),
+        updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["index_clicked"])),
+        get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["rank"])],
+    ),
+    StatsAcc(
+        name="user_session_rank_preference",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc=defaultdict(int),
+        updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["session_id"], row["index_clicked"])),
+        get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["session_id"], item["rank"])],
+    ),
+    StatsAcc(
+        name="user_impression_rank_preference",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc=defaultdict(int),
+        updater=lambda acc, row: increment_key_by_one(
+            acc, (row["user_id"], row["impressions_hash"], row["index_clicked"])
+        ),
+        get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["impressions_hash"], item["rank"])],
+    ),
+    StatsAcc(
+        name="clickout_prices_list",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc=defaultdict(set),
+        updater=lambda acc, row: add_to_set(acc, row["user_id"], row["price_clicked"]),
+        get_stats_func=lambda acc, row, item: list(acc[row["user_id"]]),
+    ),
+    # StatsAcc(
+    #     name="user_rank_dict",
+    #     filter=lambda row: row["action_type"] == "clickout item",
+    #     acc=defaultdict(lambda: defaultdict(int)),
+    #     updater=lambda acc, row: add_one_nested_key(
+    #         acc, row["user_id"], row["index_clicked"]
+    #     ),
+    #     get_stats_func=lambda acc, row, item: json.dumps(acc[row["user_id"]]),
+    # ),
+    # StatsAcc(
+    #     name="user_session_rank_dict",
+    #     filter=lambda row: row["action_type"] == "clickout item",
+    #     acc=defaultdict(lambda: defaultdict(int)),
+    #     updater=lambda acc, row: add_one_nested_key(
+    #         acc, (row["user_id"], row["session_id"]), row["index_clicked"]
+    #     ),
+    #     get_stats_func=lambda acc, row, item: json.dumps(acc[(row["user_id"], row["session_id"])]),
+    # ),
 ]
 
 for acc in accumulators:
@@ -355,6 +403,7 @@ class FeatureGenerator:
     def __init__(self, limit, parallel=True):
         self.limit = limit
         self.jacc_sim = JaccardItemSim(path="../../data/item_metadata_map.joblib")
+        self.price_sim = ItemPriceSim(path="../../data/item_prices.joblib")
 
     def calculate_features_per_item(self, clickout_id, item_id, max_price, mean_price, price, rank, row):
         obs = row.copy()
@@ -371,6 +420,7 @@ class FeatureGenerator:
 
         self.calculate_similarity_features(item_id, obs)
         self.calculate_indices_features(obs, rank)
+        self.calculate_price_similarity(obs, price)
 
         del obs["impressions"]
         del obs["impressions_hash"]
@@ -379,12 +429,27 @@ class FeatureGenerator:
         del obs["action_type"]
         return obs
 
+    def calculate_price_similarity(self, obs, price):
+        if not obs["clickout_prices_list"]:
+            output = 1000
+        else:
+            diff = [abs(p - price) for p in obs["clickout_prices_list"]]
+            output = sum(diff) / len(diff)
+        obs["avg_price_similarity"] = output
+        del obs["clickout_prices_list"]
+
     def calculate_similarity_features(self, item_id, obs):
         obs["item_similarity_to_last_clicked_item"] = self.jacc_sim.two_items(obs["last_item_clickout"], int(item_id))
         obs["avg_similarity_to_interacted_items"] = self.jacc_sim.list_to_item(
             obs["user_item_interactions_list"], int(item_id)
         )
         obs["avg_similarity_to_interacted_session_items"] = self.jacc_sim.list_to_item(
+            obs["user_item_session_interactions_list"], int(item_id)
+        )
+        obs["avg_price_similarity_to_interacted_items"] = self.price_sim.list_to_item(
+            obs["user_item_interactions_list"], int(item_id)
+        )
+        obs["avg_price_similarity_to_interacted_session_items"] = self.price_sim.list_to_item(
             obs["user_item_session_interactions_list"], int(item_id)
         )
 
@@ -420,7 +485,6 @@ class FeatureGenerator:
                 print(clickout_id)
             if self.limit and clickout_id > self.limit:
                 break
-            user_id = row["user_id"]
             row["timestamp"] = int(row["timestamp"])
             if row["action_type"] == "clickout item":
                 row["impressions_raw"] = row["impressions"]
@@ -430,6 +494,7 @@ class FeatureGenerator:
                     row["impressions"].index(row["reference"]) if row["reference"] in row["impressions"] else None
                 )
                 prices = list(map(int, row["prices"].split("|")))
+                row["price_clicked"] = prices[row["index_clicked"]] if row["index_clicked"] else 0
                 max_price = max(prices)
                 mean_price = sum(prices) / len(prices)
 
