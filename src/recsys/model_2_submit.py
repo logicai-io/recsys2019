@@ -22,7 +22,7 @@ with timer("splitting data"):
     gc.collect()
 
 with timer("model fitting"):
-    model = LGBMRanker(n_estimators=1600, n_jobs=-2)
+    model = LGBMRanker(n_estimators=1600, num_leaves=62, n_jobs=-2)
     model.fit(X_train, meta_train["was_clicked"].values, group=group_lengths(meta_train["clickout_id"].values))
     val_pred = model.predict(X_val)
     meta_val["click_proba"] = val_pred

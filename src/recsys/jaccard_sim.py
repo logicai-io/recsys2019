@@ -36,3 +36,19 @@ class JaccardItemSim:
 
     def two_items_star_chunk(self, vs):
         return [self.two_items_star(v) for v in vs]
+
+
+class ItemPriceSim:
+    def __init__(self, path):
+        self.item_prices = joblib.load(path)
+
+    def list_to_item(self, other_items, item):
+        default_sim = 1000
+        if other_items and item in self.item_prices:
+            sims = [abs(self.item_prices[a] - self.item_prices[item]) for a in other_items if a in self.item_prices]
+            if sims:
+                return sum(sims) / len(sims)
+            else:
+                return default_sim
+        else:
+            return default_sim

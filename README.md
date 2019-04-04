@@ -1,7 +1,7 @@
 # recsys2019
 
-Current process
----------------
+Current process (full)
+----------------------
 
 1. cd data/
 2. ./download_data.sh
@@ -11,20 +11,29 @@ Current process
 6. python generate_training_data.py (or pypy generate_training_data.py which is 2x faster)
 7. python split_events_sorted_trans.py (pypy is good)
 8. python vectorize_datasets.py
-9. ./make_predictions.sh
-10. python make_blend.py
+9. python model_2_val.py (validate model)
+10. python model_2_submit.py (make test predictions)
+11. python make_blend.py (prepare submission file)
+
+Quick validation (1 million rows)
+----------------------
+
+1. cd data/
+2. ./download_data.sh
+3. cd ../../src/recsys/data_prep
+4. ./run_data_prep.sh
+5. cd ..
+6. python generate_training_data.py --limit 1000000
+7. python quick_validate.py
 
 Best submissions
 ---------------
 
-Best model 1 ranking model (LGBMRanker) model_2_val.py / model_2_submit.py
-MRR: Validation 0.6162 Leaderboard 0.6740
-
-Python dataset models
+Last improvements
 ```
-Train AUC 0.8903
-Val AUC 0.8845
-Val MRR 0.6162
+1m validation   0.6196 -> 0.6233
+full validation 0.6174 -> 0.6226
+leaderboard     0.6750 -> 0.6776
 ```
 
 Feather

@@ -27,6 +27,8 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X["country"] = X["city"].map(lambda x: x.split(",")[-1].strip())
         X["country_eq_platform"] = (X["country"].map(COUNTRY_CODES) == X["platform"]).astype(np.int32)
         X["last_event_ts_dict"] = X["last_event_ts"].map(json.loads)
+        # X["user_rank_dict"] = X["user_rank_dict"].map(json.loads)
+        # X["user_session_rank_dict"] = X["user_session_rank_dict"].map(json.loads)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (X["clickout_user_item_impressions"] + 1)
         X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (X["last_poi_item_impressions"] + 1)
@@ -140,4 +142,15 @@ class MinimizeNNZ(BaseEstimator, TransformerMixin):
         for col, offset in zip(X.columns, self.offsets):
             if offset != 0:
                 X[col] += offset
+        return X
+
+
+class SanitizeSparseMatrix(BaseEstimator, TransformerMixin):
+    def fit(self, X, y):
+        self.datamax = np.nanmax(X.data)
+        return self
+
+    def transform(self, X):
+        X.data[np.isnan(X.data)] = 0
+        X.data = X.data.clip(0, self.datamax)
         return X
