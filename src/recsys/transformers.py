@@ -154,3 +154,25 @@ class SanitizeSparseMatrix(BaseEstimator, TransformerMixin):
         X.data[np.isnan(X.data)] = 0
         X.data = X.data.clip(0, self.datamax)
         return X
+
+
+class RemoveDuplicatedColumnsDF(BaseEstimator, TransformerMixin):
+    def fit(self, X):
+        groups = X.columns.to_series().groupby(X.dtypes).groups
+        self.duplicate_cols = []
+        for t, v in groups.items():
+            cs = X[v].columns
+            vs = X[v]
+            lcs = len(cs)
+            for i in range(lcs):
+                ia = vs.iloc[:, i].values
+                for j in range(i + 1, lcs):
+                    ja = vs.iloc[:, j].values
+                    if np.array_equiv(ia, ja):
+                        self.duplicate_cols.append(cs[i])
+                        break
+        return self
+
+    def transform(self, X):
+        X = X.drop(self.duplicate_cols, axis=1)
+        return X
