@@ -66,6 +66,9 @@ numerical_features_py = [
     "avg_price_similarity",
     "avg_price_similarity_to_interacted_items",
     "avg_price_similarity_to_interacted_session_items",
+    "clickout_item_item_last_timestamp",
+    "interaction_item_image_item_last_timestamp",
+    "filter_selection_count",
 ]
 numerical_features_for_ranking_py = [
     "price",
