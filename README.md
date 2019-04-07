@@ -15,6 +15,8 @@ Current process (full)
 10. python model_submit.py (make test predictions)
 11. python make_blend.py (prepare submission file)
 
+Steps 6-11 are also inside run_all.sh script
+
 Quick validation (1 million rows)
 ----------------------
 
@@ -31,9 +33,9 @@ Best submissions
 
 Last improvements
 ```
-1m validation   0.6196 -> 0.6233
-full validation 0.6174 -> 0.6226
-leaderboard     0.6750 -> 0.6776
+1m validation   0.6196 -> 0.6233 -> 0.6272
+full validation 0.6174 -> 0.6226 -> 0.6237
+leaderboard     0.6750 -> 0.6776 -> 0.6782
 ```
 
 Feather
