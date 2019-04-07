@@ -1,8 +1,11 @@
 #!/bin/sh
 
-python generate_training_data.py
-python split_events_sorted_trans.py
-python vectorize_datasets.py
-python model_val.py
-python model_submit.py
-python make_blend.py
+alias PYPY=~/.pyenv/versions/recsys-pypy/bin/python
+alias PY3=~/.pyenv/versions/recsys/bin/python
+
+PYPY generate_training_data.py
+PYPY split_events_sorted_trans.py
+PY3 vectorize_datasets.py
+PY3 model_val.py
+PY3 model_submit.py
+PY3 make_blend.py
