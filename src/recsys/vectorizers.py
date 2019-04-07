@@ -70,6 +70,7 @@ numerical_features_py = [
     "interaction_item_image_item_last_timestamp",
     "filter_selection_count",
 ]
+
 numerical_features_for_ranking_py = [
     "price",
     "last_poi_item_clicks",
@@ -101,11 +102,13 @@ numerical_features_for_ranking_py = [
     "avg_price_similarity_to_interacted_session_items",
 ]
 categorical_features_py = ["device", "platform", "last_sort_order", "last_filter_selection", "country", "hotel_cat"]
+numerical_features_offset_2 = ["was_interaction_info", "was_interaction_img", "last_index_diff_5"]
 
 
 def make_vectorizer_1(
     categorical_features=categorical_features_py,
     numerical_features=numerical_features_py,
+    numerical_features_offset_2=numerical_features_offset_2,
     numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
     return make_pipeline(
@@ -121,6 +124,11 @@ def make_vectorizer_1(
                     "numerical_context",
                     make_pipeline(LagNumericalFeaturesWithinGroup(), MinimizeNNZ()),
                     numerical_features + ["clickout_id"],
+                ),
+                (
+                    "numerical_context_offset_2",
+                    make_pipeline(LagNumericalFeaturesWithinGroup(offset=2), MinimizeNNZ()),
+                    numerical_features_offset_2 + ["clickout_id"],
                 ),
                 ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
                 (

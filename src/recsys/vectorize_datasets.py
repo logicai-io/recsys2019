@@ -6,8 +6,11 @@ import h5sparse
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from recsys.log_utils import get_logger
 from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2
 from scipy.sparse import load_npz, save_npz
+
+logger = get_logger()
 
 
 class VectorizeChunks:
@@ -43,10 +46,10 @@ class VectorizeChunks:
         h5f = h5sparse.File(save_as)
         first = True
         for fn in fns:
-            print(fn)
+            logger.info(f"Saving {fn}")
             mat = load_npz(os.path.join(self.output_folder, "chunks", fn)).astype(np.float32)
             if first:
-                h5f.create_dataset("matrix", data=mat, chunks=(10000000,), maxshape=(None,))
+                h5f.create_dataset("matrix", data=mat, chunks=(10_000_000,), maxshape=(None,))
                 first = False
             else:
                 h5f["matrix"].append(mat)
@@ -54,7 +57,7 @@ class VectorizeChunks:
         h5f.close()
 
     def vectorize_one(self, fn):
-        print(fn)
+        logger.info(f"Vectorize {fn}")
         fname_h5 = fn.split("/")[-1].replace(".csv", ".h5")
         fname_npz = fn.split("/")[-1].replace(".csv", ".npz")
 
@@ -97,11 +100,3 @@ if __name__ == "__main__":
         n_jobs=10,
     )
     vectorize_chunks.vectorize_all()
-
-    # vectorize_chunks = VectorizeChunks(
-    #     vectorizer=lambda: make_vectorizer_2(),
-    #     input_files="../../data/proc/raw_csv/*.csv",
-    #     output_folder="../../data/proc/vectorizer_2/",
-    #     n_jobs=10,
-    # )
-    # vectorize_chunks.vectorize_all()

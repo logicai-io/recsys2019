@@ -61,6 +61,9 @@ class FeatureEngScala(BaseEstimator, TransformerMixin):
 
 
 class RankFeatures(BaseEstimator, TransformerMixin):
+    def __init__(self, drop_clickout_id=True):
+        self.drop_clickout_id = drop_clickout_id
+
     def fit(self, X, y=None):
         return self
 
@@ -68,22 +71,28 @@ class RankFeatures(BaseEstimator, TransformerMixin):
         for col in X.columns:
             if col != "clickout_id":
                 X[col] = X.groupby("clickout_id")[col].rank("max", ascending=False) - 1
-        X.drop("clickout_id", axis=1, inplace=True)
+        if self.drop_clickout_id:
+            X.drop("clickout_id", axis=1, inplace=True)
         return X
 
 
 class LagNumericalFeaturesWithinGroup(BaseEstimator, TransformerMixin):
+    def __init__(self, offset=1, drop_clickout_id=True):
+        self.offset = offset
+        self.drop_clickout_id = drop_clickout_id
+
     def fit(self, X, y=None):
         return self
 
     def transform(self, X):
         for col in X.columns:
             if col != "clickout_id":
-                X[col + "_shifted_p1_diff"] = X[col] - X.groupby(["clickout_id"])[col].shift(1).fillna(0)
-                X[col + "_shifted_m1_diff"] = X[col] - X.groupby(["clickout_id"])[col].shift(-1).fillna(0)
-                X[col + "_shifted_p1"] = X.groupby(["clickout_id"])[col].shift(1).fillna(0)
-                X[col + "_shifted_m1"] = X.groupby(["clickout_id"])[col].shift(-1).fillna(0)
-        X.drop("clickout_id", axis=1, inplace=True)
+                X[col + "_shifted_p1_diff"] = X[col] - X.groupby(["clickout_id"])[col].shift(self.offset).fillna(0)
+                X[col + "_shifted_m1_diff"] = X[col] - X.groupby(["clickout_id"])[col].shift(-self.offset).fillna(0)
+                X[col + "_shifted_p1"] = X.groupby(["clickout_id"])[col].shift(self.offset).fillna(0)
+                X[col + "_shifted_m1"] = X.groupby(["clickout_id"])[col].shift(-self.offset).fillna(0)
+        if self.drop_clickout_id:
+            X.drop("clickout_id", axis=1, inplace=True)
         return X
 
 

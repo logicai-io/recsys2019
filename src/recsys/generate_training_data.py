@@ -4,6 +4,7 @@ from csv import DictReader, DictWriter
 
 import click
 from recsys.jaccard_sim import ItemPriceSim, JaccardItemSim
+from recsys.log_utils import get_logger
 
 ACTION_SHORTENER = {
     "change of sort order": "a",
@@ -26,6 +27,8 @@ ACTIONS_WITH_ITEM_REFERENCE = {
     "interaction item rating",
     "clickout item",
 }
+
+logger = get_logger()
 
 
 class StatsAcc:
@@ -486,13 +489,14 @@ class FeatureGenerator:
         return n_consecutive
 
     def generate_features(self):
+        logger.info("Starting feature generation")
         inp = open("../../data/events_sorted.csv")
         dr = DictReader(inp)
         out = open("../../data/events_sorted_trans.csv", "wt")
         first_row = True
         for clickout_id, row in enumerate(dr):
             if clickout_id % 100000 == 0:
-                print(clickout_id)
+                logger.info(clickout_id)
             if self.limit and clickout_id > self.limit:
                 break
             row["timestamp"] = int(row["timestamp"])

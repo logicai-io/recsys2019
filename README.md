@@ -11,8 +11,8 @@ Current process (full)
 6. python generate_training_data.py (or pypy generate_training_data.py which is 2x faster)
 7. python split_events_sorted_trans.py (pypy is good)
 8. python vectorize_datasets.py
-9. python model_2_val.py (validate model)
-10. python model_2_submit.py (make test predictions)
+9. python model_val.py (validate model)
+10. python model_submit.py (make test predictions)
 11. python make_blend.py (prepare submission file)
 
 Quick validation (1 million rows)
