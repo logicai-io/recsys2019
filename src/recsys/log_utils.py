@@ -1,13 +1,15 @@
 import logging
+import sys
 
 
 def get_logger():
-    log = logging.getLogger()
-    ch = logging.StreamHandler()
-    log.addHandler(ch)
-    fh = logging.FileHandler("recsys.log")
-    log.addHandler(fh)
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    return log
+    file_handler = logging.FileHandler(filename='recsys.log')
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    handlers = [file_handler, stdout_handler]
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s',
+        handlers=handlers
+    )
+    logger = logging.getLogger('RECSYS')
+    return logger
