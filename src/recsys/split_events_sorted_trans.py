@@ -1,6 +1,11 @@
 from csv import DictReader, DictWriter
 
+from recsys.log_utils import get_logger
 from tqdm import tqdm
+
+logger = get_logger()
+
+logger.info("Starting splitting")
 
 header = []
 
@@ -18,3 +23,5 @@ for i, row in tqdm(enumerate(reader)):
             output.writeheader()
     find = int(row["clickout_id"]) % 30
     outputs[find].writerow(row)
+
+logger.info("Stop splitting")

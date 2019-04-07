@@ -93,6 +93,8 @@ class VectorizeChunks:
 
 
 if __name__ == "__main__":
+    logger = get_logger()
+    logger.info("Starting vectorizing")
     vectorize_chunks = VectorizeChunks(
         vectorizer=lambda: make_vectorizer_1(),
         input_files="../../data/proc/raw_csv/*.csv",
@@ -100,3 +102,4 @@ if __name__ == "__main__":
         n_jobs=10,
     )
     vectorize_chunks.vectorize_all()
+    logger.info("Finished vectorizing")

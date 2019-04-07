@@ -5,6 +5,8 @@ from recsys.submission import group_clickouts
 
 logger = get_logger()
 
+logger.info("Staring blending")
+
 p_lgbr = pd.read_csv("predictions/model_2_val.csv")
 final = p_lgbr.copy()
 final["click_proba"] = 1.0 * p_lgbr["click_proba"]

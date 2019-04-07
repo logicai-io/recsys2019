@@ -527,6 +527,7 @@ class FeatureGenerator:
 
         inp.close()
         out.close()
+        logger.info("Finished feature generation")
 
 
 @click.command()
