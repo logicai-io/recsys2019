@@ -3,8 +3,8 @@ from collections import defaultdict
 from csv import DictReader, DictWriter
 
 import click
-from recsys.jaccard_sim import JaccardItemSim, ItemPriceSim
-from tqdm import tqdm
+from recsys.jaccard_sim import ItemPriceSim, JaccardItemSim
+from recsys.log_utils import get_logger
 
 ACTION_SHORTENER = {
     "change of sort order": "a",
@@ -27,6 +27,8 @@ ACTIONS_WITH_ITEM_REFERENCE = {
     "interaction item rating",
     "clickout item",
 }
+
+logger = get_logger()
 
 
 class StatsAcc:
@@ -375,24 +377,35 @@ accumulators = [
         updater=lambda acc, row: add_to_set(acc, row["user_id"], row["price_clicked"]),
         get_stats_func=lambda acc, row, item: list(acc[row["user_id"]]),
     ),
-    # StatsAcc(
-    #     name="user_rank_dict",
-    #     filter=lambda row: row["action_type"] == "clickout item",
-    #     acc=defaultdict(lambda: defaultdict(int)),
-    #     updater=lambda acc, row: add_one_nested_key(
-    #         acc, row["user_id"], row["index_clicked"]
-    #     ),
-    #     get_stats_func=lambda acc, row, item: json.dumps(acc[row["user_id"]]),
-    # ),
-    # StatsAcc(
-    #     name="user_session_rank_dict",
-    #     filter=lambda row: row["action_type"] == "clickout item",
-    #     acc=defaultdict(lambda: defaultdict(int)),
-    #     updater=lambda acc, row: add_one_nested_key(
-    #         acc, (row["user_id"], row["session_id"]), row["index_clicked"]
-    #     ),
-    #     get_stats_func=lambda acc, row, item: json.dumps(acc[(row["user_id"], row["session_id"])]),
-    # ),
+    StatsAcc(
+        name="interaction_item_image_item_last_timestamp",
+        filter=lambda row: row["action_type"] == "interaction item image",
+        acc={},
+        updater=lambda acc, row: set_key(
+            acc, (row["user_id"], row["reference"], "interaction item image"), row["timestamp"]
+        ),
+        get_stats_func=lambda acc, row, item: min(
+            row["timestamp"] - acc.get((row["user_id"], item["item_id"], "interaction item image"), 0), 1000000
+        ),
+    ),
+    StatsAcc(
+        name="clickout_item_item_last_timestamp",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc={},
+        updater=lambda acc, row: set_key(acc, (row["user_id"], row["reference"], "clickout item"), row["timestamp"]),
+        get_stats_func=lambda acc, row, item: min(
+            row["timestamp"] - acc.get((row["user_id"], item["item_id"], "clickout item"), 0), 1000000
+        ),
+    ),
+] + [
+    StatsAcc(
+        name="{}_count".format(action_type.replace(" ", "_")),
+        filter=lambda row: row["action_type"] == action_type,
+        acc=defaultdict(int),
+        updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], action_type)),
+        get_stats_func=lambda acc, row, item: acc.get((row["user_id"], action_type), 0),
+    )
+    for action_type in ["filter selection"]
 ]
 
 for acc in accumulators:
@@ -476,13 +489,14 @@ class FeatureGenerator:
         return n_consecutive
 
     def generate_features(self):
+        logger.info("Starting feature generation")
         inp = open("../../data/events_sorted.csv")
         dr = DictReader(inp)
         out = open("../../data/events_sorted_trans.csv", "wt")
         first_row = True
         for clickout_id, row in enumerate(dr):
             if clickout_id % 100000 == 0:
-                print(clickout_id)
+                logger.info(clickout_id)
             if self.limit and clickout_id > self.limit:
                 break
             row["timestamp"] = int(row["timestamp"])
@@ -513,6 +527,7 @@ class FeatureGenerator:
 
         inp.close()
         out.close()
+        logger.info("Finished feature generation")
 
 
 @click.command()
