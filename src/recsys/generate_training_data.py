@@ -6,6 +6,9 @@ import click
 from recsys.jaccard_sim import ItemPriceSim, JaccardItemSim
 from recsys.log_utils import get_logger
 
+# TODO: check usage of impressions_hash vs impressions_raw
+# impressions_hash is an old way
+
 ACTION_SHORTENER = {
     "change of sort order": "a",
     "clickout item": "b",
@@ -79,6 +82,12 @@ def set_key(acc, key, value):
     return True
 
 
+def set_key_if_new(acc, key, value):
+    if key not in acc:
+        acc[key] = value
+    return True
+
+
 def set_nested_key(acc, key1, key2, value):
     acc[key1][key2] = value
     return acc
@@ -132,11 +141,25 @@ accumulators = [
         get_stats_func=lambda acc, row, item: acc[row["impressions_hash"]][item["item_id"]],
     ),
     StatsAcc(
+        name="identical_impressions_item_clicks2",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc=defaultdict(lambda: defaultdict(int)),
+        updater=lambda acc, row: add_one_nested_key(acc, row["impressions_raw"], row["reference"]),
+        get_stats_func=lambda acc, row, item: acc[row["impressions_raw"]][item["item_id"]],
+    ),
+    StatsAcc(
         name="is_impression_the_same",
         filter=lambda row: row["action_type"] == "clickout item",
         acc=defaultdict(str),
         updater=lambda acc, row: set_key(acc, row["user_id"], row["impressions_hash"]),
         get_stats_func=lambda acc, row, item: acc.get(row["user_id"]) == row["impressions_hash"],
+    ),
+    StatsAcc(
+        name="is_impression_the_same2",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc=defaultdict(str),
+        updater=lambda acc, row: set_key(acc, row["user_id"], row["impressions_raw"]),
+        get_stats_func=lambda acc, row, item: acc.get(row["user_id"]) == row["impressions_raw"],
     ),
     StatsAcc(
         name="last_10_actions",
@@ -371,6 +394,15 @@ accumulators = [
         get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["impressions_hash"], item["rank"])],
     ),
     StatsAcc(
+        name="user_impression_rank_preference2",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc=defaultdict(int),
+        updater=lambda acc, row: increment_key_by_one(
+            acc, (row["user_id"], row["impressions_raw"], row["index_clicked"])
+        ),
+        get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["impressions_raw"], item["rank"])],
+    ),
+    StatsAcc(
         name="clickout_prices_list",
         filter=lambda row: row["action_type"] == "clickout item",
         acc=defaultdict(set),
@@ -396,6 +428,40 @@ accumulators = [
         get_stats_func=lambda acc, row, item: min(
             row["timestamp"] - acc.get((row["user_id"], item["item_id"], "clickout item"), 0), 1000000
         ),
+    ),
+    StatsAcc(
+        name="clickout_time_since_first_impression",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc={},
+        updater=lambda acc, row: set_key_if_new(acc, (row["session_id"], row["impressions_raw"]), row["timestamp"]),
+        get_stats_func=lambda acc, row, item: row["timestamp"]
+        - acc.get((row["session_id"], row["impressions_raw"]), row["timestamp"] + 1),
+    ),
+    StatsAcc(
+        name="clickout_time_item_since_first_impression",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc={},
+        updater=lambda acc, row: set_key_if_new(
+            acc, (row["session_id"], row["impressions_raw"], row["reference"]), row["timestamp"]
+        ),
+        get_stats_func=lambda acc, row, item: row["timestamp"]
+        - acc.get((row["session_id"], item["item_id"], row["impressions_raw"]), row["timestamp"] + 1),
+    ),
+    StatsAcc(
+        name="interaction_user_item_image_item_since_first_timestamp",
+        filter=lambda row: row["action_type"] == "interaction item image",
+        acc={},
+        updater=lambda acc, row: set_key_if_new(acc, (row["user_id"], row["reference"]), row["timestamp"]),
+        get_stats_func=lambda acc, row, item: row["timestamp"]
+        - acc.get((row["user_id"], item["item_id"]), row["timestamp"] + 1),
+    ),
+    StatsAcc(
+        name="interaction_user_item_info_since_first_timestamp",
+        filter=lambda row: row["action_type"] == "interaction item info",
+        acc={},
+        updater=lambda acc, row: set_key_if_new(acc, (row["user_id"], row["reference"]), row["timestamp"]),
+        get_stats_func=lambda acc, row, item: row["timestamp"]
+        - acc.get((row["user_id"], item["item_id"]), row["timestamp"] + 1),
     ),
 ] + [
     StatsAcc(

@@ -38,8 +38,10 @@ numerical_features_py = [
     "interaction_rating_freq",
     "interaction_img_diff_ts",
     "identical_impressions_item_clicks",
+    "identical_impressions_item_clicks2",
     "clickout_item_platform_clicks",
     "is_impression_the_same",
+    "is_impression_the_same2",
     "clicked_before",
     "country_eq_platform",
     "item_similarity_to_last_clicked_item",
@@ -63,12 +65,17 @@ numerical_features_py = [
     "user_rank_preference",
     "user_session_rank_preference",
     "user_impression_rank_preference",
+    "user_impression_rank_preference2",
     "avg_price_similarity",
     "avg_price_similarity_to_interacted_items",
     "avg_price_similarity_to_interacted_session_items",
     "clickout_item_item_last_timestamp",
     "interaction_item_image_item_last_timestamp",
     "filter_selection_count",
+    "clickout_time_since_first_impression",
+    "clickout_time_item_since_first_impression",
+    "interaction_user_item_image_item_since_first_timestamp",
+    "interaction_user_item_info_since_first_timestamp",
 ]
 
 numerical_features_for_ranking_py = [
@@ -100,6 +107,9 @@ numerical_features_for_ranking_py = [
     "avg_price_similarity",
     "avg_price_similarity_to_interacted_items",
     "avg_price_similarity_to_interacted_session_items",
+    "clickout_time_item_since_first_impression",
+    "interaction_user_item_image_item_since_first_timestamp",
+    "interaction_user_item_info_since_first_timestamp",
 ]
 categorical_features_py = ["device", "platform", "last_sort_order", "last_filter_selection", "country", "hotel_cat"]
 numerical_features_offset_2 = ["was_interaction_info", "was_interaction_img", "last_index_diff_5"]
