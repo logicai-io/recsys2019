@@ -15,7 +15,7 @@ print("Staring validation")
 
 with timer("reading data"):
     meta = pd.read_hdf("../../data/proc/vectorizer_1/meta.h5", key="data")
-    mat = h5sparse.File("../../data/proc/vectorizer_1/Xcsr.h5", mode="r")["matrix"][:]
+    mat = h5sparse.File("../../data/proc/vectorizer_1/Xcsr.h5", mode="r")["matrix"]
 
 with timer("splitting data"):
     train_ind = np.where((meta.is_val == 0) & (meta.is_test == 0))[0]
@@ -23,8 +23,8 @@ with timer("splitting data"):
     logger.info(f"Train shape {train_ind.shape[0]} Val shape {val_ind.shape[0]}")
     meta_train = meta.iloc[train_ind]
     meta_val = meta.iloc[val_ind]
-    X_train = mat[train_ind]
-    X_val = mat[val_ind]
+    X_train = mat[train_ind.min():train_ind.max()]
+    X_val = mat[val_ind.min():val_ind.max()]
     del mat
     gc.collect()
 
