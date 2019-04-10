@@ -3,8 +3,10 @@ from collections import defaultdict
 from csv import DictReader, DictWriter
 
 import click
+import joblib
 from recsys.jaccard_sim import ItemPriceSim, JaccardItemSim
 from recsys.log_utils import get_logger
+from recsys.utils import group_time
 
 ACTION_SHORTENER = {
     "change of sort order": "a",
@@ -56,6 +58,87 @@ class StatsAcc:
 
     def get_stats(self, row, item):
         return self.get_stats_func(self.acc, row, item)
+
+
+class ClickSequenceEncoder:
+    def __init__(self):
+        self.name = "click_index_sequence"
+        self.current_impression = {}
+        self.sequences = defaultdict(list)
+
+    def filter(self, row):
+        return row["action_type"] == "clickout item"
+
+    def update_acc(self, row):
+        if self.filter(row):
+            key = (row["user_id"], row["session_id"])
+            if self.current_impression.get(key) == row["impressions_raw"]:
+                self.sequences[key][-1].append(row["index_clicked"])
+            else:
+                self.sequences[key].append([row["index_clicked"]])
+            self.current_impression[key] = row["impressions_raw"]
+
+    def get_stats(self, row, item):
+        key = (row["user_id"], row["session_id"])
+        return json.dumps(self.sequences[key])
+
+
+class ClickProbabilityClickOffsetTimeOffset:
+    def __init__(self):
+        self.name = "clickout_prob_time_position_offset"
+
+        # tracks the impression per user
+        self.current_impression = defaultdict(str)
+        self.last_timestamp = {}
+        self.last_clickout_position = {}
+        self.read_probs()
+
+    def read_probs(self):
+        self.probs = joblib.load("../../data/click_probs_by_index.joblib")
+
+    def filter(self, row):
+        return row["action_type"] == "clickout item"
+
+    def update_acc(self, row):
+        if self.filter(row):
+            self.current_impression[row["user_id"]] = row["impressions_raw"]
+            key = (row["user_id"], row["impressions_raw"])
+            self.last_timestamp[key] = row["timestamp"]
+            self.last_clickout_position[key] = row["index_clicked"]
+
+    def get_stats(self, row, item):
+        key = (row["user_id"], row["impressions_raw"])
+
+        if row["impressions_raw"] == self.current_impression[row["user_id"]]:
+            t1 = self.last_timestamp[key]
+            t2 = row["timestamp"]
+
+            c1 = self.last_clickout_position[key]
+            c2 = item["rank"]
+
+            timestamp_offset = int(group_time(t2 - t1))
+            click_offset = int(c2 - c1)
+
+            key = (click_offset, timestamp_offset)
+
+            if key in self.probs:
+                return self.probs[key]
+            else:
+                try:
+                    return self.probs[(click_offset, 120)]
+                except KeyError:
+                    return self.default_click_prob(item)
+
+        else:
+            # TODO fill this with prior distribution for positions
+            return self.default_click_prob(item)
+
+    def default_click_prob(self, item):
+        probs = {0: 0.3, 1: 0.2, 2: 0.1, 3: 0.07, 4: 0.05, 5: 0.03}
+        try:
+            return probs[item["rank"]]
+        except KeyError:
+            return 0.03
 
 
 def increment_key_by_one(acc, key):
@@ -132,6 +215,13 @@ accumulators = [
         get_stats_func=lambda acc, row, item: acc[row["impressions_hash"]][item["item_id"]],
     ),
     StatsAcc(
+        name="identical_impressions_item_clicks2",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc=defaultdict(lambda: defaultdict(int)),
+        updater=lambda acc, row: add_one_nested_key(acc, row["impressions_raw"], row["reference"]),
+        get_stats_func=lambda acc, row, item: acc[row["impressions_raw"]][item["item_id"]],
+    ),
+    StatsAcc(
         name="is_impression_the_same",
         filter=lambda row: row["action_type"] == "clickout item",
         acc=defaultdict(str),
@@ -190,6 +280,13 @@ accumulators = [
         acc=defaultdict(list),
         updater=lambda acc, row: append_to_list_not_null(acc, row["user_id"], row["index_clicked"]),
         get_stats_func=lambda acc, row, item: acc[row["user_id"]][-1] - item["rank"] if acc[row["user_id"]] else -1000,
+    ),
+    StatsAcc(
+        name="last_clicked_item_position_same_view",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc={},
+        updater=lambda acc, row: set_key(acc, (row["user_id"], row["impressions_raw"]), row["index_clicked"]),
+        get_stats_func=lambda acc, row, item: item["rank"] - acc.get((row["user_id"], row["impressions_raw"]), -1000),
     ),
     StatsAcc(
         name="last_item_index_same_view",
@@ -397,6 +494,14 @@ accumulators = [
             row["timestamp"] - acc.get((row["user_id"], item["item_id"], "clickout item"), 0), 1000000
         ),
     ),
+    StatsAcc(
+        name="last_timestamp_clickout",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc={},
+        updater=lambda acc, row: set_key(acc, (row["user_id"], row["impressions_raw"]), row["timestamp"]),
+        get_stats_func=lambda acc, row, item: row["timestamp"] - acc.get((row["user_id"], item["impressions_raw"]), 0),
+    ),
+    ClickProbabilityClickOffsetTimeOffset(),
 ] + [
     StatsAcc(
         name="{}_count".format(action_type.replace(" ", "_")),
@@ -505,10 +610,10 @@ class FeatureGenerator:
                 row["impressions"] = row["impressions"].split("|")
                 row["impressions_hash"] = "|".join(sorted(row["impressions"]))
                 row["index_clicked"] = (
-                    row["impressions"].index(row["reference"]) if row["reference"] in row["impressions"] else None
+                    row["impressions"].index(row["reference"]) if row["reference"] in row["impressions"] else -1000
                 )
                 prices = list(map(int, row["prices"].split("|")))
-                row["price_clicked"] = prices[row["index_clicked"]] if row["index_clicked"] else 0
+                row["price_clicked"] = prices[row["index_clicked"]] if row["index_clicked"] >= 0 else 0
                 max_price = max(prices)
                 mean_price = sum(prices) / len(prices)
 

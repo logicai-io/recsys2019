@@ -55,3 +55,14 @@ def reduce_mem_usage(df, verbose=False, aggressive=False):
             )
         )
     return df
+
+
+def str_split(text: str):
+    return text.split()
+
+
+def group_time(t):
+    if t <= 12:
+        return t
+    else:
+        return int(t / 4) * 4

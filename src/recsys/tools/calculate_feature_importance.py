@@ -12,6 +12,7 @@ from recsys.metric import mrr_fast
 @click.option("--dst", type=str, default=None, help="Save results")
 def main(src, dst, limit):
     df = pd.read_csv(src, nrows=limit)
+    # df = df[df["is_impression_the_same"] == True]
     results = []
     for col in tqdm(df.columns):
         if df[col].dtype in [np.int, np.float] and col != "was_clicked":

@@ -23,8 +23,8 @@ with timer("splitting data"):
     logger.info(f"Train shape {train_ind.shape[0]} Val shape {val_ind.shape[0]}")
     meta_train = meta.iloc[train_ind]
     meta_val = meta.iloc[val_ind]
-    X_train = mat[train_ind.min():train_ind.max()]
-    X_val = mat[val_ind.min():val_ind.max()]
+    X_train = mat[train_ind.min() : train_ind.max()]
+    X_val = mat[val_ind.min() : val_ind.max()]
     del mat
     gc.collect()
 

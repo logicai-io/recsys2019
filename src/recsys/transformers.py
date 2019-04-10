@@ -1,5 +1,6 @@
 import json
 import pathlib
+from copy import deepcopy
 
 import arrow
 import joblib
@@ -77,9 +78,10 @@ class RankFeatures(BaseEstimator, TransformerMixin):
 
 
 class LagNumericalFeaturesWithinGroup(BaseEstimator, TransformerMixin):
-    def __init__(self, offset=1, drop_clickout_id=True):
+    def __init__(self, offset=1, drop_clickout_id=True, groupby="clickout_id"):
         self.offset = offset
         self.drop_clickout_id = drop_clickout_id
+        self.groupby = groupby
 
     def fit(self, X, y=None):
         return self
@@ -87,10 +89,10 @@ class LagNumericalFeaturesWithinGroup(BaseEstimator, TransformerMixin):
     def transform(self, X):
         for col in X.columns:
             if col != "clickout_id":
-                X[col + "_shifted_p1_diff"] = X[col] - X.groupby(["clickout_id"])[col].shift(self.offset).fillna(0)
-                X[col + "_shifted_m1_diff"] = X[col] - X.groupby(["clickout_id"])[col].shift(-self.offset).fillna(0)
-                X[col + "_shifted_p1"] = X.groupby(["clickout_id"])[col].shift(self.offset).fillna(0)
-                X[col + "_shifted_m1"] = X.groupby(["clickout_id"])[col].shift(-self.offset).fillna(0)
+                X[col + "_shifted_p1_diff"] = X[col] - X.groupby([self.groupby])[col].shift(self.offset).fillna(0)
+                X[col + "_shifted_m1_diff"] = X[col] - X.groupby([self.groupby])[col].shift(-self.offset).fillna(0)
+                X[col + "_shifted_p1"] = X.groupby([self.groupby])[col].shift(self.offset).fillna(0)
+                X[col + "_shifted_m1"] = X.groupby([self.groupby])[col].shift(-self.offset).fillna(0)
         if self.drop_clickout_id:
             X.drop("clickout_id", axis=1, inplace=True)
         return X
@@ -185,3 +187,27 @@ class RemoveDuplicatedColumnsDF(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X = X.drop(self.duplicate_cols, axis=1)
         return X
+
+
+class NormalizeClickSequence(BaseEstimator, TransformerMixin):
+    def fit(self, X, *arg):
+        return self
+
+    def transform(self, X):
+        X["click_index_sequence_dec"] = X["click_index_sequence"].map(json.loads)
+        X["click_index_sequence_norm"] = X.apply(self.normalize_seq, axis=1)
+        X["click_index_sequence_text"] = X["click_index_sequence_norm"].map(self.encode_as_text)
+        return X
+
+    def normalize_seq(self, row):
+        seq = deepcopy(row["click_index_sequence_dec"])
+        # return [[ind-row["rank"] if ind else 'X' for ind in session if ind] for session in seq]
+        return [[ind if ind else "X" for ind in session if ind] for session in seq]
+
+    def encode_as_text(self, seq):
+        return "BEG " + " , ".join([" ".join(["N" + str(ind) for ind in session]) for session in seq]) + " END"
+
+
+if __name__ == "__main__":
+    df = pd.DataFrame({"click_index_sequence": ["[[0]]"] * 4 + ["[[1,2,3],[0]]"] * 2, "rank": [0, 1, 2, 3, 0, 1]})
+    print(NormalizeClickSequence().fit_transform(df))

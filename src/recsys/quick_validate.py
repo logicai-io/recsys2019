@@ -15,7 +15,9 @@ df_train, df_val = split_by_timestamp(df)
 vectorizer = make_vectorizer_1()
 
 mat_train = vectorizer.fit_transform(df_train)
+print(mat_train.shape)
 mat_val = vectorizer.transform(df_val)
+print(mat_val.shape)
 
 model = LGBMRanker()
 model.fit(mat_train, df_train["was_clicked"], group=group_lengths(df_train["clickout_id"]))

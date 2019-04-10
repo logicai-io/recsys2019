@@ -2,10 +2,12 @@ from recsys.transformers import (
     FeatureEng,
     LagNumericalFeaturesWithinGroup,
     MinimizeNNZ,
+    NormalizeClickSequence,
     PandasToNpArray,
     PandasToRecords,
     RankFeatures,
 )
+from recsys.utils import str_split
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
@@ -69,6 +71,8 @@ numerical_features_py = [
     "clickout_item_item_last_timestamp",
     "interaction_item_image_item_last_timestamp",
     "filter_selection_count",
+    "identical_impressions_item_clicks2",
+    "clickout_prob_time_position_offset",
 ]
 
 numerical_features_for_ranking_py = [
@@ -100,6 +104,7 @@ numerical_features_for_ranking_py = [
     "avg_price_similarity",
     "avg_price_similarity_to_interacted_items",
     "avg_price_similarity_to_interacted_session_items",
+    "clickout_prob_time_position_offset",
 ]
 categorical_features_py = ["device", "platform", "last_sort_order", "last_filter_selection", "country", "hotel_cat"]
 numerical_features_offset_2 = ["was_interaction_info", "was_interaction_img", "last_index_diff_5"]
@@ -113,6 +118,7 @@ def make_vectorizer_1(
 ):
     return make_pipeline(
         FeatureEng(),
+        # NormalizeClickSequence(),
         ColumnTransformer(
             [
                 (
@@ -146,6 +152,8 @@ def make_vectorizer_1(
                 ),
                 ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
+                # ("click_sequence_enc", CountVectorizer(ngram_range=(3, 3), tokenizer=str_split, min_df=50),
+                #  "click_index_sequence_text")
                 # ("user_rank_dict", DictVectorizer(), "user_rank_dict"),
                 # ("user_session_rank_dict", DictVectorizer(), "user_session_rank_dict"),
             ]
