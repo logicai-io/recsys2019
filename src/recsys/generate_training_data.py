@@ -84,9 +84,12 @@ class ClickSequenceEncoder:
 
 
 class ClickProbabilityClickOffsetTimeOffset:
-    def __init__(self):
-        self.name = "clickout_prob_time_position_offset"
-
+    def __init__(
+        self, name="clickout_prob_time_position_offset", impressions_type="impressions_raw", index_col="index_clicked"
+    ):
+        self.name = name
+        self.index_col = index_col
+        self.impressions_type = impressions_type
         # tracks the impression per user
         self.current_impression = defaultdict(str)
         self.last_timestamp = {}
@@ -97,19 +100,22 @@ class ClickProbabilityClickOffsetTimeOffset:
         self.probs = joblib.load("../../data/click_probs_by_index.joblib")
 
     def filter(self, row):
-        return row["action_type"] == "clickout item"
+        if self.impressions_type == "impressions_raw":
+            return row["action_type"] == "clickout item"
+        elif self.impressions_type == "fake_impressions_raw":
+            return row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE
 
     def update_acc(self, row):
         if self.filter(row):
-            self.current_impression[row["user_id"]] = row["impressions_raw"]
-            key = (row["user_id"], row["impressions_raw"])
+            self.current_impression[row["user_id"]] = row[self.impressions_type]
+            key = (row["user_id"], row[self.impressions_type])
             self.last_timestamp[key] = row["timestamp"]
-            self.last_clickout_position[key] = row["index_clicked"]
+            self.last_clickout_position[key] = row[self.index_col]
 
     def get_stats(self, row, item):
-        key = (row["user_id"], row["impressions_raw"])
+        key = (row["user_id"], row[self.impressions_type])
 
-        if row["impressions_raw"] == self.current_impression[row["user_id"]]:
+        if row[self.impressions_type] == self.current_impression[row["user_id"]]:
             t1 = self.last_timestamp[key]
             t2 = row["timestamp"]
 
@@ -282,6 +288,13 @@ accumulators = [
         get_stats_func=lambda acc, row, item: acc[row["user_id"]][-1] - item["rank"] if acc[row["user_id"]] else -1000,
     ),
     StatsAcc(
+        name="last_item_fake_index",
+        filter=lambda row: row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE,
+        acc=defaultdict(list),
+        updater=lambda acc, row: append_to_list_not_null(acc, row["user_id"], row["fake_index_interacted"]),
+        get_stats_func=lambda acc, row, item: acc[row["user_id"]][-1] - item["rank"] if acc[row["user_id"]] else -1000,
+    ),
+    StatsAcc(
         name="last_clicked_item_position_same_view",
         filter=lambda row: row["action_type"] == "clickout item",
         acc={},
@@ -297,6 +310,17 @@ accumulators = [
         ),
         get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["impressions_raw"])][-1] - item["rank"]
         if acc[(row["user_id"], row["impressions_raw"])]
+        else -1000,
+    ),
+    StatsAcc(
+        name="last_item_index_same_fake_view",
+        filter=lambda row: row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE,
+        acc=defaultdict(list),
+        updater=lambda acc, row: append_to_list_not_null(
+            acc, (row["user_id"], row["fake_impressions_raw"]), row["fake_index_interacted"]
+        ),
+        get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["fake_impressions_raw"])][-1] - item["rank"]
+        if acc[(row["user_id"], row["fake_impressions_raw"])]
         else -1000,
     ),
     StatsAcc(
@@ -452,6 +476,13 @@ accumulators = [
         get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["rank"])],
     ),
     StatsAcc(
+        name="user_fake_rank_preference",
+        filter=lambda row: row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE,
+        acc=defaultdict(int),
+        updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["fake_index_interacted"])),
+        get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["rank"])],
+    ),
+    StatsAcc(
         name="user_session_rank_preference",
         filter=lambda row: row["action_type"] == "clickout item",
         acc=defaultdict(int),
@@ -502,6 +533,11 @@ accumulators = [
         get_stats_func=lambda acc, row, item: row["timestamp"] - acc.get((row["user_id"], item["impressions_raw"]), 0),
     ),
     ClickProbabilityClickOffsetTimeOffset(),
+    ClickProbabilityClickOffsetTimeOffset(
+        name="fake_clickout_prob_time_position_offset",
+        impressions_type="fake_impressions_raw",
+        index_col="fake_index_interacted",
+    ),
 ] + [
     StatsAcc(
         name="{}_count".format(action_type.replace(" ", "_")),
@@ -538,6 +574,9 @@ class FeatureGenerator:
 
         self.calculate_similarity_features(item_id, obs)
         self.calculate_indices_features(obs, rank)
+        self.calculate_indices_features(
+            obs, rank, view="last_item_index_same_fake_view", column="fake_impressions_raw", prefix="fake_"
+        )
         self.calculate_price_similarity(obs, price)
 
         del obs["impressions"]
@@ -571,17 +610,19 @@ class FeatureGenerator:
             obs["user_item_session_interactions_list"], int(item_id)
         )
 
-    def calculate_indices_features(self, obs, rank):
+    def calculate_indices_features(
+        self, obs, rank, view="last_item_index_same_view", column="impressions_raw", prefix=""
+    ):
         last_n = 5
-        last_indices_raw = acc_dict["last_item_index_same_view"].acc[(obs["user_id"], obs["impressions_raw"])]
+        last_indices_raw = acc_dict[view].acc[(obs["user_id"], obs[column])]
         last_indices = [-100] * last_n + last_indices_raw
         last_indices = last_indices[-last_n:]
         diff_last_indices = diff(last_indices + [rank])
         for n in range(1, last_n + 1):
-            obs["last_index_{}".format(n)] = last_indices[-n]
-            obs["last_index_diff_{}".format(n)] = diff_last_indices[-n]
+            obs[prefix + "last_index_{}".format(n)] = last_indices[-n]
+            obs[prefix + "last_index_diff_{}".format(n)] = diff_last_indices[-n]
         n_consecutive = FeatureGenerator.calculate_n_consecutive_clicks(last_indices_raw, rank)
-        obs["n_consecutive_clicks"] = n_consecutive
+        obs[prefix + "n_consecutive_clicks"] = n_consecutive
 
     @staticmethod
     def calculate_n_consecutive_clicks(last_indices_raw, rank):
@@ -605,6 +646,15 @@ class FeatureGenerator:
             if self.limit and clickout_id > self.limit:
                 break
             row["timestamp"] = int(row["timestamp"])
+
+            row["fake_impressions_raw"] = row["fake_impressions"]
+            row["fake_impressions"] = row["fake_impressions"].split("|")
+            row["fake_index_interacted"] = (
+                row["fake_impressions"].index(row["reference"])
+                if row["reference"] in row["fake_impressions"]
+                else -1000
+            )
+
             if row["action_type"] == "clickout item":
                 row["impressions_raw"] = row["impressions"]
                 row["impressions"] = row["impressions"].split("|")
