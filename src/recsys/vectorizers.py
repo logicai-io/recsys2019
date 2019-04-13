@@ -12,8 +12,8 @@ from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.impute import SimpleImputer
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
+from sklearn.pipeline import make_pipeline, make_union
+from sklearn.preprocessing import KBinsDiscretizer, StandardScaler, FunctionTransformer
 
 numerical_features_py = [
     "rank",
@@ -62,7 +62,19 @@ numerical_features_py = [
     "last_index_diff_4",
     "last_index_diff_5",
     "n_consecutive_clicks",
+    "fake_last_index_1",
+    "fake_last_index_2",
+    "fake_last_index_3",
+    "fake_last_index_4",
+    "fake_last_index_5",
+    "fake_last_index_diff_1",
+    "fake_last_index_diff_2",
+    "fake_last_index_diff_3",
+    "fake_last_index_diff_4",
+    "fake_last_index_diff_5",
+    "fake_n_consecutive_clicks",
     "user_rank_preference",
+    "user_fake_rank_preference",
     "user_session_rank_preference",
     "user_impression_rank_preference",
     "avg_price_similarity",
@@ -73,6 +85,7 @@ numerical_features_py = [
     "filter_selection_count",
     "identical_impressions_item_clicks2",
     "clickout_prob_time_position_offset",
+    "last_item_fake_index",
 ]
 
 numerical_features_for_ranking_py = [
@@ -99,6 +112,7 @@ numerical_features_for_ranking_py = [
     "stars",
     "n_consecutive_clicks",
     "user_rank_preference",
+    "user_fake_rank_preference",
     "user_session_rank_preference",
     "user_impression_rank_preference",
     "avg_price_similarity",
