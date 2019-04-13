@@ -31,11 +31,14 @@ Quick validation (1 million rows)
 Best submissions
 ---------------
 
-Last improvements
-```
-1m validation   0.6196 -> 0.6233 -> 0.6272 -> 0.6775
-full validation 0.6174 -> 0.6226 -> 0.6237 -> 0.6241
-leaderboard     0.6750 -> 0.6776 -> 0.6782 -> 0.6787
+Commit | 1m validation | Full validation | Leaderboard
+--- | --- | --- | ---
+unk | 0.6196 | 0.6174 | 0.6750
+unk | 0.6233 | 0.6226 | 0.6776
+unk | 0.6272 | 0.6237 | 0.6782
+#14f76d | 0.6275 | 0.6241 | 0.6787
+#995156 | 0.6330 | 0.6255 | 0.6795
+
 ```
 
 Feather
