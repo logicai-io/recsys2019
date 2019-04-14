@@ -13,6 +13,13 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 PATH_TO_IMM = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_map.joblib"
 METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_dense.csv"
+PATH_TO_DATA = pathlib.Path().absolute().parents[1] / "data"
+
+
+def load_joblib_item_dict(path):
+    d = joblib.load(path)
+    d = {int(k):v for k,v in d.items()}
+    return d
 
 
 class FeatureEng(BaseEstimator, TransformerMixin):
@@ -39,9 +46,20 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X["is_rank_greater_than_prv_click"] = (X["rank"] > X["last_item_index"]).astype(np.int32)
         X["last_filter"].fillna("", inplace=True)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
+
+        pagerank = load_joblib_item_dict(PATH_TO_DATA / "pagerank_dict.joblib")
+        cluster = load_joblib_item_dict(PATH_TO_DATA / "cluster_dict.joblib")
+        neigh = load_joblib_item_dict(PATH_TO_DATA / "avg_neighbor_deg_dict.joblib")
+        cluster_triangle = load_joblib_item_dict(PATH_TO_DATA / "cluster_triangles_dict.joblib")
+
+        for d, name in [(pagerank, "pagerank"), (cluster, "cluster"), (neigh, "neigh"),
+                        (cluster_triangle, "cluster_triangle")]:
+            X["graph_" + name] = X["item_id"].map(d)
+
         for col in X.columns:
             if X[col].dtype == np.bool:
                 X[col] = X[col].astype(np.int32)
+
         return X
 
 

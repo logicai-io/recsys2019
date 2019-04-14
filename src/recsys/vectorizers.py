@@ -2,18 +2,16 @@ from recsys.transformers import (
     FeatureEng,
     LagNumericalFeaturesWithinGroup,
     MinimizeNNZ,
-    NormalizeClickSequence,
     PandasToNpArray,
     PandasToRecords,
     RankFeatures,
-)
-from recsys.utils import str_split
+    SanitizeSparseMatrix)
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.impute import SimpleImputer
-from sklearn.pipeline import make_pipeline, make_union
-from sklearn.preprocessing import KBinsDiscretizer, StandardScaler, FunctionTransformer
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
 
 numerical_features_py = [
     "rank",
@@ -86,6 +84,7 @@ numerical_features_py = [
     "identical_impressions_item_clicks2",
     "clickout_prob_time_position_offset",
     "last_item_fake_index",
+    "graph_pagerank", "graph_cluster", "graph_neigh", "graph_cluster_triangle"
 ]
 
 numerical_features_for_ranking_py = [
@@ -119,20 +118,20 @@ numerical_features_for_ranking_py = [
     "avg_price_similarity_to_interacted_items",
     "avg_price_similarity_to_interacted_session_items",
     "clickout_prob_time_position_offset",
+    "graph_pagerank", "graph_cluster", "graph_neigh", "graph_cluster_triangle"
 ]
 categorical_features_py = ["device", "platform", "last_sort_order", "last_filter_selection", "country", "hotel_cat"]
 numerical_features_offset_2 = ["was_interaction_info", "was_interaction_img", "last_index_diff_5"]
 
 
 def make_vectorizer_1(
-    categorical_features=categorical_features_py,
-    numerical_features=numerical_features_py,
-    numerical_features_offset_2=numerical_features_offset_2,
-    numerical_features_for_ranking=numerical_features_for_ranking_py,
+        categorical_features=categorical_features_py,
+        numerical_features=numerical_features_py,
+        numerical_features_offset_2=numerical_features_offset_2,
+        numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
     return make_pipeline(
         FeatureEng(),
-        # NormalizeClickSequence(),
         ColumnTransformer(
             [
                 (
@@ -166,19 +165,16 @@ def make_vectorizer_1(
                 ),
                 ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
-                # ("click_sequence_enc", CountVectorizer(ngram_range=(3, 3), tokenizer=str_split, min_df=50),
-                #  "click_index_sequence_text")
-                # ("user_rank_dict", DictVectorizer(), "user_rank_dict"),
-                # ("user_session_rank_dict", DictVectorizer(), "user_session_rank_dict"),
             ]
         ),
     )
 
 
 def make_vectorizer_2(
-    numerical_features=numerical_features_py,
-    numerical_features_for_ranking=numerical_features_for_ranking_py,
-    categorical_features=categorical_features_py,
+        categorical_features=categorical_features_py,
+        numerical_features=numerical_features_py,
+        numerical_features_offset_2=numerical_features_offset_2,
+        numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
     return make_pipeline(
         FeatureEng(),
@@ -186,13 +182,18 @@ def make_vectorizer_2(
             [
                 (
                     "numerical",
-                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), KBinsDiscretizer()),
+                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), StandardScaler()),
                     numerical_features,
                 ),
                 (
                     "numerical_context",
                     make_pipeline(LagNumericalFeaturesWithinGroup(), MinimizeNNZ()),
                     numerical_features + ["clickout_id"],
+                ),
+                (
+                    "numerical_context_offset_2",
+                    make_pipeline(LagNumericalFeaturesWithinGroup(offset=2), MinimizeNNZ()),
+                    numerical_features_offset_2 + ["clickout_id"],
                 ),
                 ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
                 (
@@ -212,4 +213,5 @@ def make_vectorizer_2(
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
             ]
         ),
+        StandardScaler(with_mean=False)
     )
