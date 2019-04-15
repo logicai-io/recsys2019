@@ -557,6 +557,7 @@ class FeatureGenerator:
     def __init__(self, limit, parallel=True):
         self.limit = limit
         self.jacc_sim = JaccardItemSim(path="../../data/item_metadata_map.joblib")
+        self.poi_sim = JaccardItemSim(path="../../data/item_pois.joblib")
         self.price_sim = ItemPriceSim(path="../../data/item_prices.joblib")
 
     def calculate_features_per_item(self, clickout_id, item_id, max_price, mean_price, price, rank, row):
@@ -589,10 +590,13 @@ class FeatureGenerator:
     def calculate_price_similarity(self, obs, price):
         if not obs["clickout_prices_list"]:
             output = 1000
+            last_price_diff = 1000
         else:
             diff = [abs(p - price) for p in obs["clickout_prices_list"]]
             output = sum(diff) / len(diff)
+            last_price_diff = obs["clickout_prices_list"][-1] - price
         obs["avg_price_similarity"] = output
+        obs["last_price_diff"] = last_price_diff
         del obs["clickout_prices_list"]
 
     def calculate_similarity_features(self, item_id, obs):
@@ -609,6 +613,13 @@ class FeatureGenerator:
         obs["avg_price_similarity_to_interacted_session_items"] = self.price_sim.list_to_item(
             obs["user_item_session_interactions_list"], int(item_id)
         )
+        obs["poi_item_similarity_to_last_clicked_item"] = self.poi_sim.two_items(
+            obs["last_item_clickout"], int(item_id)
+        )
+        obs["poi_avg_similarity_to_interacted_items"] = self.poi_sim.list_to_item(
+            obs["user_item_interactions_list"], int(item_id)
+        )
+        obs["num_pois"] = len(self.poi_sim.imm[int(item_id)])
 
     def calculate_indices_features(
         self, obs, rank, view="last_item_index_same_view", column="impressions_raw", prefix=""

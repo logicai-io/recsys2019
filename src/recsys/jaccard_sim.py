@@ -52,3 +52,19 @@ class ItemPriceSim:
                 return default_sim
         else:
             return default_sim
+
+
+class ItemPoiSim:
+    def __init__(self, path):
+        self.item_pois = joblib.load(path)
+
+    def list_to_item(self, other_items, item):
+        default_sim = 1000
+        if other_items and item in self.item_pois:
+            sims = [abs(self.item_pois[a] - self.item_pois[item]) for a in other_items if a in self.item_pois]
+            if sims:
+                return sum(sims) / len(sims)
+            else:
+                return default_sim
+        else:
+            return default_sim
