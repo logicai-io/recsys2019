@@ -26,6 +26,7 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         imm = joblib.load(PATH_TO_IMM)
         metadata_dense = reduce_mem_usage(pd.read_csv(METADATA_DENSE).fillna(0))
         X["country"] = X["city"].map(lambda x: x.split(",")[-1].strip())
+        X["item_id_cat"] = X["item_id"].map(str)
         X["country_eq_platform"] = (X["country"].map(COUNTRY_CODES) == X["platform"]).astype(np.int32)
         X["last_event_ts_dict"] = X["last_event_ts"].map(json.loads)
         # X["user_rank_dict"] = X["user_rank_dict"].map(json.loads)
@@ -208,6 +209,13 @@ class NormalizeClickSequence(BaseEstimator, TransformerMixin):
         return "BEG " + " , ".join([" ".join(["N" + str(ind) for ind in session]) for session in seq]) + " END"
 
 
-if __name__ == "__main__":
-    df = pd.DataFrame({"click_index_sequence": ["[[0]]"] * 4 + ["[[1,2,3],[0]]"] * 2, "rank": [0, 1, 2, 3, 0, 1]})
-    print(NormalizeClickSequence().fit_transform(df))
+class SparsityFilter(BaseEstimator, TransformerMixin):
+    def __init__(self, min_nnz=None):
+        self.min_nnz = min_nnz
+
+    def fit(self, X, y=None):
+        self.sparsity = X.getnnz(0)
+        return self
+
+    def transform(self, X):
+        return X[:, self.sparsity >= self.min_nnz]

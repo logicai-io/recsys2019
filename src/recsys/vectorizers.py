@@ -6,6 +6,7 @@ from recsys.transformers import (
     PandasToNpArray,
     PandasToRecords,
     RankFeatures,
+    SparsityFilter,
 )
 from recsys.utils import str_split
 from sklearn.compose import ColumnTransformer
@@ -86,6 +87,10 @@ numerical_features_py = [
     "identical_impressions_item_clicks2",
     "clickout_prob_time_position_offset",
     "last_item_fake_index",
+    "last_price_diff",
+    "poi_item_similarity_to_last_clicked_item",
+    "poi_avg_similarity_to_interacted_items",
+    "num_pois",
 ]
 
 numerical_features_for_ranking_py = [
@@ -119,8 +124,21 @@ numerical_features_for_ranking_py = [
     "avg_price_similarity_to_interacted_items",
     "avg_price_similarity_to_interacted_session_items",
     "clickout_prob_time_position_offset",
+    "last_price_diff",
+    "poi_item_similarity_to_last_clicked_item",
+    "poi_avg_similarity_to_interacted_items",
+    "num_pois",
 ]
-categorical_features_py = ["device", "platform", "last_sort_order", "last_filter_selection", "country", "hotel_cat"]
+categorical_features_py = [
+    "device",
+    "platform",
+    "last_sort_order",
+    "last_filter_selection",
+    "country",
+    "hotel_cat",
+    "city",
+    "last_poi",
+]
 numerical_features_offset_2 = ["was_interaction_info", "was_interaction_img", "last_index_diff_5"]
 
 
@@ -165,11 +183,8 @@ def make_vectorizer_1(
                     "last_filter",
                 ),
                 ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
+                ("last_poi_bow", CountVectorizer(min_df=5), "last_poi"),
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
-                # ("click_sequence_enc", CountVectorizer(ngram_range=(3, 3), tokenizer=str_split, min_df=50),
-                #  "click_index_sequence_text")
-                # ("user_rank_dict", DictVectorizer(), "user_rank_dict"),
-                # ("user_session_rank_dict", DictVectorizer(), "user_session_rank_dict"),
             ]
         ),
     )
