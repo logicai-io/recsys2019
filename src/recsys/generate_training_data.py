@@ -354,18 +354,50 @@ accumulators = [
         get_stats_func=lambda acc, row, item: acc[item["item_id"]],
     ),
     StatsAcc(
-        name="clickout_item_platform_clicks",
-        filter=lambda row: row["action_type"] == "clickout item",
-        acc=defaultdict(int),
-        updater=lambda acc, row: increment_key_by_one(acc, (row["reference"], row["platform"])),
-        get_stats_func=lambda acc, row, item: acc[(item["item_id"], row["platform"])],
-    ),
-    StatsAcc(
         name="clickout_item_impressions",
         filter=lambda row: row["action_type"] == "clickout item",
         acc=defaultdict(int),
         updater=lambda acc, row: increment_keys_by_one(acc, row["impressions"]),
         get_stats_func=lambda acc, row, item: acc[item["item_id"]],
+    ),
+    StatsAcc(
+        name="clickout_item_clicks_per_rank",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc=defaultdict(int),
+        updater=lambda acc, row: increment_key_by_one(acc, (row["reference"], row["index_clicked"])),
+        get_stats_func=lambda acc, row, item: acc[(item["item_id"], item["rank"])],
+    ),
+    StatsAcc(
+        name="clickout_item_impressions_per_rank",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc=defaultdict(int),
+        updater=lambda acc, row: increment_keys_by_one(
+            acc, [(item_id, rank) for rank, item_id in enumerate(row["impressions"])]
+        ),
+        get_stats_func=lambda acc, row, item: acc[(item["item_id"], item["rank"])],
+    ),
+    StatsAcc(
+        name="interaction_clicks_per_rank",
+        filter=lambda row: row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE,
+        acc=defaultdict(int),
+        updater=lambda acc, row: increment_key_by_one(acc, (row["reference"], row["fake_index_interacted"])),
+        get_stats_func=lambda acc, row, item: acc[(item["item_id"], item["rank"])],
+    ),
+    StatsAcc(
+        name="interaction_impressions_per_rank",
+        filter=lambda row: row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE,
+        acc=defaultdict(int),
+        updater=lambda acc, row: increment_keys_by_one(
+            acc, [(item_id, rank) for rank, item_id in enumerate(row["impressions"])]
+        ),
+        get_stats_func=lambda acc, row, item: acc[(item["item_id"], item["rank"])],
+    ),
+    StatsAcc(
+        name="clickout_item_platform_clicks",
+        filter=lambda row: row["action_type"] == "clickout item",
+        acc=defaultdict(int),
+        updater=lambda acc, row: increment_key_by_one(acc, (row["reference"], row["platform"])),
+        get_stats_func=lambda acc, row, item: acc[(item["item_id"], row["platform"])],
     ),
     StatsAcc(
         name="clickout_user_item_impressions",
