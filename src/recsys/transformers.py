@@ -32,8 +32,13 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         # X["user_rank_dict"] = X["user_rank_dict"].map(json.loads)
         # X["user_session_rank_dict"] = X["user_session_rank_dict"].map(json.loads)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
+        X["clickout_item_ctr"] = X["clickout_item_clicks"] / (X["clickout_item_impressions"] + 1)
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (X["clickout_user_item_impressions"] + 1)
         X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (X["last_poi_item_impressions"] + 1)
+        X["clickout_item_per_rank_ctr"] = X["clickout_item_clicks_per_rank"] / (
+            X["clickout_item_impressions_per_rank"] + 1
+        )
+        X["interaction_per_rank_ctr"] = X["interaction_clicks_per_rank"] / (X["interaction_impressions_per_rank"] + 1)
         X["properties"] = [str(x) for x in X["item_id"].map(imm)]
         X = pd.merge(X, metadata_dense, how="left", on="item_id")
         X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)

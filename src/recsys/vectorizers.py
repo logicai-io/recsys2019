@@ -39,7 +39,7 @@ numerical_features_py = [
     "was_item_searched",
     "was_interaction_rating",
     "interaction_rating_freq",
-    "interaction_img_diff_ts",
+    "interaction_img_diff_ts",  # TODO: dodać dla reszty
     "identical_impressions_item_clicks",
     "clickout_item_platform_clicks",
     "is_impression_the_same",
@@ -91,6 +91,13 @@ numerical_features_py = [
     "poi_item_similarity_to_last_clicked_item",
     "poi_avg_similarity_to_interacted_items",
     "num_pois",
+    "clickout_item_clicks_per_rank",
+    "clickout_item_impressions_per_rank",
+    "clickout_item_per_rank_ctr",
+    "interaction_clicks_per_rank",
+    "interaction_impressions_per_rank",
+    "interaction_per_rank_ctr",
+    "clickout_item_ctr",
 ]
 
 numerical_features_for_ranking_py = [
@@ -128,6 +135,13 @@ numerical_features_for_ranking_py = [
     "poi_item_similarity_to_last_clicked_item",
     "poi_avg_similarity_to_interacted_items",
     "num_pois",
+    "clickout_item_clicks_per_rank",
+    "clickout_item_impressions_per_rank",
+    "clickout_item_per_rank_ctr",
+    "interaction_clicks_per_rank",
+    "interaction_impressions_per_rank",
+    "interaction_per_rank_ctr",
+    "clickout_item_ctr",
 ]
 categorical_features_py = [
     "device",
