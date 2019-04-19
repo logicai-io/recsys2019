@@ -1,7 +1,7 @@
 from csv import DictReader, DictWriter
 
 import click
-from recsys.accumulators import logger, get_accumulators
+from recsys.data_generator.accumulators import logger, get_accumulators
 from tqdm import tqdm
 
 
@@ -49,7 +49,7 @@ class FeatureGenerator:
         self.save_rows(output_obs)
 
     def save_rows(self, output_obs):
-        out = open("../../data/events_sorted_trans.csv", "wt")
+        out = open("../../../data/events_sorted_trans.csv", "wt")
         first_row = True
         for obs in output_obs:
             if first_row:
@@ -60,7 +60,7 @@ class FeatureGenerator:
         out.close()
 
     def read_rows(self):
-        inp = open("../../data/events_sorted.csv")
+        inp = open("../../../data/events_sorted.csv")
         dr = DictReader(inp)
         print("Reading rows")
         rows = []

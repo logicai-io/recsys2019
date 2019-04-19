@@ -2,7 +2,7 @@ import json
 from collections import defaultdict
 
 import joblib
-from recsys.accumulators_helpers import (
+from recsys.data_generator.accumulators_helpers import (
     increment_key_by_one,
     increment_keys_by_one,
     add_to_set,
@@ -15,7 +15,7 @@ from recsys.accumulators_helpers import (
     tryint,
     diff,
 )
-from recsys.jaccard_sim import JaccardItemSim, ItemPriceSim
+from recsys.data_generator.jaccard_sim import JaccardItemSim, ItemPriceSim
 from recsys.log_utils import get_logger
 from recsys.utils import group_time
 
@@ -109,7 +109,7 @@ class ClickProbabilityClickOffsetTimeOffset:
         self.read_probs()
 
     def read_probs(self):
-        self.probs = joblib.load("../../data/click_probs_by_index.joblib")
+        self.probs = joblib.load("../../../data/click_probs_by_index.joblib")
 
     def update_acc(self, row):
         self.current_impression[row["user_id"]] = row[self.impressions_type]
@@ -259,9 +259,9 @@ class PriceFeatures:
 class SimilarityFeatures:
     def __init__(self):
         self.action_types = ACTIONS_WITH_ITEM_REFERENCE
-        self.jacc_sim = JaccardItemSim(path="../../data/item_metadata_map.joblib")
-        self.poi_sim = JaccardItemSim(path="../../data/item_pois.joblib")
-        self.price_sim = ItemPriceSim(path="../../data/item_prices.joblib")
+        self.jacc_sim = JaccardItemSim(path="../../../data/item_metadata_map.joblib")
+        self.poi_sim = JaccardItemSim(path="../../../data/item_pois.joblib")
+        self.price_sim = ItemPriceSim(path="../../../data/item_prices.joblib")
         self.last_item_clickout = defaultdict(int)
         self.user_item_interactions_list = defaultdict(set)
         self.user_item_session_interactions_list = defaultdict(set)
