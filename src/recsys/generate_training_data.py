@@ -156,7 +156,7 @@ class PoiFeatures:
     def update_acc(self, row):
         if row["action_type"] == "search for poi":
             self.last_poi[row["user_id"]] = row["reference"]
-        else:
+        if row["action_type"] == "clickout item":
             self.last_poi_clicks[(self.last_poi[row["user_id"]], row["reference"])] += 1
             for item_id in row["impressions"]:
                 self.last_poi_impressions[(self.last_poi[row["user_id"]], item_id)] += 1
@@ -195,9 +195,84 @@ class IndicesFeatures:
         for n in range(1, last_n + 1):
             output[self.prefix + "last_index_{}".format(n)] = last_indices[-n]
             output[self.prefix + "last_index_diff_{}".format(n)] = diff_last_indices[-n]
-        n_consecutive = FeatureGenerator.calculate_n_consecutive_clicks(last_indices_raw, item["rank"])
+        n_consecutive = self._calculate_n_consecutive_clicks(last_indices_raw, item["rank"])
         output[self.prefix + "n_consecutive_clicks"] = n_consecutive
         output[self.prefix + "last_index_diff"] = last_indices[-1] - item["rank"]
+        return output
+
+    def _calculate_n_consecutive_clicks(self, last_indices_raw, rank):
+        n_consecutive = 0
+        for n in range(1, len(last_indices_raw) + 1):
+            if last_indices_raw[-n] == rank:
+                n_consecutive += 1
+            else:
+                break
+        return n_consecutive
+
+
+class PriceSimilarity:
+    def __init__(self):
+        self.last_prices = defaultdict(set)
+
+    def update(self, row):
+        self.last_prices[row["user_id"]].append(row["price_clicked"])
+
+    def get_stats(self, row, item):
+        clickout_prices_list = self.last_prices[row["user_id"]]
+        if not clickout_prices_list:
+            output = 1000
+            last_price_diff = 1000
+        else:
+            diff = [abs(p - item["price"]) for p in clickout_prices_list]
+            output = sum(diff) / len(diff)
+            last_price_diff = clickout_prices_list[-1] - item["price"]
+        obs = {}
+        obs["avg_price_similarity"] = output
+        obs["last_price_diff"] = last_price_diff
+        return obs
+
+
+class SimilarityFeatures:
+    def __init__(self):
+        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
+        self.jacc_sim = JaccardItemSim(path="../../data/item_metadata_map.joblib")
+        self.poi_sim = JaccardItemSim(path="../../data/item_pois.joblib")
+        self.price_sim = ItemPriceSim(path="../../data/item_prices.joblib")
+        self.last_item_clickout = defaultdict(int)
+        self.user_item_interactions_list = defaultdict(set)
+        self.user_item_session_interactions_list = defaultdict(set)
+
+    def update_acc(self, row):
+        if row["action_type"] == "clickout item":
+            self.last_item_clickout[row["user_id"]] = row["reference"]
+        if row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE:
+            self.user_item_interactions_list[row["user_id"]].add(tryint(row["reference"]))
+            self.user_item_session_interactions_list[(row["user_id"], row["session_id"])].add(tryint(row["reference"]))
+
+    def get_stats(self, row, item):
+        user_item_interactions_list = list(self.user_item_interactions_list[row["user_id"]])
+        user_item_session_interactions_list = list(
+            self.user_item_session_interactions_list[(row["user_id"], row["session_id"])]
+        )
+        last_item_clickout = self.last_item_clickout[row["user_id"]]
+        item_id = int(item["item_id"])
+        output = {}
+        output["item_similarity_to_last_clicked_item"] = self.jacc_sim.two_items(last_item_clickout, item["item_id"])
+        output["avg_similarity_to_interacted_items"] = self.jacc_sim.list_to_item(user_item_interactions_list, item_id)
+        output["avg_similarity_to_interacted_session_items"] = self.jacc_sim.list_to_item(
+            user_item_session_interactions_list, item_id
+        )
+        output["avg_price_similarity_to_interacted_items"] = self.price_sim.list_to_item(
+            user_item_interactions_list, item_id
+        )
+        output["avg_price_similarity_to_interacted_session_items"] = self.price_sim.list_to_item(
+            user_item_session_interactions_list, item_id
+        )
+        output["poi_item_similarity_to_last_clicked_item"] = self.poi_sim.two_items(last_item_clickout, item_id)
+        output["poi_avg_similarity_to_interacted_items"] = self.poi_sim.list_to_item(
+            user_item_interactions_list, item_id
+        )
+        output["num_pois"] = len(self.poi_sim.imm[item_id])
         return output
 
 
@@ -534,13 +609,6 @@ def get_accumulators():
             get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["impressions_hash"], item["rank"])],
         ),
         StatsAcc(
-            name="clickout_prices_list",
-            action_types=["clickout item"],
-            acc=defaultdict(set),
-            updater=lambda acc, row: add_to_set(acc, row["user_id"], row["price_clicked"]),
-            get_stats_func=lambda acc, row, item: list(acc[row["user_id"]]),
-        ),
-        StatsAcc(
             name="interaction_item_image_item_last_timestamp",
             action_types=["interaction item image"],
             acc={},
@@ -577,6 +645,7 @@ def get_accumulators():
             impressions_type="fake_impressions_raw",
             index_col="fake_index_interacted",
         ),
+        SimilarityFeatures(),
         PoiFeatures(),
         IndicesFeatures(
             action_types=["clickout item"], prefix="", impressions_type="impressions_raw", index_key="index_clicked"
@@ -587,6 +656,7 @@ def get_accumulators():
             impressions_type="fake_impressions_raw",
             index_key="fake_index_interacted",
         ),
+        SimilarityFeatures(),
     ] + [
         StatsAcc(
             name="{}_count".format(action_type.replace(" ", "_")),
@@ -611,9 +681,7 @@ class FeatureGenerator:
         self.limit = limit
         self.accumulators = accumulators
         self.accs_by_action_type = accs_by_action_type
-        self.jacc_sim = JaccardItemSim(path="../../data/item_metadata_map.joblib")
-        self.poi_sim = JaccardItemSim(path="../../data/item_pois.joblib")
-        self.price_sim = ItemPriceSim(path="../../data/item_prices.joblib")
+
         print("Number of accumulators %d" % len(self.accumulators))
 
     def calculate_features_per_item(self, clickout_id, item_id, max_price, mean_price, price, rank, row):
@@ -627,11 +695,6 @@ class FeatureGenerator:
         obs["price_vs_max_price"] = max_price - price
         obs["price_vs_mean_price"] = price / mean_price
         self.update_obs_with_acc(obs, row)
-
-        # TODO: move all features to accumulators
-        self.calculate_similarity_features(item_id, obs)
-        self.calculate_price_similarity(obs, price)
-
         del obs["fake_impressions"]
         del obs["fake_impressions_raw"]
         del obs["fake_prices"]
@@ -650,50 +713,6 @@ class FeatureGenerator:
                     obs[k] = v
             else:
                 obs[acc.name] = acc.get_stats(row, obs)
-
-    def calculate_price_similarity(self, obs, price):
-        if not obs["clickout_prices_list"]:
-            output = 1000
-            last_price_diff = 1000
-        else:
-            diff = [abs(p - price) for p in obs["clickout_prices_list"]]
-            output = sum(diff) / len(diff)
-            last_price_diff = obs["clickout_prices_list"][-1] - price
-        obs["avg_price_similarity"] = output
-        obs["last_price_diff"] = last_price_diff
-        del obs["clickout_prices_list"]
-
-    def calculate_similarity_features(self, item_id, obs):
-        obs["item_similarity_to_last_clicked_item"] = self.jacc_sim.two_items(obs["last_item_clickout"], int(item_id))
-        obs["avg_similarity_to_interacted_items"] = self.jacc_sim.list_to_item(
-            obs["user_item_interactions_list"], int(item_id)
-        )
-        obs["avg_similarity_to_interacted_session_items"] = self.jacc_sim.list_to_item(
-            obs["user_item_session_interactions_list"], int(item_id)
-        )
-        obs["avg_price_similarity_to_interacted_items"] = self.price_sim.list_to_item(
-            obs["user_item_interactions_list"], int(item_id)
-        )
-        obs["avg_price_similarity_to_interacted_session_items"] = self.price_sim.list_to_item(
-            obs["user_item_session_interactions_list"], int(item_id)
-        )
-        obs["poi_item_similarity_to_last_clicked_item"] = self.poi_sim.two_items(
-            obs["last_item_clickout"], int(item_id)
-        )
-        obs["poi_avg_similarity_to_interacted_items"] = self.poi_sim.list_to_item(
-            obs["user_item_interactions_list"], int(item_id)
-        )
-        obs["num_pois"] = len(self.poi_sim.imm[int(item_id)])
-
-    @staticmethod
-    def calculate_n_consecutive_clicks(last_indices_raw, rank):
-        n_consecutive = 0
-        for n in range(1, len(last_indices_raw) + 1):
-            if last_indices_raw[-n] == rank:
-                n_consecutive += 1
-            else:
-                break
-        return n_consecutive
 
     def generate_features(self):
         logger.info("Starting feature generation")
