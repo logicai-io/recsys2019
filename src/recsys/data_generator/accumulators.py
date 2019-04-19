@@ -300,6 +300,31 @@ class SimilarityFeatures:
         return output
 
 
+def get_accumulators_basic():
+    accumulators = [
+        SimilarityFeatures(),
+        PoiFeatures(),
+        IndicesFeatures(
+            action_types=["clickout item"], prefix="", impressions_type="impressions_raw", index_key="index_clicked"
+        ),
+        IndicesFeatures(
+            action_types=list(ACTIONS_WITH_ITEM_REFERENCE),
+            prefix="fake_",
+            impressions_type="fake_impressions_raw",
+            index_key="fake_index_interacted",
+        ),
+        SimilarityFeatures(),
+        PriceFeatures(),
+        PriceSimilarity(),
+    ]
+    accs_by_action_type = defaultdict(list)
+    for acc in accumulators:
+        for action_type in acc.action_types:
+            accs_by_action_type[action_type].append(acc)
+
+    return accumulators, accs_by_action_type
+
+
 def get_accumulators():
     accumulators = [
         StatsAcc(
