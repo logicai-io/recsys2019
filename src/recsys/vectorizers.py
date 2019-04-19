@@ -116,6 +116,7 @@ numerical_features_for_ranking_py = [
     "rating",
     "stars",
     "n_consecutive_clicks",
+    "fake_n_consecutive_clicks",
     "user_rank_preference",
     "user_fake_rank_preference",
     "user_session_rank_preference",

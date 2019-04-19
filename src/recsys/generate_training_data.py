@@ -165,7 +165,7 @@ class PoiFeatures:
         output = {}
         output["last_poi"] = self.last_poi[row["user_id"]]
         output["last_poi_item_clicks"] = self.last_poi_clicks[(output["last_poi"], item["item_id"])]
-        output["last_poi_item_impressions"] = self.last_poi_clicks[(output["last_poi"], item["item_id"])]
+        output["last_poi_item_impressions"] = self.last_poi_impressions[(output["last_poi"], item["item_id"])]
         output["last_poi_ctr"] = output["last_poi_item_clicks"] / (output["last_poi_item_impressions"] + 1)
         return output
 
@@ -181,6 +181,7 @@ class IndicesFeatures:
         self.prefix = prefix
 
     def update_acc(self, row):
+        # TODO: reset list when there is a change of sort order?
         if row["action_type"] in self.action_types and row[self.index_key] >= 0:
             self.last_indices[(row["user_id"], row[self.impressions_type])].append(row[self.index_key])
 
@@ -631,6 +632,9 @@ class FeatureGenerator:
         self.calculate_similarity_features(item_id, obs)
         self.calculate_price_similarity(obs, price)
 
+        del obs["fake_impressions"]
+        del obs["fake_impressions_raw"]
+        del obs["fake_prices"]
         del obs["impressions"]
         del obs["impressions_hash"]
         del obs["impressions_raw"]
@@ -751,7 +755,6 @@ class FeatureGenerator:
                     obs = self.calculate_features_per_item(
                         clickout_id, item_id, max_price, mean_price, price, rank, row
                     )
-                    print(obs["last_index_1"])
                     output_rows.append(obs)
 
             for acc in self.accs_by_action_type[row["action_type"]]:
