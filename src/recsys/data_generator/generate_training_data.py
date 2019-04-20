@@ -76,7 +76,7 @@ class FeatureGenerator:
         print("Reading rows")
         for i, row in enumerate(dr):
             yield row
-            if i > self.limit:
+            if self.limit and i > self.limit:
                 break
         inp.close()
 
