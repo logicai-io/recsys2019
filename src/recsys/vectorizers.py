@@ -21,9 +21,9 @@ numerical_features_info = [
     ("avg_similarity_to_interacted_session_items", True),
     ("clicked_before", False),
     ("clickout_item_clicks", True),
+    ("clickout_item_impressions", True),
     ("clickout_item_clicks_by_user_id", True),
     ("clickout_item_ctr_by_user_id", True),
-    ("clickout_item_impressions", True),
     ("clickout_item_item_last_timestamp", False),
     ("clickout_item_platform_clicks", True),
     ("clickout_prob_time_position_offset", True),
@@ -113,7 +113,6 @@ def make_vectorizer_1(
 ):
     return make_pipeline(
         FeatureEng(),
-        # NormalizeClickSequence(),
         ColumnTransformer(
             [
                 (
@@ -147,46 +146,6 @@ def make_vectorizer_1(
                 ),
                 ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
                 ("last_poi_bow", CountVectorizer(min_df=5), "last_poi"),
-                ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
-            ]
-        ),
-    )
-
-
-def make_vectorizer_2(
-    numerical_features=numerical_features_py,
-    numerical_features_for_ranking=numerical_features_for_ranking_py,
-    categorical_features=categorical_features_py,
-):
-    return make_pipeline(
-        FeatureEng(),
-        ColumnTransformer(
-            [
-                (
-                    "numerical",
-                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), KBinsDiscretizer()),
-                    numerical_features,
-                ),
-                (
-                    "numerical_context",
-                    make_pipeline(LagNumericalFeaturesWithinGroup(), MinimizeNNZ()),
-                    numerical_features + ["clickout_id"],
-                ),
-                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
-                (
-                    "numerical_ranking",
-                    make_pipeline(RankFeatures(), MinimizeNNZ()),
-                    numerical_features_for_ranking + ["clickout_id"],
-                ),
-                ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=2), "properties"),
-                (
-                    "last_filter",
-                    CountVectorizer(
-                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=2
-                    ),
-                    "last_filter",
-                ),
-                ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
             ]
         ),

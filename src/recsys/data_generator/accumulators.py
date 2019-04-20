@@ -319,14 +319,9 @@ class ItemCTR:
         self.impressions = defaultdict(int)
 
     def update_acc(self, row):
-        if self.key is None:
-            self.clicks[row["reference"]] += 1
-            for item_id in row["impressions"]:
-                self.impressions[item_id] += 1
-        else:
-            self.clicks[(row["reference"], row[self.key])] += 1
-            for item_id in row["impressions"]:
-                self.impressions[(item_id, row[self.key])] += 1
+        self.clicks[row["reference"]] += 1
+        for item_id in row["impressions"]:
+            self.impressions[item_id] += 1
 
     def get_stats(self, row, item):
         output = {}
