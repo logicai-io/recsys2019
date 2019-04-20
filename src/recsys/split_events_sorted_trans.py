@@ -13,18 +13,16 @@ def write_worker(q: queue.Queue, filename):
         dw = DictWriter(out, fieldnames=header)
         header_written = False
         while True:
-            print("Waiting", filename)
             row = q.get()
             if not header_written:
                 dw.fieldnames = row.keys()
                 dw.writeheader()
                 header_written = True
-            print(row)
             dw.writerow(row)
 
 
 def create_queue_process(filename):
-    q = queue.Queue(maxsize=1)
+    q = multiprocessing.Queue(maxsize=10000)
     process = multiprocessing.Process(target=write_worker, args=(q, filename))
     process.daemon = True
     process.start()
