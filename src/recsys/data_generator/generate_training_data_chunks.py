@@ -9,10 +9,7 @@ from tqdm import tqdm
 
 
 def merge_dicts(*dicts):
-    return reduce(lambda d1, d2: reduce(lambda d, t:
-                                        dict(list(d.items()) + [t]),
-                                        d2.items(), d1),
-                  dicts, {})
+    return reduce(lambda d1, d2: reduce(lambda d, t: dict(list(d.items()) + [t]), d2.items(), d1), dicts, {})
 
 
 class FeatureGenerator:
@@ -64,9 +61,7 @@ class FeatureGenerator:
         row["fake_impressions_raw"] = row["fake_impressions"]
         row["fake_impressions"] = row["fake_impressions"].split("|")
         row["fake_index_interacted"] = (
-            row["fake_impressions"].index(row["reference"])
-            if row["reference"] in row["fake_impressions"]
-            else -1000
+            row["fake_impressions"].index(row["reference"]) if row["reference"] in row["fake_impressions"] else -1000
         )
         if row["action_type"] == "clickout item":
             row["impressions_raw"] = row["impressions"]
@@ -112,8 +107,7 @@ def main(limit):
     accumulators, accs_by_action_type = get_accumulators_basic()
     data_io = DataIOChunks()
     feature_generator = FeatureGenerator(
-        data_io=data_io,
-        limit=limit, accumulators=accumulators, accs_by_action_type=accs_by_action_type
+        data_io=data_io, limit=limit, accumulators=accumulators, accs_by_action_type=accs_by_action_type
     )
     feature_generator.generate_features()
 

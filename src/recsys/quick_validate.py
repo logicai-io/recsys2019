@@ -9,7 +9,7 @@ from recsys.vectorizers import make_vectorizer_1
 
 warnings.filterwarnings("ignore")
 
-df = pd.read_csv("../../data/events_sorted_trans.csv", nrows=1000000)
+df = pd.read_csv("../../data/events_sorted_trans_all.csv", nrows=1000000)
 
 df_train, df_val = split_by_timestamp(df)
 vectorizer = make_vectorizer_1()

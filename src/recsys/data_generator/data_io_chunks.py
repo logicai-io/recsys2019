@@ -15,8 +15,7 @@ def grouper(n, iterable):
         yield chunk
 
 
-class DataIOChunks():
-
+class DataIOChunks:
     def __init__(self):
         self.reader_queue = multiprocessing.Queue(maxsize=10)
         reader_process = multiprocessing.Process(target=self.csv_reader, args=(self.reader_queue,))

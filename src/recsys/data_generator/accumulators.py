@@ -257,11 +257,16 @@ class PriceFeatures:
 
 
 class SimilarityFeatures:
-    def __init__(self):
+    def __init__(self, type):
         self.action_types = ACTIONS_WITH_ITEM_REFERENCE
-        self.jacc_sim = JaccardItemSim(path="../../../data/item_metadata_map.joblib")
-        self.poi_sim = JaccardItemSim(path="../../../data/item_pois.joblib")
-        self.price_sim = ItemPriceSim(path="../../../data/item_prices.joblib")
+        self.type = type
+
+        if self.type == "imm":
+            self.jacc_sim = JaccardItemSim(path="../../../data/item_metadata_map.joblib")
+        elif self.type == "poi":
+            self.poi_sim = JaccardItemSim(path="../../../data/item_pois.joblib")
+        elif self.type == "price":
+            self.price_sim = ItemPriceSim(path="../../../data/item_prices.joblib")
         self.last_item_clickout = defaultdict(int)
         self.user_item_interactions_list = defaultdict(set)
         self.user_item_session_interactions_list = defaultdict(set)
@@ -281,51 +286,33 @@ class SimilarityFeatures:
         last_item_clickout = self.last_item_clickout[row["user_id"]]
         item_id = int(item["item_id"])
         output = {}
-        output["item_similarity_to_last_clicked_item"] = self.jacc_sim.two_items(last_item_clickout, item["item_id"])
-        output["avg_similarity_to_interacted_items"] = self.jacc_sim.list_to_item(user_item_interactions_list, item_id)
-        output["avg_similarity_to_interacted_session_items"] = self.jacc_sim.list_to_item(
-            user_item_session_interactions_list, item_id
-        )
-        output["avg_price_similarity_to_interacted_items"] = self.price_sim.list_to_item(
-            user_item_interactions_list, item_id
-        )
-        output["avg_price_similarity_to_interacted_session_items"] = self.price_sim.list_to_item(
-            user_item_session_interactions_list, item_id
-        )
-        output["poi_item_similarity_to_last_clicked_item"] = self.poi_sim.two_items(last_item_clickout, item_id)
-        output["poi_avg_similarity_to_interacted_items"] = self.poi_sim.list_to_item(
-            user_item_interactions_list, item_id
-        )
-        output["num_pois"] = len(self.poi_sim.imm[item_id])
+        if self.type == "imm":
+            output["item_similarity_to_last_clicked_item"] = self.jacc_sim.two_items(
+                last_item_clickout, item["item_id"]
+            )
+            output["avg_similarity_to_interacted_items"] = self.jacc_sim.list_to_item(
+                user_item_interactions_list, item_id
+            )
+            output["avg_similarity_to_interacted_session_items"] = self.jacc_sim.list_to_item(
+                user_item_session_interactions_list, item_id
+            )
+        elif self.type == "price":
+            output["avg_price_similarity_to_interacted_items"] = self.price_sim.list_to_item(
+                user_item_interactions_list, item_id
+            )
+            output["avg_price_similarity_to_interacted_session_items"] = self.price_sim.list_to_item(
+                user_item_session_interactions_list, item_id
+            )
+        elif self.type == "poi":
+            output["poi_item_similarity_to_last_clicked_item"] = self.poi_sim.two_items(last_item_clickout, item_id)
+            output["poi_avg_similarity_to_interacted_items"] = self.poi_sim.list_to_item(
+                user_item_interactions_list, item_id
+            )
+            output["num_pois"] = len(self.poi_sim.imm[item_id])
         return output
 
 
-def get_accumulators_basic():
-    accumulators = [
-        SimilarityFeatures(),
-        PoiFeatures(),
-        IndicesFeatures(
-            action_types=["clickout item"], prefix="", impressions_type="impressions_raw", index_key="index_clicked"
-        ),
-        IndicesFeatures(
-            action_types=list(ACTIONS_WITH_ITEM_REFERENCE),
-            prefix="fake_",
-            impressions_type="fake_impressions_raw",
-            index_key="fake_index_interacted",
-        ),
-        SimilarityFeatures(),
-        PriceFeatures(),
-        PriceSimilarity(),
-    ]
-    accs_by_action_type = defaultdict(list)
-    for acc in accumulators:
-        for action_type in acc.action_types:
-            accs_by_action_type[action_type].append(acc)
-
-    return accumulators, accs_by_action_type
-
-
-def get_accumulators():
+def get_accumulators(hashn=None):
     accumulators = [
         StatsAcc(
             name="identical_impressions_item_clicks",
@@ -631,7 +618,9 @@ def get_accumulators():
             impressions_type="fake_impressions_raw",
             index_col="fake_index_interacted",
         ),
-        SimilarityFeatures(),
+        SimilarityFeatures("imm"),
+        SimilarityFeatures("poi"),
+        SimilarityFeatures("price"),
         PoiFeatures(),
         IndicesFeatures(
             action_types=["clickout item"], prefix="", impressions_type="impressions_raw", index_key="index_clicked"
@@ -642,7 +631,6 @@ def get_accumulators():
             impressions_type="fake_impressions_raw",
             index_key="fake_index_interacted",
         ),
-        SimilarityFeatures(),
         PriceFeatures(),
         PriceSimilarity(),
     ] + [
@@ -655,6 +643,10 @@ def get_accumulators():
         )
         for action_type in ["filter selection"]
     ]
+
+    if hashn is not None:
+        accumulators = [acc for i, acc in enumerate(accumulators) if i % 8 == hashn]
+        print("N acc", hashn, len(accumulators))
 
     accs_by_action_type = defaultdict(list)
     for acc in accumulators:

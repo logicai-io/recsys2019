@@ -6,8 +6,7 @@ from multiprocessing import Queue
 STOP = 1
 
 
-class DataIO():
-
+class DataIO:
     def __init__(self, limit=None):
         self.limit = limit
 

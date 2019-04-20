@@ -77,8 +77,7 @@ def main(limit):
     data_io = DataIO(limit=limit)
     accumulators, accs_by_action_type = get_accumulators()
     feature_generator = FeatureGenerator(
-        data_io=data_io,
-        limit=limit, accumulators=accumulators, accs_by_action_type=accs_by_action_type
+        data_io=data_io, limit=limit, accumulators=accumulators, accs_by_action_type=accs_by_action_type
     )
     feature_generator.generate_features()
 
