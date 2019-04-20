@@ -31,6 +31,7 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X["last_event_ts_dict"] = X["last_event_ts"].map(json.loads)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
         X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (X["last_poi_item_impressions"] + 1)
+        X["user_item_ctr"] = X["clickout_user_item_clicks"] / (X["clickout_user_item_impressions"] + 1)
         X["properties"] = [str(x) for x in X["item_id"].map(imm)]
         X = pd.merge(X, metadata_dense, how="left", on="item_id")
         X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)

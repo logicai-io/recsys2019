@@ -327,7 +327,6 @@ class ItemCTR:
         output = {}
         output["clickout_item_clicks"] = self.clicks[item["item_id"]]
         output["clickout_item_impressions"] = self.impressions[item["item_id"]]
-        output["clickout_item_ctr"] = output["clickout_item_clicks"] / (output["clickout_item_impressions"] + 1)
         return output
 
 
@@ -349,9 +348,9 @@ class ItemCTRByKey:
         output["clickout_item_impressions_by_{key}".format(key=self.key)] = self.impressions[
             (item["item_id"], row[self.key])
         ]
-        output["clickout_item_ctr_by_{key}".format(key=self.key)] = output["clickout_item_clicks_by_{key}".format(key=self.key)] / (
-            output["clickout_item_impressions_by_{key}".format(key=self.key)] + 1
-        )
+        output["clickout_item_ctr_by_{key}".format(key=self.key)] = output[
+            "clickout_item_clicks_by_{key}".format(key=self.key)
+        ] / (output["clickout_item_impressions_by_{key}".format(key=self.key)] + 1)
         return output
 
 
@@ -464,13 +463,28 @@ def get_accumulators(hashn=None):
             get_stats_func=lambda acc, row, item: acc.get(row["user_id"], 0),
         ),
         ItemCTR(action_types=["clickout item"]),
-        ItemCTRByKey(action_types=["clickout item"], key="user_id"),
         StatsAcc(
             name="clickout_item_platform_clicks",
             action_types=["clickout item"],
             acc=defaultdict(int),
             updater=lambda acc, row: increment_key_by_one(acc, (row["reference"], row["platform"])),
             get_stats_func=lambda acc, row, item: acc[(item["item_id"], row["platform"])],
+        ),
+        StatsAcc(
+            name="clickout_user_item_clicks",
+            action_types=["clickout item"],
+            acc=defaultdict(int),
+            updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
+            get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
+        ),
+        StatsAcc(
+            name="clickout_user_item_impressions",
+            action_types=["clickout item"],
+            acc=defaultdict(int),
+            updater=lambda acc, row: increment_keys_by_one(
+                acc, [(row["user_id"], item_id) for item_id in row["impressions"]]
+            ),
+            get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
         ),
         StatsAcc(
             name="was_interaction_img",
