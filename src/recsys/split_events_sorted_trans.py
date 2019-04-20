@@ -20,7 +20,7 @@ outputs_te = [
     for chunk_id in range(4)
 ]
 
-reader = DictReader(open("../../data/events_sorted_trans.csv"))
+reader = DictReader(open("../../data/events_sorted_trans_all.csv"))
 
 for i, row in tqdm(enumerate(reader)):
     if i == 0:
