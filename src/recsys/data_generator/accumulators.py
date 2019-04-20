@@ -312,6 +312,25 @@ class SimilarityFeatures:
         return output
 
 
+class ItemCTR:
+    def __init__(self, action_types):
+        self.action_types = action_types
+        self.clicks = defaultdict(int)
+        self.impressions = defaultdict(int)
+
+    def update_acc(self, row):
+        self.clicks[row["reference"]] += 1
+        for item_id in row["impressions"]:
+            self.impressions[item_id] += 1
+
+    def get_stats(self, row, item):
+        output = {}
+        output["clickout_item_clicks"] = self.clicks[item["item_id"]]
+        output["clickout_item_impressions"] = self.impressions[item["item_id"]]
+        # output["clickout_item_ctr"] = output["clickout_item_clicks"] / (output["clickout_item_impressions"] + 1)
+        return output
+
+
 def get_accumulators(hashn=None):
     accumulators = [
         StatsAcc(
@@ -427,26 +446,13 @@ def get_accumulators(hashn=None):
             updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
             get_stats_func=lambda acc, row, item: acc.get(row["user_id"], 0),
         ),
-        StatsAcc(
-            name="clickout_item_clicks",
-            action_types=["clickout item"],
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_key_by_one(acc, row["reference"]),
-            get_stats_func=lambda acc, row, item: acc[item["item_id"]],
-        ),
+        ItemCTR(action_types=["clickout item"]),
         StatsAcc(
             name="clickout_item_platform_clicks",
             action_types=["clickout item"],
             acc=defaultdict(int),
             updater=lambda acc, row: increment_key_by_one(acc, (row["reference"], row["platform"])),
             get_stats_func=lambda acc, row, item: acc[(item["item_id"], row["platform"])],
-        ),
-        StatsAcc(
-            name="clickout_item_impressions",
-            action_types=["clickout item"],
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_keys_by_one(acc, row["impressions"]),
-            get_stats_func=lambda acc, row, item: acc[item["item_id"]],
         ),
         StatsAcc(
             name="clickout_user_item_impressions",
