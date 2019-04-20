@@ -12,7 +12,7 @@ logger = get_logger()
 def timer(name):
     t0 = time.time()
     yield
-    logger.info(f"[{name}] done in {time.time() - t0:.0f} s")
+    logger.info("[%s] done in %f s", name, time.time() - t0)
 
 
 def group_lengths(group_ids):
