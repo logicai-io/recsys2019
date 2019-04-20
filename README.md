@@ -5,15 +5,17 @@ Current process (full)
 
 1. cd data/
 2. ./download_data.sh
-3. cd ../../src/recsys/data_prep
-4. ./run_data_prep.sh
-5. cd ..
-6. python generate_training_data.py (or pypy generate_training_data.py which is 2x faster)
-7. python split_events_sorted_trans.py (pypy is good)
-8. python vectorize_datasets.py
-9. python model_val.py (validate model)
-10. python model_submit.py (make test predictions)
-11. python make_blend.py (prepare submission file)
+3. cd ../../src
+4. export PYTHONPATH=$(pwd)
+5. cd recsys/data_prep
+6. ./run_data_prep.sh
+7. cd ..
+8. python generate_training_data.py (or pypy generate_training_data.py which is 2x faster)
+9. python split_events_sorted_trans.py (pypy is good)
+10. python vectorize_datasets.py
+11. python model_val.py (validate model)
+12. python model_submit.py (make test predictions)
+13. python make_blend.py (prepare submission file)
 
 Steps 6-11 are also inside run_all.sh script
 

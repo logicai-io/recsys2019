@@ -3,6 +3,7 @@ click
 joblib
 lightgbm
 numpy
+cython
 pandas
 scikit-learn
 scipy
