@@ -38,6 +38,7 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X["is_rank_greater_than_prv_click"] = (X["rank"] > X["last_item_index"]).astype(np.int32)
         X["last_filter"].fillna("", inplace=True)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
+        X["last_poi"].fillna("", inplace=True)
         for col in X.columns:
             if X[col].dtype == np.bool:
                 X[col] = X[col].astype(np.int32)
