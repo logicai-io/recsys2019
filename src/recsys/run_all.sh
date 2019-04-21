@@ -3,7 +3,7 @@
 alias PYPY=~/.pyenv/versions/recsys-pypy/bin/python
 alias PY3=~/.pyenv/versions/recsys/bin/python
 
-PYPY generate_training_data.py
+cd data_generator; PYPY generate_training_parallel_all.py; cd -
 PYPY split_events_sorted_trans.py
 PY3 vectorize_datasets.py
 PY3 model_val.py

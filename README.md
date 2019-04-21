@@ -8,7 +8,7 @@ Current process (full)
 3. cd ../../src/recsys/data_prep
 4. ./run_data_prep.sh
 5. cd ..
-6. python generate_training_data.py (or pypy generate_training_data.py which is 2x faster)
+6. cd data_generator; python generate_data_parallel_all.py; cd - (pypy is good)
 7. python split_events_sorted_trans.py (pypy is good)
 8. python vectorize_datasets.py
 9. python model_val.py (validate model)
@@ -25,7 +25,7 @@ Quick validation (1 million rows)
 3. cd ../../src/recsys/data_prep
 4. ./run_data_prep.sh
 5. cd ..
-6. python generate_training_data.py --limit 1000000
+6. cd data_generator; python generate_data_parallel_quick.py; cd - (pypy is good)
 7. python quick_validate.py
 
 Best submissions
@@ -39,6 +39,7 @@ unk | 0.6272 | 0.6237 | 0.6782
 @14f76d | 0.6275 | 0.6241 | 0.6787
 @995156 | 0.6330 | 0.6255 | 0.6795
 @657072 | 0.6336 | 0.6266 | 0.6802
+@560cd0 | 0.6352 | 0.6269 | 0.6807
 
 ```
 
