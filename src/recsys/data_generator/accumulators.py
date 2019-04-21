@@ -257,7 +257,7 @@ class PriceFeatures:
 
 
 class SimilarityFeatures:
-    def __init__(self, type):
+    def __init__(self, type, hashn):
         self.action_types = ACTIONS_WITH_ITEM_REFERENCE
         self.type = type
 
@@ -270,6 +270,7 @@ class SimilarityFeatures:
         self.last_item_clickout = defaultdict(int)
         self.user_item_interactions_list = defaultdict(set)
         self.user_item_session_interactions_list = defaultdict(set)
+        self.hashn = hashn
 
     def update_acc(self, row):
         if row["action_type"] == "clickout item":
@@ -287,28 +288,36 @@ class SimilarityFeatures:
         item_id = int(item["item_id"])
         output = {}
         if self.type == "imm":
-            output["item_similarity_to_last_clicked_item"] = self.jacc_sim.two_items(
-                last_item_clickout, item["item_id"]
-            )
-            output["avg_similarity_to_interacted_items"] = self.jacc_sim.list_to_item(
-                user_item_interactions_list, item_id
-            )
-            output["avg_similarity_to_interacted_session_items"] = self.jacc_sim.list_to_item(
-                user_item_session_interactions_list, item_id
-            )
+            if self.hashn == 0:
+                output["item_similarity_to_last_clicked_item"] = self.jacc_sim.two_items(
+                    last_item_clickout, item["item_id"]
+                )
+            elif self.hashn == 1:
+                output["avg_similarity_to_interacted_items"] = self.jacc_sim.list_to_item(
+                    user_item_interactions_list, item_id
+                )
+            elif self.hashn == 2:
+                output["avg_similarity_to_interacted_session_items"] = self.jacc_sim.list_to_item(
+                    user_item_session_interactions_list, item_id
+                )
         elif self.type == "price":
-            output["avg_price_similarity_to_interacted_items"] = self.price_sim.list_to_item(
-                user_item_interactions_list, item_id
-            )
-            output["avg_price_similarity_to_interacted_session_items"] = self.price_sim.list_to_item(
-                user_item_session_interactions_list, item_id
-            )
+            if self.hashn == 0:
+                output["avg_price_similarity_to_interacted_items"] = self.price_sim.list_to_item(
+                    user_item_interactions_list, item_id
+                )
+            elif self.hashn == 1:
+                output["avg_price_similarity_to_interacted_session_items"] = self.price_sim.list_to_item(
+                    user_item_session_interactions_list, item_id
+                )
         elif self.type == "poi":
-            output["poi_item_similarity_to_last_clicked_item"] = self.poi_sim.two_items(last_item_clickout, item_id)
-            output["poi_avg_similarity_to_interacted_items"] = self.poi_sim.list_to_item(
-                user_item_interactions_list, item_id
-            )
-            output["num_pois"] = len(self.poi_sim.imm[item_id])
+            if self.hashn == 0:
+                output["poi_item_similarity_to_last_clicked_item"] = self.poi_sim.two_items(last_item_clickout, item_id)
+            elif self.hashn == 1:
+                output["poi_avg_similarity_to_interacted_items"] = self.poi_sim.list_to_item(
+                    user_item_interactions_list, item_id
+                )
+            elif self.hashn == 2:
+                output["num_pois"] = len(self.poi_sim.imm[item_id])
         return output
 
 
@@ -647,9 +656,14 @@ def get_accumulators(hashn=None):
             impressions_type="fake_impressions_raw",
             index_col="fake_index_interacted",
         ),
-        SimilarityFeatures("imm"),
-        SimilarityFeatures("poi"),
-        SimilarityFeatures("price"),
+        SimilarityFeatures("imm", hashn=0),
+        SimilarityFeatures("imm", hashn=1),
+        SimilarityFeatures("imm", hashn=2),
+        SimilarityFeatures("poi", hashn=0),
+        SimilarityFeatures("poi", hashn=1),
+        SimilarityFeatures("poi", hashn=2),
+        SimilarityFeatures("price", hashn=0),
+        SimilarityFeatures("price", hashn=1),
         PoiFeatures(),
         IndicesFeatures(
             action_types=["clickout item"], prefix="", impressions_type="impressions_raw", index_key="index_clicked"
