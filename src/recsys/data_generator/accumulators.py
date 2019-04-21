@@ -339,27 +339,68 @@ class ItemCTR:
         return output
 
 
+
+class ItemCTRByRank:
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.clicks = defaultdict(int)
+        self.impressions = defaultdict(int)
+
+    def update_acc(self, row):
+        self.clicks[(row["reference"], row["index_clicked"])] += 1
+        for rank, item_id in enumerate(row["impressions"]):
+            self.impressions[(item_id, rank)] += 1
+
+    def get_stats(self, row, item):
+        output = {}
+        output["clickout_item_rank_clicks"] = self.clicks[(item["item_id"], item["rank"])]
+        output["clickout_item_rank_impressions"] = self.impressions[(item["item_id"], item["rank"])]
+        output["clickout_item_rank_ctr"] = self.impressions[(item["item_id"], item["rank"])]
+        return output
+
+
 class ItemCTRByKey:
     def __init__(self, action_types, key=None):
         self.action_types = action_types
         self.clicks = defaultdict(int)
         self.impressions = defaultdict(int)
         self.key = key
+        self.key_name = self.build_key_name()
 
     def update_acc(self, row):
-        self.clicks[(row["reference"], row[self.key])] += 1
+        key = self.build_key(row)
+        self.clicks[(row["reference"], key)] += 1
         for item_id in row["impressions"]:
-            self.impressions[(item_id, row[self.key])] += 1
+            self.impressions[(item_id, key)] += 1
+
+    def build_key(self, row):
+        if isinstance(self.key, str):
+            key = row[self.key]
+        elif isinstance(self.key, list):
+            key = "_".join([row[k] for k in self.key])
+        else:
+            raise ValueError("Key type not understood")
+        return key
+    
+    def build_key_name(self):
+        if isinstance(self.key, str):
+            key = self.key
+        elif isinstance(self.key, list):
+            key = "_".join(self.key)
+        else:
+            raise ValueError("Key type not understood")
+        return key
 
     def get_stats(self, row, item):
         output = {}
-        output["clickout_item_clicks_by_{key}".format(key=self.key)] = self.clicks[(item["item_id"], row[self.key])]
-        output["clickout_item_impressions_by_{key}".format(key=self.key)] = self.impressions[
-            (item["item_id"], row[self.key])
+        key = self.build_key(row)
+        output["clickout_item_clicks_by_{key}".format(key=self.key_name)] = self.clicks[(item["item_id"], key)]
+        output["clickout_item_impressions_by_{key}".format(key=self.key_name)] = self.impressions[
+            (item["item_id"], key)
         ]
-        output["clickout_item_ctr_by_{key}".format(key=self.key)] = output[
-            "clickout_item_clicks_by_{key}".format(key=self.key)
-        ] / (output["clickout_item_impressions_by_{key}".format(key=self.key)] + 1)
+        output["clickout_item_ctr_by_{key}".format(key=self.key_name)] = output[
+            "clickout_item_clicks_by_{key}".format(key=self.key_name)
+        ] / (output["clickout_item_impressions_by_{key}".format(key=self.key_name)] + 1)
         return output
 
 
@@ -472,6 +513,10 @@ def get_accumulators(hashn=None):
             get_stats_func=lambda acc, row, item: acc.get(row["user_id"], 0),
         ),
         ItemCTR(action_types=["clickout item"]),
+        # ItemCTRByRank(),
+        # ItemCTRByKey(action_types=["clickout item"], key="platform"), # not improving
+        # ItemCTRByKey(action_types=["clickout item"], key="device"), # not improving
+        # ItemCTRByKey(action_types=["clickout item"], key="current_filters"), # not improving
         StatsAcc(
             name="clickout_item_platform_clicks",
             action_types=["clickout item"],
