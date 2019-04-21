@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from recsys.log_utils import get_logger
-from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2
+from recsys.vectorizers import make_vectorizer_1
 from scipy.sparse import load_npz, save_npz
 
 logger = get_logger()
