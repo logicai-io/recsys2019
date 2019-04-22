@@ -1,4 +1,5 @@
 import gzip
+import hashlib
 import multiprocessing
 import queue
 from csv import DictReader, DictWriter
@@ -29,7 +30,11 @@ def create_queue_process(filename):
     return q, process
 
 
-if __name__ == '__main__':
+def hash_str(text):
+    return int(hashlib.sha1(text).hexdigest(), 16) % (10 ** 8)
+
+
+if __name__ == "__main__":
     logger = get_logger()
     logger.info("Starting splitting")
 
@@ -45,13 +50,14 @@ if __name__ == '__main__':
     reader = DictReader(open("../../data/events_sorted_trans_all.csv"))
 
     for i, row in tqdm(enumerate(reader)):
+        hashn = hash_str(row["user_id"])
         if (row["is_val"] == "0") and (row["is_test"] == "0"):
-            find = int(row["clickout_id"]) % 25
+            find = hashn % 25
             outputs_tr[find][0].put(row)
         elif (row["is_val"] == "1") and (row["is_test"] == "0"):
             outputs_va[0][0].put(row)
         elif row["is_test"] == "1":
-            find = int(row["clickout_id"]) % 4
+            find = hashn % 4
             outputs_te[find][0].put(row)
         else:
             raise ValueError("Shouldn't happen")

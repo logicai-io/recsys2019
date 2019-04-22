@@ -136,6 +136,16 @@ def make_vectorizer_1(
                     make_pipeline(RankFeatures(), MinimizeNNZ()),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
+                (
+                    "numerical_ranking_session",
+                    make_pipeline(RankFeatures(group_by="session_id"), MinimizeNNZ()),
+                    numerical_features_for_ranking + ["session_id"],
+                ),
+                (
+                    "numerical_ranking_user",
+                    make_pipeline(RankFeatures(group_by="user_id"), MinimizeNNZ()),
+                    numerical_features_for_ranking + ["user_id"],
+                ),
                 ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=2), "properties"),
                 (
                     "last_filter",

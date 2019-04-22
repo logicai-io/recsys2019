@@ -3,19 +3,19 @@ from collections import defaultdict
 
 import joblib
 from recsys.data_generator.accumulators_helpers import (
-    increment_key_by_one,
-    increment_keys_by_one,
-    add_to_set,
-    set_key,
-    set_nested_key,
     add_one_nested_key,
+    add_to_set,
     append_to_list,
     append_to_list_not_null,
-    diff_ts,
-    tryint,
     diff,
+    diff_ts,
+    increment_key_by_one,
+    increment_keys_by_one,
+    set_key,
+    set_nested_key,
+    tryint,
 )
-from recsys.data_generator.jaccard_sim import JaccardItemSim, ItemPriceSim
+from recsys.data_generator.jaccard_sim import ItemPriceSim, JaccardItemSim
 from recsys.log_utils import get_logger
 from recsys.utils import group_time
 
@@ -256,6 +256,55 @@ class PriceFeatures:
         return obs
 
 
+class ImmUserPerceptron:
+    def __init__(self):
+        self.name = "imm_user_perceptron"
+        self.action_types = ["clickout item"]
+        self.imm = joblib.load("../../../data/item_metadata_map.joblib")
+        self.w = defaultdict(int)
+
+    def update_acc(self, row):
+        for rank, item_id in enumerate(row["impressions"]):
+            item_id = int(item_id)
+            imms = self.imm[item_id]
+            for imm in imms:
+                if rank == row["index_clicked"]:
+                    self.w[(row["user_id"], imm)] += 1
+                else:
+                    self.w[(row["user_id"], imm)] -= 1
+
+    def get_stats(self, row, item):
+        imms = self.imm[item["item_id"]]
+        prediction = sum([self.w[(row["user_id"], imm)] for imm in imms])
+        return prediction
+
+
+class ImmUserPerceptronInteractions:
+    def __init__(self, name):
+        self.name = name
+        self.action_types = list(ACTIONS_WITH_ITEM_REFERENCE)
+        self.imm = joblib.load("../../../data/item_metadata_map.joblib")
+        self.w = defaultdict(int)
+
+    def update_acc(self, row):
+        for item_id, price in zip(row["fake_impressions"], row["fake_prices"]):
+            item_id = int(item_id)
+            imms = list(self.imm[item_id]) + [self.get_price_feature(price)]
+            for imm in imms:
+                if item_id == int(row["reference"]):
+                    self.w[(row["user_id"], imm)] += 1
+                else:
+                    self.w[(row["user_id"], imm)] -= 1
+
+    def get_price_feature(self, price):
+        return "price={}".format(round(price / 25))
+
+    def get_stats(self, row, item):
+        imms = list(self.imm[item["item_id"]]) + [self.get_price_feature(item["price"])]
+        prediction = sum([self.w[(row["user_id"], imm)] for imm in imms])
+        return prediction
+
+
 class SimilarityFeatures:
     def __init__(self, type, hashn):
         self.action_types = ACTIONS_WITH_ITEM_REFERENCE
@@ -472,6 +521,8 @@ def get_accumulators(hashn=None):
             get_stats_func=lambda acc, row, item: acc.get(row["user_id"], 0),
         ),
         ItemCTR(action_types=["clickout item"]),
+        ImmUserPerceptron(),
+        ImmUserPerceptronInteractions(name="imm_user_perceptron_interactions"),
         StatsAcc(
             name="clickout_item_platform_clicks",
             action_types=["clickout item"],

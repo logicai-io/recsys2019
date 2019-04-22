@@ -62,18 +62,19 @@ class FeatureEngScala(BaseEstimator, TransformerMixin):
 
 
 class RankFeatures(BaseEstimator, TransformerMixin):
-    def __init__(self, drop_clickout_id=True):
+    def __init__(self, drop_clickout_id=True, group_by="clickout_id"):
         self.drop_clickout_id = drop_clickout_id
+        self.group_by = group_by
 
     def fit(self, X, y=None):
         return self
 
     def transform(self, X):
         for col in X.columns:
-            if col != "clickout_id":
-                X[col] = X.groupby("clickout_id")[col].rank("max", ascending=False) - 1
+            if col != self.group_by:
+                X[col] = X.groupby(self.group_by)[col].rank("max", ascending=False) - 1
         if self.drop_clickout_id:
-            X.drop("clickout_id", axis=1, inplace=True)
+            X.drop(self.group_by, axis=1, inplace=True)
         return X
 
 
