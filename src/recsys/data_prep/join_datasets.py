@@ -19,7 +19,7 @@ def partition_row(row):
         find = hashn % 4
         return "03_test_%04d" % find
     else:
-        raise ValueError('No matching value to split row')
+        raise ValueError("No matching value to split row")
 
 
 train = pd.read_csv("../../../data/train.csv")
