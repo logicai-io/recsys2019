@@ -11,7 +11,7 @@ from tqdm import tqdm
 def write_worker(q: queue.Queue, filename):
     with open(filename, "wt") as out:
         header = []
-        dw = DictWriter(out, fieldnames=header)
+        dw = DictWriter(out, fieldnames=header, extrasaction="ignore")
         header_written = False
         while True:
             row = q.get()

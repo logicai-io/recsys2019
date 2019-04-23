@@ -105,6 +105,18 @@ categorical_features_py = [
 numerical_features_offset_2 = ["was_interaction_info", "was_interaction_img", "last_index_diff_5"]
 
 
+def identity(x):
+    return x
+
+
+def fillna_with_unk(x):
+    return "UNK" if x != x else x
+
+
+def tokenize_pipe(x):
+    return x.split("|")
+
+
 def make_vectorizer_1(
     categorical_features=categorical_features_py,
     numerical_features=numerical_features_py,
@@ -146,12 +158,10 @@ def make_vectorizer_1(
                     make_pipeline(RankFeatures(group_by="user_id"), MinimizeNNZ()),
                     numerical_features_for_ranking + ["user_id"],
                 ),
-                ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=2), "properties"),
+                ("properties", CountVectorizer(tokenizer=identity, lowercase=False, min_df=2), "properties"),
                 (
                     "last_filter",
-                    CountVectorizer(
-                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=2
-                    ),
+                    CountVectorizer(preprocessor=fillna_with_unk, tokenizer=tokenize_pipe, min_df=2),
                     "last_filter",
                 ),
                 ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
