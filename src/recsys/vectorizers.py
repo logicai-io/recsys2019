@@ -90,7 +90,9 @@ numerical_features_info = [
     ("was_item_searched", False),
 ]
 
+
 numerical_features_for_ranking_py = [f for f, rank in numerical_features_info if rank]
+safe_numerical_features_for_ranking_py = [f for f, rank in safe_numerical_features_info if rank]
 numerical_features_py = [f for f, rank in numerical_features_info]
 categorical_features_py = [
     "device",
@@ -140,7 +142,7 @@ def make_vectorizer_1(
                 (
                     "numerical_context_offset_2",
                     make_pipeline(LagNumericalFeaturesWithinGroup(offset=2), MinimizeNNZ()),
-                    numerical_features_offset_2 + ["clickout_id"],
+                    numerical_features + ["clickout_id"],
                 ),
                 ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
                 (
@@ -151,12 +153,12 @@ def make_vectorizer_1(
                 (
                     "numerical_ranking_session",
                     make_pipeline(RankFeatures(group_by="session_id"), MinimizeNNZ()),
-                    numerical_features_for_ranking + ["session_id"],
+                    safe_numerical_features_for_ranking_py + ["session_id"],
                 ),
                 (
                     "numerical_ranking_user",
                     make_pipeline(RankFeatures(group_by="user_id"), MinimizeNNZ()),
-                    numerical_features_for_ranking + ["user_id"],
+                    safe_numerical_features_for_ranking_py + ["user_id"],
                 ),
                 ("properties", CountVectorizer(tokenizer=identity, lowercase=False, min_df=2), "properties"),
                 (
