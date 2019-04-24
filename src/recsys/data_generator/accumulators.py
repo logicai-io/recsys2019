@@ -521,8 +521,6 @@ def get_accumulators(hashn=None):
             get_stats_func=lambda acc, row, item: acc.get(row["user_id"], 0),
         ),
         ItemCTR(action_types=["clickout item"]),
-        ImmUserPerceptron(),
-        ImmUserPerceptronInteractions(name="imm_user_perceptron_interactions"),
         StatsAcc(
             name="clickout_item_platform_clicks",
             action_types=["clickout item"],
