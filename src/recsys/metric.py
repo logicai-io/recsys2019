@@ -13,11 +13,14 @@ def calculate_mean_rec_err(queries, clicks):
     return np.array(recs).mean()
 
 
-def group_clickouts_into_list(df, predcol):
+def group_clickouts_into_list(df, predcol, append_index=False):
     sessions_items = defaultdict(list)
     df = df.sort_values(predcol, ascending=False)
-    for clickout_id, item_id in zip(df.clickout_id, df.item_id):
-        sessions_items[clickout_id].append(item_id)
+    for id, (clickout_id, item_id) in enumerate(zip(df.clickout_id, df.item_id)):
+        if append_index:
+            sessions_items[clickout_id].append(id)
+        else:
+            sessions_items[clickout_id].append(item_id)
     return sessions_items
 
 

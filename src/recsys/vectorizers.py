@@ -150,3 +150,50 @@ def make_vectorizer_1(
             ]
         ),
     )
+
+
+def make_vectorizer_2(
+    categorical_features=categorical_features_py,
+    numerical_features=numerical_features_py,
+    numerical_features_offset_2=numerical_features_offset_2,
+    numerical_features_for_ranking=numerical_features_for_ranking_py,
+):
+    return make_pipeline(
+        FeatureEng(),
+        ColumnTransformer(
+            [
+                (
+                    "numerical",
+                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), StandardScaler()),
+                    numerical_features,
+                ),
+                (
+                    "numerical_context",
+                    make_pipeline(LagNumericalFeaturesWithinGroup(), MinimizeNNZ()),
+                    numerical_features + ["clickout_id"],
+                ),
+                (
+                    "numerical_context_offset_2",
+                    make_pipeline(LagNumericalFeaturesWithinGroup(offset=2), MinimizeNNZ()),
+                    numerical_features_offset_2 + ["clickout_id"],
+                ),
+                (
+                    "numerical_ranking",
+                    make_pipeline(RankFeatures(), MinimizeNNZ()),
+                    numerical_features_for_ranking + ["clickout_id"],
+                ),
+                # ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
+                # ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=2), "properties"),
+                # (
+                #     "last_filter",
+                #     CountVectorizer(
+                #         preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=2
+                #     ),
+                #     "last_filter",
+                # ),
+                # ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
+                # ("last_poi_bow", CountVectorizer(min_df=5), "last_poi"),
+                # ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
+            ]
+        ),
+    )
