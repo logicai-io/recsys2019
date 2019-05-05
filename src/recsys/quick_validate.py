@@ -4,8 +4,13 @@ import pandas as pd
 from lightgbm import LGBMRanker
 from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast
+from recsys.transformers import SanitizeSparseMatrix
 from recsys.utils import group_lengths
 from recsys.vectorizers import make_vectorizer_1
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from xgboost import XGBRanker
+import keras as ks
 
 warnings.filterwarnings("ignore")
 
@@ -27,7 +32,7 @@ df_val["click_proba"] = model.predict(mat_val)
 
 print(mrr_fast(df_train, "click_proba"))
 print(mrr_fast(df_val, "click_proba"))
-#
+
 # scaler = make_pipeline(SanitizeSparseMatrix(), StandardScaler(with_mean=False))
 # mat_train_s = scaler.fit_transform(mat_train, df_train["was_clicked"])
 # mat_val_s = scaler.transform(mat_val)

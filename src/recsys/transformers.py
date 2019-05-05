@@ -77,6 +77,21 @@ class RankFeatures(BaseEstimator, TransformerMixin):
         return X
 
 
+class NormalizeFeaturesPerGroup(BaseEstimator, TransformerMixin):
+    def __init__(self, drop_clickout_id=True):
+        self.drop_clickout_id = drop_clickout_id
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        # TODO: finish
+        num_cols = [c for c in X.columns if c != "clickout_id"]
+        if self.drop_clickout_id:
+            X.drop("clickout_id", axis=1, inplace=True)
+        return X
+
+
 class LagNumericalFeaturesWithinGroup(BaseEstimator, TransformerMixin):
     def __init__(self, offset=1, drop_clickout_id=True, groupby="clickout_id"):
         self.offset = offset
@@ -87,6 +102,7 @@ class LagNumericalFeaturesWithinGroup(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X):
+        cols = []
         for col in X.columns:
             if col != "clickout_id":
                 X[col + "_shifted_p1_diff"] = X[col] - X.groupby([self.groupby])[col].shift(self.offset).fillna(0)
@@ -96,6 +112,26 @@ class LagNumericalFeaturesWithinGroup(BaseEstimator, TransformerMixin):
         if self.drop_clickout_id:
             X.drop("clickout_id", axis=1, inplace=True)
         return X
+
+
+class FeaturesAtAbsoluteRank(BaseEstimator, TransformerMixin):
+    def __init__(self, rank=1, normalize=False):
+        self.rank = rank
+        self.normalize = normalize
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        suffix = "_rank_{}".format(self.rank)
+        X_ranked = X[X["rank"] == self.rank]
+        X_all = pd.merge(X, X_ranked, how="left", on="clickout_id", suffixes=("", suffix))
+        cols = [c for c in X_all.columns if c.endswith(suffix) and c not in ("rank"+suffix, "clickout_id"+suffix)]
+        orig_cols = [c.replace(suffix,"") for c in cols]
+        if self.normalize:
+            return (X_all[cols].fillna(0) - X_all[orig_cols].fillna(0)).astype(np.float32)
+        else:
+            return X_all[cols].fillna(0).astype(np.float32)
 
 
 class PandasToRecords(BaseEstimator, TransformerMixin):

@@ -15,7 +15,7 @@ from recsys.data_generator.accumulators_helpers import (
     tryint,
     diff,
 )
-from recsys.data_generator.jaccard_sim import JaccardItemSim, ItemPriceSim
+from recsys.data_generator.jaccard_sim import JaccardItemSim, ItemPriceSim, PairwiseSim
 from recsys.log_utils import get_logger
 from recsys.utils import group_time
 
@@ -267,6 +267,8 @@ class SimilarityFeatures:
             self.poi_sim = JaccardItemSim(path="../../../data/item_pois.joblib")
         elif self.type == "price":
             self.price_sim = ItemPriceSim(path="../../../data/item_prices.joblib")
+        elif self.type == "pairwise_tfidf":
+            self.tfidf_sim = PairwiseSim(path="../../../data/item_properties_tfidf.joblib")
         self.last_item_clickout = defaultdict(int)
         self.user_item_interactions_list = defaultdict(set)
         self.user_item_session_interactions_list = defaultdict(set)
@@ -318,6 +320,19 @@ class SimilarityFeatures:
                 )
             elif self.hashn == 2:
                 output["num_pois"] = len(self.poi_sim.imm[item_id])
+        elif self.type == "pairwise_tfidf":
+            if self.hashn == 0:
+                output["tfidf_item_similarity_to_last_clicked_item"] = self.tfidf_sim.two_items(
+                    last_item_clickout, item["item_id"]
+                )
+            elif self.hashn == 1:
+                output["tfidf_avg_similarity_to_interacted_items"] = self.tfidf_sim.list_to_item(
+                    user_item_interactions_list, item_id
+                )
+            elif self.hashn == 2:
+                output["tfidf_avg_similarity_to_interacted_session_items"] = self.tfidf_sim.list_to_item(
+                    user_item_session_interactions_list, item_id
+                )
         return output
 
 
@@ -664,6 +679,9 @@ def get_accumulators(hashn=None):
         SimilarityFeatures("poi", hashn=2),
         SimilarityFeatures("price", hashn=0),
         SimilarityFeatures("price", hashn=1),
+        # SimilarityFeatures("pairwise_tfidf", hashn=0),
+        # SimilarityFeatures("pairwise_tfidf", hashn=1),
+        # SimilarityFeatures("pairwise_tfidf", hashn=2),
         PoiFeatures(),
         IndicesFeatures(
             action_types=["clickout item"], prefix="", impressions_type="impressions_raw", index_key="index_clicked"

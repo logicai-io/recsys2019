@@ -1,5 +1,6 @@
 import joblib
 import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 def jaccard(a, b):
@@ -68,3 +69,22 @@ class ItemPoiSim:
                 return default_sim
         else:
             return default_sim
+
+
+class PairwiseSim:
+    def __init__(self, path):
+        self.item_ids_map, self.tfidf_mat = joblib.load(path)
+
+    def two_items(self, a, b):
+        return self.list_to_item([a], b)
+
+    def list_to_item(self, other_items, item):
+        if item in self.item_ids_map:
+            item_ind = self.item_ids_map[item]
+            other_items_ind = np.array([self.item_ids_map[i] for i in other_items if i in self.item_ids_map])
+            if len(other_items_ind) > 0:
+                return cosine_similarity(self.tfidf_mat[item_ind, :], self.tfidf_mat[other_items_ind, :]).mean()
+            else:
+                return 0.0
+        else:
+            return 0.0
