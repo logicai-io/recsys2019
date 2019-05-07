@@ -29,7 +29,7 @@ def create_queue_process(filename):
     return q, process
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logger = get_logger()
     logger.info("Starting splitting")
 

@@ -77,6 +77,22 @@ class RankFeatures(BaseEstimator, TransformerMixin):
         return X
 
 
+class NormalizeRanking(BaseEstimator, TransformerMixin):
+    def __init__(self, drop_clickout_id=True):
+        self.drop_clickout_id = drop_clickout_id
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        for col in X.columns:
+            if col != "clickout_id":
+                X[col] = X.groupby("clickout_id")[col].fillna(0).transform(lambda x: (x - x.mean()) / (x.std() + 1))
+        if self.drop_clickout_id:
+            X.drop("clickout_id", axis=1, inplace=True)
+        return X
+
+
 class LagNumericalFeaturesWithinGroup(BaseEstimator, TransformerMixin):
     def __init__(self, offset=1, drop_clickout_id=True, groupby="clickout_id"):
         self.offset = offset
@@ -218,3 +234,24 @@ class SparsityFilter(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         return X[:, self.sparsity >= self.min_nnz]
+
+
+class FeaturesAtAbsoluteRank(BaseEstimator, TransformerMixin):
+    def __init__(self, rank=1, normalize=False):
+        self.rank = rank
+        self.normalize = normalize
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        suffix = "_rank_{}".format(self.rank)
+        X_ranked = X[X["rank"] == self.rank]
+        X_all = pd.merge(X, X_ranked, how="left", on="clickout_id", suffixes=("", suffix))
+        cols = [c for c in X_all.columns if c.endswith(suffix) and c not in ("rank" + suffix, "clickout_id" + suffix)]
+        orig_cols = [c.replace(suffix, "") for c in X.columns if c not in ("rank", "clickout_id")]
+        # import ipdb; ipdb.set_trace()
+        if self.normalize:
+            return (X_all[cols].fillna(0).values - X_all[orig_cols].fillna(0).values).astype(np.float32)
+        else:
+            return X_all[cols].fillna(0).astype(np.float32)

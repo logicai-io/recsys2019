@@ -1,28 +1,31 @@
 import warnings
 
 import pandas as pd
+import numpy as np
 from lightgbm import LGBMRanker
 from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast
-from recsys.transformers import LagNumericalFeaturesWithinGroup, MinimizeNNZ
+from recsys.transformers import LagNumericalFeaturesWithinGroup, MinimizeNNZ, FeaturesAtAbsoluteRank, NormalizeRanking
 from recsys.utils import group_lengths
-from recsys.vectorizers import make_vectorizer_1, numerical_features_offset_2
+from recsys.vectorizers import (
+    make_vectorizer_1,
+    numerical_features_offset_2,
+    numerical_features_py,
+    numerical_features_for_ranking_py,
+)
 from scipy import sparse
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import make_pipeline
 
 warnings.filterwarnings("ignore")
 
-df = pd.read_csv("../../data/events_sorted_trans.csv", nrows=1000000)
+df = pd.read_csv("../../data/events_sorted_trans_all.csv", nrows=1000000)
 
 vectorizer = make_vectorizer_1()
 
 df_train, df_val = split_by_timestamp(df)
 mat_train = vectorizer.fit_transform(df_train)
 mat_val = vectorizer.transform(df_val)
-
-columns_to_add = set(numerical_features_offset_2)  # set(numerical_features_py).intersection(set(df.columns))
-columns_added = set()
 
 # test initial MRR
 model = LGBMRanker()
@@ -31,19 +34,19 @@ df_val["click_proba"] = model.predict(mat_val)
 mrr_val = mrr_fast(df_val, "click_proba")
 current_best_mrr = mrr_val
 
+columns_to_add = set(numerical_features_for_ranking_py).intersection(set(df.columns))
+columns_added = set()
+
 print("MRR Starting {}".format(current_best_mrr))
 
 while len(columns_to_add) > 0:
     column_to_try = list(columns_to_add)[0]
+    if df_train[column_to_try].dtype == np.bool:
+        df_train[column_to_try] = df_train[column_to_try].astype(np.float32)
+        df_val[column_to_try] = df_val[column_to_try].astype(np.float32)
 
     new_vectorizer = ColumnTransformer(
-        [
-            (
-                "offsets_2",
-                make_pipeline(LagNumericalFeaturesWithinGroup(offset=3), MinimizeNNZ()),
-                list(columns_added) + [column_to_try, "clickout_id"],
-            )
-        ]
+        [("normalize_rank", NormalizeRanking(), list(columns_added) + [column_to_try, "clickout_id"])]
     )
 
     mat_train_new = new_vectorizer.fit_transform(df_train)
@@ -71,5 +74,3 @@ while len(columns_to_add) > 0:
         # keeping the feature
 
     columns_to_add.remove(column_to_try)
-
-# 0.6272
