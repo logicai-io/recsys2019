@@ -1,5 +1,4 @@
 from recsys.transformers import (
-    ApplyPrice,
     FeatureEng,
     LagNumericalFeaturesWithinGroup,
     MinimizeNNZ,
