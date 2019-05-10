@@ -103,6 +103,8 @@ numerical_features_info = [
     # ("interaction_item_deals_unique_num_by_timestamp",True),
     # ("interaction_item_deals_unique_num_by_session_id",True),
     # ("average_item_attention", True)
+    ("similar_users_item_interaction", True),
+    ("most_similar_item_interaction", True),
 ]
 
 numerical_features_for_ranking_py = [f for f, rank in numerical_features_info if rank]

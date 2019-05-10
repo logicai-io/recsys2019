@@ -34,7 +34,23 @@ model.fit(
     eval_set=[(mat_val, df_val["was_clicked"])],
     eval_group=[group_lengths(df_val["clickout_id"])],
     eval_metric=mrr_metric,
-    early_stopping_rounds=100,
+    early_stopping_rounds=200,
+)
+
+df_train["click_proba"] = model.predict(mat_train)
+df_val["click_proba"] = model.predict(mat_val)
+
+print(mrr_fast(df_val, "click_proba"))
+
+model = LGBMRanker()
+model.fit(
+    mat_train,
+    df_train["was_clicked"],
+    group=group_lengths(df_train["clickout_id"]),
+    verbose=True,
+    eval_set=[(mat_val, df_val["was_clicked"])],
+    eval_group=[group_lengths(df_val["clickout_id"])],
+    eval_metric=mrr_metric,
 )
 
 df_train["click_proba"] = model.predict(mat_train)

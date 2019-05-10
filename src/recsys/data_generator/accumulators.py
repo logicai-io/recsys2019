@@ -441,6 +441,159 @@ class DistinctInteractions:
         return output
 
 
+class SimilarUsersItemInteraction:
+
+    """
+    This is an accumulator that given interaction with items
+    Finds users who interacted with the same items and then gathers statistics of interaction
+    from them
+    """
+
+    def __init__(self):
+        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
+        self.items_users = defaultdict(set)
+        self.users_items = defaultdict(set)
+        self.cache_key = None
+        self.item_stats_cached = None
+
+    def update_acc(self, row):
+        self.items_users[row["reference"]].add(row["user_id"])
+        self.users_items[row["user_id"]].add(row["reference"])
+
+    def get_stats(self, row, item):
+        items_stats = self.read_stats_from_cache(row)
+        obs = {}
+        obs["similar_users_item_interaction"] = items_stats[item["item_id"]]
+        return obs
+
+    def read_stats_from_cache(self, row):
+        key = (row["user_id"], row["timestamp"])
+        if self.cache_key == key:
+            items_stats = self.item_stats_cached
+        else:
+            items_stats = self.get_items_stats(row)
+            self.item_stats_cached = items_stats
+            self.cache_key = key
+        return items_stats
+
+    def get_items_stats(self, row):
+        items = defaultdict(int)
+        for item_id in self.users_items[row["user_id"]]:
+            for user_id in self.items_users[item_id]:
+                # discard the self similarity
+                if user_id == row["user_id"]:
+                    continue
+                for item_id_2 in self.users_items[user_id]:
+                    items[item_id_2] += 1
+        return items
+
+
+class MostSimilarUserItemInteraction:
+
+    """
+    This is an accumulator that given interaction with items
+    Finds users who interacted with the same items and then gathers statistics of interaction
+    from them
+    """
+
+    def __init__(self):
+        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
+        self.items_users = defaultdict(set)
+        self.users_items = defaultdict(set)
+        self.cache_key = None
+        self.item_stats_cached = None
+
+    def update_acc(self, row):
+        self.items_users[row["reference"]].add(row["user_id"])
+        self.users_items[row["user_id"]].add(row["reference"])
+
+    def get_stats(self, row, item):
+        items_stats = self.read_stats_from_cache(row)
+        obs = {}
+        obs["most_similar_item_interaction"] = items_stats[item["item_id"]]
+        return obs
+
+    def read_stats_from_cache(self, row):
+        key = (row["user_id"], row["timestamp"])
+        if self.cache_key == key:
+            items_stats = self.item_stats_cached
+        else:
+            items_stats = self.get_items_stats(row)
+            self.item_stats_cached = items_stats
+            self.cache_key = key
+        return items_stats
+
+    def get_items_stats(self, row):
+        this_user_items = self.users_items[row["user_id"]]
+        best_user_id = None
+        best_intersection_len = 0
+        for item_id in this_user_items:
+            for other_user_id in self.items_users[item_id]:
+                if other_user_id == row["user_id"]:
+                    continue
+                intersection_len = len(self.users_items[other_user_id] | this_user_items)
+                if intersection_len > best_intersection_len:
+                    best_user_id = other_user_id
+                    best_intersection_len = intersection_len
+        items = defaultdict(int)
+        for item_id in self.users_items[best_user_id]:
+            items[item_id] = 1
+        return items
+
+
+class MostSimilarUserItemInteractionv2:
+
+    """
+    This is an accumulator that given interaction with items
+    Finds users who interacted with the same items and then gathers statistics of interaction
+    from them
+    """
+
+    def __init__(self, k=1):
+        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
+        self.items_users = defaultdict(set)
+        self.users_items = defaultdict(set)
+        self.k = k
+        self.cache_key = None
+        self.item_stats_cached = None
+
+    def update_acc(self, row):
+        self.items_users[row["reference"]].add(row["user_id"])
+        self.users_items[row["user_id"]].add(row["reference"])
+
+    def get_stats(self, row, item):
+        items_stats = self.read_stats_from_cache(row)
+        obs = {}
+        obs["most_similar_item_interaction_k_{}".format(self.k)] = items_stats[item["item_id"]]
+        return obs
+
+    def read_stats_from_cache(self, row):
+        key = (row["user_id"], row["timestamp"])
+        if self.cache_key == key:
+            items_stats = self.item_stats_cached
+        else:
+            items_stats = self.get_items_stats(row)
+            self.item_stats_cached = items_stats
+            self.cache_key = key
+        return items_stats
+
+    def get_items_stats(self, row):
+        this_user_items = self.users_items[row["user_id"]]
+        user_stats = []
+        for item_id in this_user_items:
+            for other_user_id in self.items_users[item_id]:
+                if other_user_id == row["user_id"]:
+                    continue
+                intersection_len = len(self.users_items[other_user_id] | this_user_items)
+                user_stats.append((other_user_id, intersection_len))
+        selected_users = sorted(user_stats, key=lambda x: x[1], reverse=True)[: self.k]
+        items = defaultdict(int)
+        for user_id, _ in selected_users:
+            for item_id in self.users_items[user_id]:
+                items[item_id] = 1
+        return items
+
+
 def get_accumulators(hashn=None):
     accumulators = (
         [
@@ -758,6 +911,8 @@ def get_accumulators(hashn=None):
             ),
             PriceFeatures(),
             PriceSimilarity(),
+            SimilarUsersItemInteraction(),
+            MostSimilarUserItemInteraction(),
         ]
         + [
             StatsAcc(
@@ -789,32 +944,34 @@ def get_accumulators(hashn=None):
 
 
 if __name__ == "__main__":
-    acc = ItemAttentionSpan()
-    row = {"user_id": "a", "session_id": "b", "reference": 1, "timestamp": 100}
+    acc = SimilarUsersItemInteraction()
+    row = {"user_id": "b", "session_id": "b", "reference": 1, "clickout_id": 100}
     acc.update_acc(row)
-    print(
-        "{} {} {} {}".format(
-            acc.interaction_times_count, acc.interaction_times_sum, acc.interaction_item_ts, acc.interaction_item
-        )
-    )
-    row = {"user_id": "a", "session_id": "b", "reference": 1, "timestamp": 110}
+    print("{} {}".format(acc.users_items, acc.items_users))
+
+    row = {"user_id": "b", "session_id": "b", "reference": 2, "clickout_id": 100}
     acc.update_acc(row)
-    print(
-        "{} {} {} {}".format(
-            acc.interaction_times_count, acc.interaction_times_sum, acc.interaction_item_ts, acc.interaction_item
-        )
-    )
-    row = {"user_id": "a", "session_id": "b", "reference": 2, "timestamp": 120}
+    print("{} {}".format(acc.users_items, acc.items_users))
+
+    row = {"user_id": "c", "session_id": "b", "reference": 1, "clickout_id": 100}
     acc.update_acc(row)
-    print(
-        "{} {} {} {}".format(
-            acc.interaction_times_count, acc.interaction_times_sum, acc.interaction_item_ts, acc.interaction_item
-        )
-    )
-    row = {"user_id": "a", "session_id": "b", "reference": 3, "timestamp": 200}
+    print("{} {}".format(acc.users_items, acc.items_users))
+
+    row = {"user_id": "c", "session_id": "b", "reference": 3, "clickout_id": 100}
     acc.update_acc(row)
-    print(
-        "{} {} {} {}".format(
-            acc.interaction_times_count, acc.interaction_times_sum, acc.interaction_item_ts, acc.interaction_item
-        )
-    )
+    print("{} {}".format(acc.users_items, acc.items_users))
+
+    row = {"user_id": "a", "session_id": "b", "reference": 1, "clickout_id": 110}
+    acc.update_acc(row)
+    print("{} {}".format(acc.users_items, acc.items_users))
+    print(acc.get_stats(row, {"item_id": 1}))
+    print(acc.get_stats(row, {"item_id": 2}))
+    print(acc.get_stats(row, {"item_id": 3}))
+    print(acc.get_stats(row, {"item_id": 4}))
+
+    row = {"user_id": "a", "session_id": "b", "reference": 2, "clickout_id": 120}
+    acc.update_acc(row)
+    print("{} {}".format(acc.users_items, acc.items_users))
+    row = {"user_id": "a", "session_id": "b", "reference": 3, "clickout_id": 200}
+    acc.update_acc(row)
+    print("{} {}".format(acc.users_items, acc.items_users))

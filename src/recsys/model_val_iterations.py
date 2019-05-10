@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 from lightgbm import LGBMRanker
 from recsys.log_utils import get_logger
-from recsys.metric import mrr_fast
-from recsys.utils import group_lengths, timer, get_git_hash
+from recsys.metric import mrr_fast, mrr_fast_v2
+from recsys.utils import group_lengths, timer
 from sklearn.metrics import roc_auc_score
 
 logger = get_logger()
@@ -29,13 +29,25 @@ with timer("splitting data"):
     gc.collect()
 
 with timer("model fitting"):
+
+    def mrr_metric(train_data, preds):
+        mrr = mrr_fast_v2(train_data, preds, meta_val["clickout_id"].values)
+        return "error", mrr, True
+
     model = LGBMRanker(n_estimators=1600, num_leaves=62, n_jobs=-2)
-    model.fit(X_train, meta_train["was_clicked"].values, group=group_lengths(meta_train["clickout_id"].values))
+    model.fit(
+        X_train,
+        meta_train["was_clicked"].values,
+        group=group_lengths(meta_train["clickout_id"]),
+        # verbose=True,
+        # eval_set=[(X_val, meta_val["was_clicked"])],
+        # eval_group=[group_lengths(meta_val["clickout_id"])],
+        # eval_metric=mrr_metric,
+    )
     val_pred = model.predict(X_val)
     train_pred = model.predict(X_train)
     logger.info("Train AUC {:.4f}".format(roc_auc_score(meta_train["was_clicked"].values, train_pred)))
     logger.info("Val AUC {:.4f}".format(roc_auc_score(meta_val["was_clicked"].values, val_pred)))
     meta_val["click_proba"] = val_pred
     logger.info("Val MRR {:.4f}".format(mrr_fast(meta_val, "click_proba")))
-    githash = get_git_hash()
-    meta_val.to_csv(f"predictions/model_val_{githash}.csv", index=False)
+    meta_val.to_csv("predictions/model_val.csv", index=False)

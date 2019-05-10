@@ -2,6 +2,7 @@ import itertools as it
 import time
 from contextlib import contextmanager
 
+import git
 import numpy as np
 from recsys.log_utils import get_logger
 
@@ -66,3 +67,8 @@ def group_time(t):
         return t
     else:
         return int(t / 4) * 4
+
+
+def get_git_hash():
+    repo = git.Repo(search_parent_directories=True)
+    return repo.head.object.hexsha
