@@ -1,15 +1,16 @@
 from csv import DictReader, DictWriter
 
 import click
-from recsys.data_generator.accumulators import get_accumulators, logger
+from recsys.data_generator.accumulators import get_accumulators, logger, group_accumulators
 
 
 class FeatureGenerator:
-    def __init__(self, limit, accumulators, accs_by_action_type, save_only_features=False, save_as=None):
+    def __init__(self, limit, accumulators, save_only_features=False, input=None, save_as=None):
         self.limit = limit
         self.accumulators = accumulators
-        self.accs_by_action_type = accs_by_action_type
+        self.accs_by_action_type = group_accumulators(accumulators)
         self.save_only_features = save_only_features
+        self.input = input
         self.save_as = save_as
         print("Number of accumulators %d" % len(self.accumulators))
 
@@ -71,7 +72,7 @@ class FeatureGenerator:
         out.close()
 
     def read_rows(self):
-        inp = open("../../../data/events_sorted.csv")
+        inp = open(self.input)
         dr = DictReader(inp)
         print("Reading rows")
         for i, row in enumerate(dr):
@@ -117,12 +118,12 @@ class FeatureGenerator:
 def main(limit, hashn):
     print(hashn)
     save_as = "../../../data/events_sorted_trans_%02d.csv" % (hashn)
-    accumulators, accs_by_action_type = get_accumulators(hashn)
+    accumulators = get_accumulators(hashn)
     feature_generator = FeatureGenerator(
         limit=limit,
         accumulators=accumulators,
-        accs_by_action_type=accs_by_action_type,
         save_only_features=hashn != 0,
+        input="../../../data/events_sorted.csv",
         save_as=save_as,
     )
     feature_generator.generate_features()

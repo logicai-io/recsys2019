@@ -441,6 +441,38 @@ class DistinctInteractions:
         return output
 
 
+class MouseSpeed:
+    def __init__(self):
+        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
+        self.last_timestamp_per_session = {}
+        self.last_index_per_session = {}
+        self.mouse_speed = defaultdict(list)
+
+    def update_acc(self, row):
+        key = (row["user_id"], row["session_id"])
+        if key in self.last_index_per_session:
+            if row["timestamp"] > self.last_timestamp_per_session[key] and \
+                    row["fake_index_interacted"] != self.last_index_per_session[key]:
+                time_passed = row["timestamp"] - self.last_timestamp_per_session[key]
+                index_diff = abs(row["fake_index_interacted"] - self.last_index_per_session[key])
+                self.mouse_speed[row["user_id"]].append(time_passed / index_diff)
+        else:
+            if row["fake_index_interacted"] != -1000:
+                self.last_timestamp_per_session[key] = row["timestamp"]
+                self.last_index_per_session[key] = row["fake_index_interacted"]
+
+    def get_stats(self, row, item):
+        output = {}
+        output["mouse_speed"] = self._mean(self.mouse_speed[row["user_id"]])
+        return output
+
+    def _mean(self, values):
+        if values:
+            return sum(values) / len(values)
+        else:
+            return 0
+
+
 class SimilarUsersItemInteraction:
 
     """
@@ -486,6 +518,32 @@ class SimilarUsersItemInteraction:
                 for item_id_2 in self.users_items[user_id]:
                     items[item_id_2] += 1
         return items
+
+
+class GlobalTimestampPerItem:
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.timestamp = {}
+        self.last_user = {}
+
+    def update_acc(self, row):
+        self.timestamp[row["reference"]] = row["timestamp"]
+        self.last_user[row["reference"]] = row["user_id"]
+
+    def get_stats(self, row, item):
+        output = {}
+        output["last_item_time_diff_same_user"] = None
+        output["last_item_last_user_id"] = None
+        output["last_item_time_diff"] = None
+
+        if item["item_id"] in self.timestamp:
+            output["last_item_last_user_id"] = self.last_user[item["item_id"]]
+            output["last_item_time_diff"] = row["timestamp"] - self.timestamp[item["item_id"]]
+            output["last_item_time_diff_same_user"] = output["last_item_time_diff"]
+            if row["user_id"] == self.last_user[item["item_id"]]:
+                output["last_item_time_diff_same_user"] = None
+        return output
+
 
 
 class MostSimilarUserItemInteraction:
@@ -592,6 +650,14 @@ class MostSimilarUserItemInteractionv2:
             for item_id in self.users_items[user_id]:
                 items[item_id] = 1
         return items
+
+
+def group_accumulators(accumulators):
+    accs_by_action_type = defaultdict(list)
+    for acc in accumulators:
+        for action_type in acc.action_types:
+            accs_by_action_type[action_type].append(acc)
+    return accs_by_action_type
 
 
 def get_accumulators(hashn=None):
@@ -913,6 +979,7 @@ def get_accumulators(hashn=None):
             PriceSimilarity(),
             SimilarUsersItemInteraction(),
             MostSimilarUserItemInteraction(),
+            GlobalTimestampPerItem()
         ]
         + [
             StatsAcc(
@@ -935,12 +1002,7 @@ def get_accumulators(hashn=None):
         accumulators = [acc for i, acc in enumerate(accumulators) if i % 8 == hashn]
         print("N acc", hashn, len(accumulators))
 
-    accs_by_action_type = defaultdict(list)
-    for acc in accumulators:
-        for action_type in acc.action_types:
-            accs_by_action_type[action_type].append(acc)
-
-    return accumulators, accs_by_action_type
+    return accumulators
 
 
 if __name__ == "__main__":
