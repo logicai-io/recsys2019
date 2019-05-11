@@ -1,62 +1,42 @@
-import gzip
-import multiprocessing
-import queue
+
 from csv import DictReader, DictWriter
 
 from recsys.log_utils import get_logger
 from tqdm import tqdm
 
+logger = get_logger()
 
-def write_worker(q: queue.Queue, filename):
-    with open(filename, "wt") as out:
-        header = []
-        dw = DictWriter(out, fieldnames=header)
-        header_written = False
-        while True:
-            row = q.get()
-            if not header_written:
-                dw.fieldnames = row.keys()
-                dw.writeheader()
-                header_written = True
-            dw.writerow(row)
+logger.info("Starting splitting")
 
+header = []
 
-def create_queue_process(filename):
-    q = multiprocessing.Queue(maxsize=10000)
-    process = multiprocessing.Process(target=write_worker, args=(q, filename))
-    process.daemon = True
-    process.start()
-    return q, process
+# split the data so that train/val/test are continguous
+outputs_tr = [
+    DictWriter(open("../../data/proc/raw_csv/01_train_{:04d}.csv".format(chunk_id), "wt"), fieldnames=header)
+    for chunk_id in range(25)
+]
+outputs_va = [DictWriter(open("../../data/proc/raw_csv/02_val_0001.csv", "wt"), fieldnames=header)]
+outputs_te = [
+    DictWriter(open("../../data/proc/raw_csv/03_test_{:04d}.csv".format(chunk_id), "wt"), fieldnames=header)
+    for chunk_id in range(4)
+]
 
+reader = DictReader(open("../../data/events_sorted_trans_all.csv"))
 
-if __name__ == "__main__":
-    logger = get_logger()
-    logger.info("Starting splitting")
+for i, row in tqdm(enumerate(reader)):
+    if i == 0:
+        for output in outputs_tr + outputs_va + outputs_te:
+            output.fieldnames = row.keys()
+            output.writeheader()
+    if (row["is_val"] == "0") and (row["is_test"] == "0"):
+        find = int(row["clickout_id"]) % 25
+        outputs_tr[find].writerow(row)
+    elif (row["is_val"] == "1") and (row["is_test"] == "0"):
+        outputs_va[0].writerow(row)
+    elif row["is_test"] == "1":
+        find = int(row["clickout_id"]) % 4
+        outputs_te[find].writerow(row)
+    else:
+        raise ValueError("Shouldn't happen")
 
-    # split the data so that train/val/test are continguous
-    outputs_tr = [
-        create_queue_process("../../data/proc/raw_csv/01_train_{:04d}.csv".format(chunk_id)) for chunk_id in range(25)
-    ]
-    outputs_va = [create_queue_process("../../data/proc/raw_csv/02_val_0001.csv")]
-    outputs_te = [
-        create_queue_process("../../data/proc/raw_csv/03_test_{:04d}.csv".format(chunk_id)) for chunk_id in range(4)
-    ]
-
-    reader = DictReader(open("../../data/events_sorted_trans_all.csv"))
-
-    for i, row in tqdm(enumerate(reader)):
-        if (row["is_val"] == "0") and (row["is_test"] == "0"):
-            find = int(row["clickout_id"]) % 25
-            outputs_tr[find][0].put(row)
-        elif (row["is_val"] == "1") and (row["is_test"] == "0"):
-            outputs_va[0][0].put(row)
-        elif row["is_test"] == "1":
-            find = int(row["clickout_id"]) % 4
-            outputs_te[find][0].put(row)
-        else:
-            raise ValueError("Shouldn't happen")
-
-    logger.info("Stop splitting")
-
-    for queue, process in outputs_tr + outputs_va + outputs_te:
-        process.terminate()
+logger.info("Stop splitting")

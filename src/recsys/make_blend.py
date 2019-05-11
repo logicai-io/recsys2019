@@ -7,13 +7,13 @@ logger = get_logger()
 
 logger.info("Staring blending")
 
-p_lgbr = pd.read_csv("predictions/model_2_val.csv")
+p_lgbr = pd.read_csv("predictions/model_val_92dc89e0765dbc875a8052ae0dbdd7e5ee4271bc.csv")
 final = p_lgbr.copy()
 final["click_proba"] = 1.0 * p_lgbr["click_proba"]
 mrr = mrr_fast(final, "click_proba")
 logger.info(f"MRR {mrr}")
 
-p_lgbr = pd.read_csv("predictions/model_2_submit.csv")
+p_lgbr = pd.read_csv("predictions/model_submit_92dc89e0765dbc875a8052ae0dbdd7e5ee4271bc.csv")
 final = p_lgbr.copy()
 final["click_proba"] = 1.0 * p_lgbr["click_proba"]
 _, submission_df = group_clickouts(final)
