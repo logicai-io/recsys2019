@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from recsys.metric import mrr_fast
+from recsys.metric import mrr_fast, mrr_fast_v2
 
 
 @click.command()
@@ -15,12 +15,12 @@ def main(src, dst, limit):
     # df = df[df["is_impression_the_same"] == True]
     results = []
     for col in tqdm(df.columns):
-        if df[col].dtype in [np.int, np.float] and col != "was_clicked":
-            results.append((col, mrr_fast(df, col)))
+        if df[col].dtype in [np.int, np.float] and col != "was_clicked" and "similar" in col:
+            results.append((col, mrr_fast_v2(df["was_clicked"], df[col], df["clickout_id"])))
             df[col + "_rank"] = df.groupby("clickout_id")[col].rank("max", ascending=False)
-            mrr_rank = mrr_fast(df, col + "_rank")
+            mrr_rank = mrr_fast_v2(df["was_clicked"], df[col + "_rank"], df["clickout_id"])
             df[col + "_rank_rev"] = df.groupby("clickout_id")[col].rank("max", ascending=True)
-            mrr_rank_rev = mrr_fast(df, col + "_rank_rev")
+            mrr_rank_rev = mrr_fast_v2(df["was_clicked"], df[col + "_rank_rev"], df["clickout_id"])
             results.append((col + "_rank", max(mrr_rank, mrr_rank_rev)))
     results_df = pd.DataFrame.from_records(results, columns=["col", "mrr"])
     results_df.sort_values("mrr", ascending=False, inplace=True)

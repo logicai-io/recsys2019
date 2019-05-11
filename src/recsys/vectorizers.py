@@ -1,5 +1,6 @@
 from recsys.transformers import (
     FeatureEng,
+    FeaturesAtAbsoluteRank,
     LagNumericalFeaturesWithinGroup,
     MinimizeNNZ,
     PandasToNpArray,
@@ -11,7 +12,7 @@ from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
+from sklearn.preprocessing import StandardScaler, KBinsDiscretizer
 
 numerical_features_info = [
     ("avg_price_similarity", True),
@@ -88,6 +89,24 @@ numerical_features_info = [
     ("was_interaction_info", False),
     ("was_interaction_rating", False),
     ("was_item_searched", False),
+    # ("last_clickout_item_stats", True),
+    # ("interaction_item_image_unique_num_by_session_id",True),
+    # ("interaction_item_image_unique_num_by_timestamp",True),
+    # ("clickout_item_unique_num_by_session_id",True),
+    # ("clickout_item_unique_num_by_timestamp",True),
+    # ("interaction_item_info_unique_num_by_timestamp",True),
+    # ("interaction_item_info_unique_num_by_session_id",True),
+    # ("search_for_item_unique_num_by_session_id",True),
+    # ("search_for_item_unique_num_by_timestamp",True),
+    # ("interaction_item_rating_unique_num_by_timestamp",True),
+    # ("interaction_item_rating_unique_num_by_session_id",True),
+    # ("interaction_item_deals_unique_num_by_timestamp",True),
+    # ("interaction_item_deals_unique_num_by_session_id",True),
+    # ("average_item_attention", True)
+    ("similar_users_item_interaction", True),
+    ("most_similar_item_interaction", True),
+    # ("last_item_time_diff_same_user", False),
+    # ("last_item_time_diff", False),
 ]
 
 numerical_features_for_ranking_py = [f for f, rank in numerical_features_info if rank]
@@ -147,6 +166,64 @@ def make_vectorizer_1(
                 ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
                 ("last_poi_bow", CountVectorizer(min_df=5), "last_poi"),
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
+                (
+                    "absolute_rank_0_norm",
+                    FeaturesAtAbsoluteRank(rank=0, normalize=True),
+                    ["price_vs_mean_price", "rank", "clickout_id"],
+                ),
+            ]
+        ),
+    )
+
+
+def make_vectorizer_2(
+    categorical_features=categorical_features_py,
+    numerical_features=numerical_features_py,
+    numerical_features_offset_2=numerical_features_offset_2,
+    numerical_features_for_ranking=numerical_features_for_ranking_py,
+):
+
+    return make_pipeline(
+        FeatureEng(),
+        ColumnTransformer(
+            [
+                (
+                    "numerical",
+                    make_pipeline(PandasToNpArray(), SimpleImputer(fill_value=-1000), StandardScaler()),
+                    numerical_features,
+                ),
+                (
+                    "numerical_context",
+                    make_pipeline(LagNumericalFeaturesWithinGroup(), MinimizeNNZ()),
+                    numerical_features + ["clickout_id"],
+                ),
+                (
+                    "numerical_context_offset_2",
+                    make_pipeline(LagNumericalFeaturesWithinGroup(offset=2), MinimizeNNZ()),
+                    numerical_features_offset_2 + ["clickout_id"],
+                ),
+                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
+                (
+                    "numerical_ranking",
+                    make_pipeline(RankFeatures(), MinimizeNNZ()),
+                    numerical_features_for_ranking + ["clickout_id"],
+                ),
+                ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=2), "properties"),
+                (
+                    "last_filter",
+                    CountVectorizer(
+                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=2
+                    ),
+                    "last_filter",
+                ),
+                ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
+                ("last_poi_bow", CountVectorizer(min_df=5), "last_poi"),
+                ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
+                (
+                    "absolute_rank_0_norm",
+                    FeaturesAtAbsoluteRank(rank=0, normalize=True),
+                    ["price_vs_mean_price", "rank", "clickout_id"],
+                ),
             ]
         ),
     )

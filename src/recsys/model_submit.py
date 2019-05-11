@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from lightgbm import LGBMRanker
 from recsys.log_utils import get_logger
-from recsys.utils import group_lengths, timer
+from recsys.utils import group_lengths, timer, get_git_hash
 
 logger = get_logger()
 
@@ -31,4 +31,5 @@ with timer("model fitting"):
     model.fit(X_train, meta_train["was_clicked"].values, group=group_lengths(meta_train["clickout_id"].values))
     val_pred = model.predict(X_val)
     meta_val["click_proba"] = val_pred
-    meta_val.to_csv("predictions/model_2_submit.csv", index=False)
+    githash = get_git_hash()
+    meta_val.to_csv(f"predictions/model_submit_{githash}.csv", index=False)
