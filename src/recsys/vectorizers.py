@@ -109,17 +109,17 @@ numerical_features_info = [
     # ("last_item_time_diff", False),
     ("loo_item_impressions", False),
     ("loo_search for item", False),
-    ("loo_search for item_ctr", False),
+    ("loo_search for item_ctr", True),
     ("loo_interaction item info", False),
-    ("loo_interaction item info_ctr", False),
+    ("loo_interaction item info_ctr", True),
     ("loo_interaction item image", False),
-    ("loo_interaction item image_ctr", False),
+    ("loo_interaction item image_ctr", True),
     ("loo_interaction item deals", False),
-    ("loo_interaction item deals_ctr", False),
+    ("loo_interaction item deals_ctr", True),
     ("loo_interaction item rating", False),
-    ("loo_interaction item rating_ctr", False),
+    ("loo_interaction item rating_ctr", True),
     ("loo_clickout item", False),
-    ("loo_clickout item_ctr", False),
+    ("loo_clickout item_ctr", True),
 ]
 
 numerical_features_for_ranking_py = [f for f, rank in numerical_features_info if rank]
