@@ -103,10 +103,23 @@ numerical_features_info = [
     # ("interaction_item_deals_unique_num_by_timestamp",True),
     # ("interaction_item_deals_unique_num_by_session_id",True),
     # ("average_item_attention", True)
-    ("similar_users_item_interaction", True),
-    ("most_similar_item_interaction", True),
+    # ("similar_users_item_interaction", True),
+    # ("most_similar_item_interaction", True),
     # ("last_item_time_diff_same_user", False),
     # ("last_item_time_diff", False),
+    ("loo_item_impressions", False),
+    ("loo_search for item", False),
+    ("loo_search for item_ctr", False),
+    ("loo_interaction item info", False),
+    ("loo_interaction item info_ctr", False),
+    ("loo_interaction item image", False),
+    ("loo_interaction item image_ctr", False),
+    ("loo_interaction item deals", False),
+    ("loo_interaction item deals_ctr", False),
+    ("loo_interaction item rating", False),
+    ("loo_interaction item rating_ctr", False),
+    ("loo_clickout item", False),
+    ("loo_clickout item_ctr", False),
 ]
 
 numerical_features_for_ranking_py = [f for f, rank in numerical_features_info if rank]

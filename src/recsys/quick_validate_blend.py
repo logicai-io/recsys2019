@@ -19,7 +19,6 @@ mat_val = vectorizer.transform(df_val)
 print(mat_val.shape)
 
 
-
 def mrr_metric(train_data, preds):
     mrr = mrr_fast_v2(train_data, preds, df_val["clickout_id"].values)
     return "error", mrr, True

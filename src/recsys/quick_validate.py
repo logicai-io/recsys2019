@@ -1,7 +1,7 @@
 import warnings
 
 import pandas as pd
-from lightgbm import LGBMRanker
+from lightgbm import LGBMRanker, LGBMRankerMRR
 from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast, mrr_fast_v2
 from recsys.utils import group_lengths
@@ -24,6 +24,7 @@ print(mat_val.shape)
 # print(mat_train_2.shape)
 # mat_val_2 = vectorizer_2.transform(df_val)
 # print(mat_val_2.shape)
+
 
 def mrr_metric(train_data, preds):
     mrr = mrr_fast_v2(train_data, preds, df_val["clickout_id"].values)

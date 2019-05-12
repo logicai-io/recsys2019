@@ -451,8 +451,10 @@ class MouseSpeed:
     def update_acc(self, row):
         key = (row["user_id"], row["session_id"])
         if key in self.last_index_per_session:
-            if row["timestamp"] > self.last_timestamp_per_session[key] and \
-                    row["fake_index_interacted"] != self.last_index_per_session[key]:
+            if (
+                row["timestamp"] > self.last_timestamp_per_session[key]
+                and row["fake_index_interacted"] != self.last_index_per_session[key]
+            ):
                 time_passed = row["timestamp"] - self.last_timestamp_per_session[key]
                 index_diff = abs(row["fake_index_interacted"] - self.last_index_per_session[key])
                 self.mouse_speed[row["user_id"]].append(time_passed / index_diff)
@@ -543,7 +545,6 @@ class GlobalTimestampPerItem:
             if row["user_id"] == self.last_user[item["item_id"]]:
                 output["last_item_time_diff_same_user"] = None
         return output
-
 
 
 class MostSimilarUserItemInteraction:
@@ -650,6 +651,55 @@ class MostSimilarUserItemInteractionv2:
             for item_id in self.users_items[user_id]:
                 items[item_id] = 1
         return items
+
+
+class SameImpressionUserStats:
+    """
+    Example definition
+
+    StatsAcc(filter=lambda row: row.action_type == "clickout_item",
+             init_acc=defaultdict(int),
+             updater=lambda acc, row: acc[(row.user_id, row.item_id)]+=1)
+    """
+
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.view_stats = defaultdict(lambda: defaultdict(set))
+
+    def update_acc(self, row):
+        self.view_stats[row["impressions_raw"]][row["user_id"]]
+        self.updater(self.acc, row)
+
+    def get_stats(self, row, item):
+        return self.get_stats_func(self.acc, row, item)
+
+
+class ItemLooStats:
+    """
+    Example definition
+
+    StatsAcc(filter=lambda row: row.action_type == "clickout_item",
+             init_acc=defaultdict(int),
+             updater=lambda acc, row: acc[(row.user_id, row.item_id)]+=1)
+    """
+
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.item_stats = joblib.load("../../../data/item_stats_loo.joblib")
+
+    def update_acc(self, row):
+        pass
+
+    def get_stats(self, row, item):
+        item_id = int(item["item_id"])
+        user_id = row["user_id"]
+        obs = {}
+        obs["loo_item_impressions"] = len(self.item_stats[item_id]["impressions"].difference({user_id}))
+        for action_type in ACTIONS_WITH_ITEM_REFERENCE:
+            clicks = len(self.item_stats[item_id].get(action_type, set()).difference({user_id}))
+            obs["loo_{}".format(action_type)] = clicks
+            obs["loo_{}_ctr".format(action_type)] = clicks / (obs["loo_item_impressions"] + 1)
+        return obs
 
 
 def group_accumulators(accumulators):
@@ -977,9 +1027,10 @@ def get_accumulators(hashn=None):
             ),
             PriceFeatures(),
             PriceSimilarity(),
-            SimilarUsersItemInteraction(),
-            MostSimilarUserItemInteraction(),
-            GlobalTimestampPerItem()
+            # SimilarUsersItemInteraction(),
+            # MostSimilarUserItemInteraction(),
+            GlobalTimestampPerItem(),
+            ItemLooStats(),
         ]
         + [
             StatsAcc(

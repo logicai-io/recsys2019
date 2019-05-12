@@ -15,10 +15,10 @@ def main(src, dst, limit):
     # df = df[df["is_impression_the_same"] == True]
     results = []
     for col in tqdm(df.columns):
-        if df[col].dtype in [np.int, np.float] and col != "was_clicked" and "similar" in col:
+        if df[col].dtype in [np.int, np.float] and col != "was_clicked":
             results.append((col, mrr_fast_v2(df["was_clicked"], df[col], df["clickout_id"])))
             df[col + "_rank"] = df.groupby("clickout_id")[col].rank("max", ascending=False)
-            mrr_rank = mrr_fast_v2(df["was_clicked"], df[col + "_rank"], df["clickout_id"])
+            mrr_rank = mrr_fast(df["was_clicked"], df[col + "_rank"], df["clickout_id"])
             df[col + "_rank_rev"] = df.groupby("clickout_id")[col].rank("max", ascending=True)
             mrr_rank_rev = mrr_fast_v2(df["was_clicked"], df[col + "_rank_rev"], df["clickout_id"])
             results.append((col + "_rank", max(mrr_rank, mrr_rank_rev)))
