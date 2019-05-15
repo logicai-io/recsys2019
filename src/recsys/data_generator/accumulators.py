@@ -1,21 +1,23 @@
+import gzip
 import json
 from collections import defaultdict
+from statistics import mean, stdev
 
 import joblib
 from recsys.data_generator.accumulators_helpers import (
-    increment_key_by_one,
-    increment_keys_by_one,
-    add_to_set,
-    set_key,
-    set_nested_key,
     add_one_nested_key,
+    add_to_set,
     append_to_list,
     append_to_list_not_null,
-    diff_ts,
-    tryint,
     diff,
+    diff_ts,
+    increment_key_by_one,
+    increment_keys_by_one,
+    set_key,
+    set_nested_key,
+    tryint,
 )
-from recsys.data_generator.jaccard_sim import JaccardItemSim, ItemPriceSim
+from recsys.data_generator.jaccard_sim import ItemPriceSim, JaccardItemSim
 from recsys.log_utils import get_logger
 from recsys.utils import group_time
 
@@ -117,6 +119,53 @@ class ClickSequenceEncoder:
     def get_stats(self, row, item):
         key = (row["user_id"], row["session_id"])
         return json.dumps(self.sequences[key])
+
+
+class ClickSequenceFeatures:
+    def __init__(self):
+        self.current_impression = {}
+        self.sequences = defaultdict(list)
+        self.action_types = ["clickout item"]
+
+    def update_acc(self, row):
+        if row["action_type"] in self.action_types:
+            key = (row["user_id"], row["session_id"])
+            self.sequences[key].append(row["index_clicked"])
+
+    def get_stats(self, row, item):
+        key = (row["user_id"], row["session_id"])
+        obs = {}
+        sequence = self.sequences[key]
+
+        if sequence:
+            obs["click_sequence_min"] = min(sequence)
+            obs["click_sequence_max"] = max(sequence)
+            obs["click_sequence_min_norm"] = obs["click_sequence_min"] - item["rank"]
+            obs["click_sequence_max_norm"] = obs["click_sequence_max"] - item["rank"]
+            obs["click_sequence_len"] = len(sequence)
+            obs["click_sequence_sd"] = stdev(sequence) if len(sequence) > 1 else 0
+            obs["click_sequence_mean"] = mean(sequence)
+            obs["click_sequence_mean_norm"] = obs["click_sequence_mean"] - item["rank"]
+            obs["click_sequence_gzip_len"], obs["click_sequence_entropy"] = self._seq_entropy(sequence, item["rank"])
+        else:
+            obs["click_sequence_min"] = -1000
+            obs["click_sequence_max"] = -1000
+            obs["click_sequence_min_norm"] = -1000
+            obs["click_sequence_max_norm"] = -1000
+            obs["click_sequence_len"] = -1000
+            obs["click_sequence_sd"] = -1000
+            obs["click_sequence_mean"] = -1000
+            obs["click_sequence_mean_norm"] = -1000
+            obs["click_sequence_gzip_len"] = -1000
+            obs["click_sequence_entropy"] = -1000
+        return obs
+
+    def _seq_entropy(self, sequence, rank):
+        seq = ",".join([str(el) for el in sequence]).encode("utf-8")
+        seq_with_rank = ",".join([str(el) for el in sequence + [rank]]).encode("utf-8")
+        compressed_with_rank = gzip.compress(seq_with_rank)
+        compressed_without_rank = gzip.compress(seq)
+        return len(compressed_with_rank), (len(compressed_with_rank) / len(compressed_without_rank))
 
 
 class ClickProbabilityClickOffsetTimeOffset:
@@ -229,11 +278,16 @@ class IndicesFeatures:
         diff_last_indices = diff(last_indices + [item["rank"]])
         output = {}
         for n in range(1, last_n + 1):
-            output[self.prefix + "last_index_{}".format(n)] = last_indices[-n]
-            output[self.prefix + "last_index_diff_{}".format(n)] = diff_last_indices[-n]
+            if last_indices[-n] != -100:
+                output[self.prefix + "last_index_{}".format(n)] = last_indices[-n]
+                # output[self.prefix + "last_index_{}_vs_rank".format(n)] = last_indices[-n] - item["rank"]
+                output[self.prefix + "last_index_diff_{}".format(n)] = diff_last_indices[-n]
+            else:
+                output[self.prefix + "last_index_{}".format(n)] = None
+                # output[self.prefix + "last_index_{}_vs_rank".format(n)] = None
+                output[self.prefix + "last_index_diff_{}".format(n)] = None
         n_consecutive = self._calculate_n_consecutive_clicks(last_indices_raw, item["rank"])
         output[self.prefix + "n_consecutive_clicks"] = n_consecutive
-        output[self.prefix + "last_index_diff"] = last_indices[-1] - item["rank"]
         return output
 
     def _calculate_n_consecutive_clicks(self, last_indices_raw, rank):
@@ -476,7 +530,6 @@ class MouseSpeed:
 
 
 class SimilarUsersItemInteraction:
-
     """
     This is an accumulator that given interaction with items
     Finds users who interacted with the same items and then gathers statistics of interaction
@@ -548,7 +601,6 @@ class GlobalTimestampPerItem:
 
 
 class MostSimilarUserItemInteraction:
-
     """
     This is an accumulator that given interaction with items
     Finds users who interacted with the same items and then gathers statistics of interaction
@@ -601,7 +653,6 @@ class MostSimilarUserItemInteraction:
 
 
 class MostSimilarUserItemInteractionv2:
-
     """
     This is an accumulator that given interaction with items
     Finds users who interacted with the same items and then gathers statistics of interaction
@@ -683,22 +734,91 @@ class ItemLooStats:
              updater=lambda acc, row: acc[(row.user_id, row.item_id)]+=1)
     """
 
-    def __init__(self):
-        self.action_types = ["clickout item"]
-        self.item_stats = joblib.load("../../../data/item_stats_loo.joblib")
+    def __init__(self, suffix=""):
+        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
+        self.input = input
+        self.item_stats = {}
+        self.suffix = suffix
 
     def update_acc(self, row):
-        pass
+        action_type = row["action_type"]
+        user_id = row["user_id"]
+        if action_type == "clickout item":
+            for item_id in row["impressions"]:
+                item_id = int(item_id)
+                try:
+                    self.item_stats[item_id]["impressions"].add(user_id)
+                except KeyError:
+                    self.item_stats[item_id] = {"impressions": {user_id}}
+
+        try:
+            item_id = int(row["reference"])
+        except:
+            return
+
+        if item_id not in self.item_stats:
+            self.item_stats[item_id] = {}
+
+        try:
+            self.item_stats[item_id][action_type].add(user_id)
+        except KeyError:
+            self.item_stats[item_id][action_type] = {user_id}
 
     def get_stats(self, row, item):
         item_id = int(item["item_id"])
         user_id = row["user_id"]
         obs = {}
-        obs["loo_item_impressions"] = len(self.item_stats[item_id]["impressions"].difference({user_id}))
+        try:
+            obs["loo_item_impressions{}".format(self.suffix)] = len(
+                self.item_stats[item_id]["impressions"].difference({user_id})
+            )
+        except KeyError:
+            obs["loo_item_impressions{}".format(self.suffix)] = 0
         for action_type in ACTIONS_WITH_ITEM_REFERENCE:
-            clicks = len(self.item_stats[item_id].get(action_type, set()).difference({user_id}))
-            obs["loo_{}".format(action_type)] = clicks
-            obs["loo_{}_ctr".format(action_type)] = clicks / (obs["loo_item_impressions"] + 1)
+            try:
+                clicks = len(self.item_stats[item_id].get(action_type, set()).difference({user_id}))
+            except KeyError:
+                clicks = 0
+            obs["loo_{}{}".format(action_type, self.suffix)] = clicks
+            obs["loo_{}_ctr{}".format(action_type, self.suffix)] = clicks / (
+                obs["loo_item_impressions{}".format(self.suffix)] + 1
+            )
+        return obs
+
+
+class ItemLooStatsByPlatform:
+    """
+    Example definition
+
+    StatsAcc(filter=lambda row: row.action_type == "clickout_item",
+             init_acc=defaultdict(int),
+             updater=lambda acc, row: acc[(row.user_id, row.item_id)]+=1)
+    """
+
+    def __init__(self, input="../../../data/item_stats_loo.joblib", suffix=""):
+        self.action_types = ["clickout item"]
+        self.input = input
+        self.item_stats = None
+        self.suffix = suffix
+
+    def update_acc(self, row):
+        pass
+
+    def get_stats(self, row, item):
+        if self.item_stats is None:
+            self.item_stats = joblib.load(self.input)
+        key = (int(item["item_id"]), row["platform"])
+        user_id = row["user_id"]
+        obs = {}
+        obs["loo_item_impressions{}".format(self.suffix)] = len(
+            self.item_stats[key]["impressions"].difference({user_id})
+        )
+        for action_type in ACTIONS_WITH_ITEM_REFERENCE:
+            clicks = len(self.item_stats[key].get(action_type, set()).difference({user_id}))
+            obs["loo_{}{}".format(action_type, self.suffix)] = clicks
+            obs["loo_{}_ctr{}".format(action_type, self.suffix)] = clicks / (
+                obs["loo_item_impressions{}".format(self.suffix)] + 1
+            )
         return obs
 
 
@@ -1031,6 +1151,8 @@ def get_accumulators(hashn=None):
             # MostSimilarUserItemInteraction(),
             GlobalTimestampPerItem(),
             ItemLooStats(),
+            # ItemLooStatsByPlatform("../../../data/item_stats_loo_by_platform.joblib", suffix="_by_platform"),
+            ClickSequenceFeatures(),
         ]
         + [
             StatsAcc(

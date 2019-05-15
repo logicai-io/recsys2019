@@ -9,7 +9,7 @@ from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2
 
 warnings.filterwarnings("ignore")
 
-df = pd.read_csv("../../data/events_sorted_trans_all.csv", nrows=1000000)
+df = pd.read_csv("../../data/events_sorted_trans_all.csv", nrows=2000000)
 
 df_train, df_val = split_by_timestamp(df)
 
@@ -31,7 +31,7 @@ def mrr_metric(train_data, preds):
     return "error", mrr, True
 
 
-model = LGBMRanker(learning_rate=0.05, n_estimators=1600, min_child_samples=5, min_child_weight=0.00001)
+model = LGBMRanker(learning_rate=0.05, n_estimators=900, min_child_samples=5, min_child_weight=0.00001)
 model.fit(
     mat_train,
     df_train["was_clicked"],
@@ -40,13 +40,14 @@ model.fit(
     eval_set=[(mat_val, df_val["was_clicked"])],
     eval_group=[group_lengths(df_val["clickout_id"])],
     eval_metric=mrr_metric,
-    early_stopping_rounds=200,
+    # early_stopping_rounds=200,
 )
 
 df_train["click_proba"] = model.predict(mat_train)
 df_val["click_proba"] = model.predict(mat_val)
 
-# 0.6407197814774794
+# 0.6446639234569186
+
 print(mrr_fast(df_val, "click_proba"))
 
 model = LGBMRanker()
@@ -63,10 +64,9 @@ model.fit(
 df_train["click_proba"] = model.predict(mat_train)
 df_val["click_proba"] = model.predict(mat_val)
 
-# 0.635727102849794
+# 0.6385284888273866
 print(mrr_fast(df_val, "click_proba"))
 
-#
 # scaler = make_pipeline(SanitizeSparseMatrix(), StandardScaler(with_mean=False))
 # mat_train_s = scaler.fit_transform(mat_train, df_train["was_clicked"])
 # mat_val_s = scaler.transform(mat_val)

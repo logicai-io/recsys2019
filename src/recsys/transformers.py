@@ -13,6 +13,8 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 PATH_TO_IMM = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_map.joblib"
 METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_dense.csv"
+PRICE_PCT_PER_CITY = pathlib.Path().absolute().parents[1] / "data" / "price_pct_by_city.joblib"
+PRICE_PCT_PER_PLATFORM = pathlib.Path().absolute().parents[1] / "data" / "price_pct_by_platform.joblib"
 
 
 class FeatureEng(BaseEstimator, TransformerMixin):
@@ -39,6 +41,16 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X["last_filter"].fillna("", inplace=True)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
         X["last_poi"].fillna("", inplace=True)
+
+        # add price per city percentile
+        price_pct_by_city = joblib.load(PRICE_PCT_PER_CITY)
+        keys = list(zip(X["city"], X["price"]))
+        X["price_pct_by_city"] = [price_pct_by_city[k] for k in keys]
+
+        price_pct_by_city = joblib.load(PRICE_PCT_PER_PLATFORM)
+        keys = list(zip(X["platform"], X["price"]))
+        X["price_pct_by_platform"] = [price_pct_by_city[k] for k in keys]
+
         for col in X.columns:
             if X[col].dtype == np.bool:
                 X[col] = X[col].astype(np.int32)
