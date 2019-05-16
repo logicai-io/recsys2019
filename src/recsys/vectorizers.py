@@ -90,7 +90,11 @@ numerical_features_info = [
     ("was_interaction_rating", False),
     ("was_item_searched", False),
     ("price_pct_by_city", True),
-    ("price_pct_by_platform", True)
+    ("price_pct_by_platform", True),
+    ("session_start_ts", False),
+    ("user_start_ts", False),
+    ("session_count", False),
+    ("step", False)
     # ("last_clickout_item_stats", True),
     # ("interaction_item_image_unique_num_by_session_id",True),
     # ("interaction_item_image_unique_num_by_timestamp",True),
@@ -174,6 +178,13 @@ def make_vectorizer_1(
                         preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=2
                     ),
                     "last_filter",
+                ),
+                (
+                    "alltime_filters",
+                    CountVectorizer(
+                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=2
+                    ),
+                    "alltime_filters",
                 ),
                 ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
                 ("last_poi_bow", CountVectorizer(min_df=5), "last_poi"),

@@ -600,6 +600,74 @@ class GlobalTimestampPerItem:
         return output
 
 
+class TimeSinceSessionStart:
+    def __init__(self):
+        self.action_types = ALL_ACTIONS
+        self.session_start = {}
+
+    def update_acc(self, row):
+        key = (row["user_id"], row["session_id"])
+        if key not in self.session_start:
+            self.session_start[key] = row["timestamp"]
+
+    def get_stats(self, row, item):
+        key = (row["user_id"], row["session_id"])
+        obs = {}
+        if key in self.session_start:
+            obs["session_start_ts"] = row["timestamp"] - self.session_start[key]
+        else:
+            obs["session_start_ts"] = 0
+        return obs
+
+
+class NumberOfSessions:
+    def __init__(self):
+        self.action_types = ALL_ACTIONS
+        self.session_count = defaultdict(set)
+
+    def update_acc(self, row):
+        self.session_count[row["user_id"]].add(row["session_id"])
+
+    def get_stats(self, row, item):
+        obs = {}
+        obs["session_count"] = len(self.session_count[row["user_id"]])
+        return obs
+
+
+class TimeSinceUserStart:
+    def __init__(self):
+        self.action_types = ALL_ACTIONS
+        self.start = {}
+
+    def update_acc(self, row):
+        key = row["user_id"]
+        if key not in self.start:
+            self.start[key] = row["timestamp"]
+
+    def get_stats(self, row, item):
+        key = row["user_id"]
+        obs = {}
+        if key in self.start:
+            obs["user_start_ts"] = row["timestamp"] - self.start[key]
+        else:
+            obs["user_start_ts"] = 0
+        return obs
+
+
+class AllFilters:
+    def __init__(self):
+        self.action_types = ["filter selection"]
+        self.filters_by_user = defaultdict(set)
+
+    def update_acc(self, row):
+        self.filters_by_user[row["user_id"]].add(row["reference"])
+
+    def get_stats(self, row, item):
+        obs = {}
+        obs["alltime_filters"] = "|".join(self.filters_by_user[row["user_id"]])
+        return obs
+
+
 class MostSimilarUserItemInteraction:
     """
     This is an accumulator that given interaction with items
@@ -1150,9 +1218,13 @@ def get_accumulators(hashn=None):
             # SimilarUsersItemInteraction(),
             # MostSimilarUserItemInteraction(),
             GlobalTimestampPerItem(),
-            ItemLooStats(),
+            # ItemLooStats(),
             # ItemLooStatsByPlatform("../../../data/item_stats_loo_by_platform.joblib", suffix="_by_platform"),
             ClickSequenceFeatures(),
+            TimeSinceSessionStart(),
+            TimeSinceUserStart(),
+            NumberOfSessions(),
+            AllFilters(),
         ]
         + [
             StatsAcc(
