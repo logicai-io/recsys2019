@@ -89,6 +89,12 @@ numerical_features_info = [
     ("was_interaction_info", False),
     ("was_interaction_rating", False),
     ("was_item_searched", False),
+    ("price_pct_by_city", True),
+    ("price_pct_by_platform", True),
+    ("session_start_ts", False),
+    ("user_start_ts", False),
+    ("session_count", False),
+    ("step", False)
     # ("last_clickout_item_stats", True),
     # ("interaction_item_image_unique_num_by_session_id",True),
     # ("interaction_item_image_unique_num_by_timestamp",True),
@@ -103,10 +109,20 @@ numerical_features_info = [
     # ("interaction_item_deals_unique_num_by_timestamp",True),
     # ("interaction_item_deals_unique_num_by_session_id",True),
     # ("average_item_attention", True)
-    ("similar_users_item_interaction", True),
-    ("most_similar_item_interaction", True),
+    # ("similar_users_item_interaction", True),
+    # ("most_similar_item_interaction", True),
     # ("last_item_time_diff_same_user", False),
     # ("last_item_time_diff", False),
+    # ("click_sequence_min", False),
+    # ("click_sequence_max", False),
+    # ("click_sequence_min_norm", False),
+    # ("click_sequence_max_norm", False),
+    # ("click_sequence_len", False),
+    # ("click_sequence_sd", False),
+    # ("click_sequence_mean", False),
+    # ("click_sequence_mean_norm", False),
+    # ("click_sequence_gzip_len", False),
+    # ("click_sequence_entropy", False),
 ]
 
 numerical_features_for_ranking_py = [f for f, rank in numerical_features_info if rank]
@@ -162,6 +178,13 @@ def make_vectorizer_1(
                         preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=2
                     ),
                     "last_filter",
+                ),
+                (
+                    "alltime_filters",
+                    CountVectorizer(
+                        preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=2
+                    ),
+                    "alltime_filters",
                 ),
                 ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
                 ("last_poi_bow", CountVectorizer(min_df=5), "last_poi"),
