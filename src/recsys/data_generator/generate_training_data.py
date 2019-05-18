@@ -22,6 +22,9 @@ class FeatureGenerator:
         obs["clickout_id"] = clickout_id
         obs["rank"] = rank
         obs["price"] = price
+        obs["clickout_step_rev"] = row["clickout_step_rev"]
+        obs["clickout_step"] = row["clickout_step"]
+        obs["clickout_max_step"] = row["clickout_max_step"]
         features = self.update_obs_with_acc(obs, row)
         del obs["fake_impressions"]
         del obs["fake_impressions_raw"]

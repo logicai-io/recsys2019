@@ -1,5 +1,5 @@
 import warnings
-
+import numpy as np
 import pandas as pd
 from lightgbm import LGBMRanker, LGBMRankerMRR
 from recsys.df_utils import split_by_timestamp
@@ -25,6 +25,9 @@ print(mat_val.shape)
 # mat_val_2 = vectorizer_2.transform(df_val)
 # print(mat_val_2.shape)
 
+# 0.6358562381418187
+# 0.6305812469281437
+
 
 def mrr_metric(train_data, preds):
     mrr = mrr_fast_v2(train_data, preds, df_val["clickout_id"].values)
@@ -47,8 +50,50 @@ df_train["click_proba"] = model.predict(mat_train)
 df_val["click_proba"] = model.predict(mat_val)
 
 # 0.6446639234569186
-
 print(mrr_fast(df_val, "click_proba"))
+print("By rank")
+for n in range(1, 10):
+    print(n, mrr_fast(df_val[df_val["clickout_step_rev"] == n], "click_proba"))
+
+assert False
+
+"""
+0.6360624243741801
+By rank
+1 0.6685477722468004
+2 0.5995294373175657
+3 0.6195404324677313
+4 0.5850299527988894
+5 0.5945804447816831
+6 0.6106072044486679
+7 0.5581610036054481
+8 0.6020300342931924
+9 0.5939788450992933
+"""
+
+
+lastind = np.where(df_train["clickout_step_rev"] == 1)[0]
+model = LGBMRanker(learning_rate=0.05, n_estimators=900, min_child_samples=5, min_child_weight=0.00001)
+model.fit(
+    mat_train[lastind, :],
+    df_train["was_clicked"].values[lastind],
+    group=group_lengths(df_train["clickout_id"].values[lastind]),
+    verbose=True,
+    eval_set=[(mat_val, df_val["was_clicked"])],
+    eval_group=[group_lengths(df_val["clickout_id"])],
+    eval_metric=mrr_metric,
+    # early_stopping_rounds=200,
+)
+
+df_train["click_proba2"] = model.predict(mat_train)
+df_val["click_proba2"] = model.predict(mat_val)
+
+# 0.6446639234569186
+print(mrr_fast(df_val, "click_proba"))
+print("By rank")
+for n in range(1, 10):
+    print(n, mrr_fast(df_val[df_val["clickout_step_rev"] == n], "click_proba2"))
+
 
 model = LGBMRanker()
 model.fit(
@@ -66,6 +111,9 @@ df_val["click_proba"] = model.predict(mat_val)
 
 # 0.6385284888273866
 print(mrr_fast(df_val, "click_proba"))
+print("By rank")
+for n in range(1, 5):
+    print(n, mrr_fast(df_val[df_val["clickout_step_rev"] == n], "click_proba"))
 
 # scaler = make_pipeline(SanitizeSparseMatrix(), StandardScaler(with_mean=False))
 # mat_train_s = scaler.fit_transform(mat_train, df_train["was_clicked"])

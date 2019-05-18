@@ -94,7 +94,17 @@ numerical_features_info = [
     ("session_start_ts", False),
     ("user_start_ts", False),
     ("session_count", False),
-    ("step", False)
+    ("step", False),
+    ("clickout_step_rev", False),
+    ("clickout_step", False),
+    ("clickout_max_step", False),
+    ("clickout_item_clicks_rank_weighted", False),
+    ("clickout_item_impressions_rank_weighted", False),
+    ("clickout_item_ctr_rank_weighted", False),
+    ("item_clicks_when_last", False),
+    ("item_impressions_when_last", False),
+    ("item_ctr_when_last", False),
+    ("item_average_seq_pos", False),
     # ("last_clickout_item_stats", True),
     # ("interaction_item_image_unique_num_by_session_id",True),
     # ("interaction_item_image_unique_num_by_timestamp",True),
@@ -136,6 +146,7 @@ categorical_features_py = [
     "hotel_cat",
     "city",
     "last_poi",
+    "user_id_1cat",
 ]
 numerical_features_offset_2 = ["was_interaction_info", "was_interaction_img", "last_index_diff_5"]
 
