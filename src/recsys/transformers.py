@@ -42,6 +42,7 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
         X["last_poi"].fillna("", inplace=True)
         X["alltime_filters"].fillna("", inplace=True)
+        X["user_id_1cat"] = X["user_id"].map(lambda x: x[0])
 
         # add price per city percentile
         price_pct_by_city = joblib.load(PRICE_PCT_PER_CITY)

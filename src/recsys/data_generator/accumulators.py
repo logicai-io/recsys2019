@@ -422,6 +422,28 @@ class ItemCTR:
         return output
 
 
+class ItemCTRRankWeighted:
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.clicks = defaultdict(int)
+        self.impressions = defaultdict(int)
+
+    def update_acc(self, row):
+        if row["index_clicked"] != -1000:
+            self.clicks[row["reference"]] += row["index_clicked"] + 1
+            for ind, item_id in enumerate(row["impressions"]):
+                self.impressions[item_id] += ind + 1
+
+    def get_stats(self, row, item):
+        output = {}
+        output["clickout_item_clicks_rank_weighted"] = self.clicks[item["item_id"]]
+        output["clickout_item_impressions_rank_weighted"] = self.impressions[item["item_id"]]
+        output["clickout_item_ctr_rank_weighted"] = output["clickout_item_clicks_rank_weighted"] / (
+            output["clickout_item_impressions_rank_weighted"] + 1
+        )
+        return output
+
+
 class ItemAttentionSpan:
     def __init__(self):
         self.action_types = ACTIONS_WITH_ITEM_REFERENCE
@@ -890,6 +912,41 @@ class ItemLooStatsByPlatform:
         return obs
 
 
+class ItemCTRInSequence:
+    """
+    Calculates statistics of items which were clicked as the last in sequence
+    """
+
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.item_clicks_when_last = defaultdict(int)
+        self.item_impressions_when_last = defaultdict(int)
+        self.item_click_in_rev_seq = defaultdict(int)
+        self.item_count_in_rev_seq = defaultdict(int)
+
+    def update_acc(self, row):
+        try:
+            item_id = int(row["reference"])
+        except:
+            return
+        if int(row["clickout_step_rev"]) == 1:
+            self.item_clicks_when_last[item_id] += 1
+            for item_id_imp in row["impressions"]:
+                item_id_imp = int(item_id_imp)
+                self.item_impressions_when_last[item_id_imp] += 1
+        self.item_click_in_rev_seq[item_id] += int(row["clickout_step_rev"])
+        self.item_count_in_rev_seq[item_id] += 1
+
+    def get_stats(self, row, item):
+        item_id = int(item["item_id"])
+        obs = {}
+        obs["item_clicks_when_last"] = self.item_clicks_when_last[item_id]
+        obs["item_impressions_when_last"] = self.item_impressions_when_last[item_id]
+        obs["item_ctr_when_last"] = obs["item_clicks_when_last"] / (obs["item_impressions_when_last"] + 1)
+        obs["item_average_seq_pos"] = self.item_click_in_rev_seq[item_id] / (self.item_count_in_rev_seq[item_id] + 1)
+        return obs
+
+
 def group_accumulators(accumulators):
     accs_by_action_type = defaultdict(list)
     for acc in accumulators:
@@ -1225,6 +1282,8 @@ def get_accumulators(hashn=None):
             TimeSinceUserStart(),
             NumberOfSessions(),
             AllFilters(),
+            ItemCTRInSequence(),
+            ItemCTRRankWeighted(),
         ]
         + [
             StatsAcc(

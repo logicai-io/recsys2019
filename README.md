@@ -41,7 +41,10 @@ unk | 0.6272 | 0.6237 | 0.6782
 @657072 | 0.6336 | 0.6266 | 0.6802
 @560cd0 | 0.6352 | 0.6269 | 0.6807
 @b7db8d | 0.6357 | 0.6289 | 0.6810
-@c4993e | XXXXXX | 0.6297 | 0.6815
+@c4993e | XXXXXX | 0.6297b | 0.6815
+@7937c5 | XXXXXX | 0.6284 | 0.6820
+
+b - blend of models, otherwise the results are for single models
 
 ```
 

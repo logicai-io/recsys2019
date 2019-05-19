@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import numpy as np
 import pandas as pd
 
@@ -22,4 +24,13 @@ events["is_val"] = events["is_val"].astype(np.int)
 events.sort_values(["timestamp", "user_id", "step"], inplace=True)
 events["fake_impressions"] = events.groupby(["user_id", "session_id"])["impressions"].bfill()
 events["fake_prices"] = events.groupby(["user_id", "session_id"])["prices"].bfill()
+
+events["clickout_step_rev"] = (
+    events.groupby(["action_type", "session_id"])["step"].rank("max", ascending=False).astype(np.int)
+)
+events["clickout_step"] = (
+    events.groupby(["action_type", "session_id"])["step"].rank("max", ascending=True).astype(np.int)
+)
+events["clickout_max_step"] = events["clickout_step"] + events["clickout_step_rev"] - 1
+
 events.to_csv("../../../data/events_sorted.csv", index=False)

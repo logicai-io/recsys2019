@@ -15,7 +15,11 @@ def main(src, dst, limit):
     # df = df[df["is_impression_the_same"] == True]
     results = []
     for col in tqdm(df.columns):
-        if df[col].dtype in [np.int, np.float] and col != "was_clicked" and "last_index" in col:
+        if (
+            df[col].dtype in [np.int, np.float]
+            and col != "was_clicked"
+            and ("rank_weighted" in col or col == "item_average_seq_pos" or "when_last" in col)
+        ):
             results.append((col, mrr_fast(df, col)))
             df[col + "_rank"] = df.groupby("clickout_id")[col].rank("max", ascending=False)
             mrr_rank = mrr_fast(df, col + "_rank")
