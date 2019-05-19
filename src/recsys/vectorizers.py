@@ -9,7 +9,7 @@ from recsys.transformers import (
 )
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler, KBinsDiscretizer
@@ -182,7 +182,9 @@ def make_vectorizer_1(
                     make_pipeline(RankFeatures(), MinimizeNNZ()),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
-                ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=2), "properties"),
+                ("properties", TfidfVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=2,
+                                               sublinear_tf=True, use_idf=False), "properties"),
+
                 (
                     "last_filter",
                     CountVectorizer(
