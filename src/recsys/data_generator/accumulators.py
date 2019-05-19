@@ -925,7 +925,10 @@ class ItemCTRInSequence:
         self.item_count_in_rev_seq = defaultdict(int)
 
     def update_acc(self, row):
-        item_id = int(row["reference"])
+        try:
+            item_id = int(row["reference"])
+        except:
+            return
         if int(row["clickout_step_rev"]) == 1:
             self.item_clicks_when_last[item_id] += 1
             for item_id_imp in row["impressions"]:
