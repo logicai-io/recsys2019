@@ -1277,7 +1277,7 @@ def get_accumulators(hashn=None):
             GlobalTimestampPerItem(),
             # ItemLooStats(),
             # ItemLooStatsByPlatform("../../../data/item_stats_loo_by_platform.joblib", suffix="_by_platform"),
-            ClickSequenceFeatures(),
+            # ClickSequenceFeatures(),
             TimeSinceSessionStart(),
             TimeSinceUserStart(),
             NumberOfSessions(),

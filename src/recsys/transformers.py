@@ -115,18 +115,28 @@ class LagNumericalFeaturesWithinGroup(BaseEstimator, TransformerMixin):
         self.groupby = groupby
 
     def fit(self, X, y=None):
+        self.diff_cols = []
+        for col in X.columns:
+            if col != "clickout_id":
+                nunique = X.groupby(self.groupby)[col].agg(lambda x: len(set(x)))
+                if np.any(nunique != 1):
+                    self.diff_cols.append(col)
         return self
 
     def transform(self, X):
-        for col in X.columns:
-            if col != "clickout_id":
-                X[col + "_shifted_p1_diff"] = X[col] - X.groupby([self.groupby])[col].shift(self.offset).fillna(0)
-                X[col + "_shifted_m1_diff"] = X[col] - X.groupby([self.groupby])[col].shift(-self.offset).fillna(0)
-                X[col + "_shifted_p1"] = X.groupby([self.groupby])[col].shift(self.offset).fillna(0)
-                X[col + "_shifted_m1"] = X.groupby([self.groupby])[col].shift(-self.offset).fillna(0)
+        new_cols = []
+        for col in self.diff_cols:
+            X[col + "_shifted_p1_diff"] = X[col] - X.groupby([self.groupby])[col].shift(self.offset).fillna(0)
+            new_cols.append(col + "_shifted_p1_diff")
+            X[col + "_shifted_m1_diff"] = X[col] - X.groupby([self.groupby])[col].shift(-self.offset).fillna(0)
+            new_cols.append(col + "_shifted_m1_diff")
+            X[col + "_shifted_p1"] = X.groupby([self.groupby])[col].shift(self.offset).fillna(0)
+            new_cols.append(col + "_shifted_p1")
+            X[col + "_shifted_m1"] = X.groupby([self.groupby])[col].shift(-self.offset).fillna(0)
+            new_cols.append(col + "_shifted_m1")
         if self.drop_clickout_id:
             X.drop("clickout_id", axis=1, inplace=True)
-        return X
+        return X[new_cols]
 
 
 class PandasToRecords(BaseEstimator, TransformerMixin):

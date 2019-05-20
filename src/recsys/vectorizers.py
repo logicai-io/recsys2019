@@ -163,7 +163,7 @@ def make_vectorizer_1(
             [
                 (
                     "numerical",
-                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="mean"), StandardScaler()),
+                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="constant", fill_value=-9999)),
                     numerical_features,
                 ),
                 (
