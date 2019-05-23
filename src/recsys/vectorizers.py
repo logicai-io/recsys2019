@@ -15,7 +15,7 @@ from recsys.transformers import (
     PandasToRecords,
     RankFeatures,
     SanitizeSparseMatrix)
-from recsys.vectorize_datasets import logger
+from recsys.utils import logger
 from scipy.sparse import load_npz, save_npz
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
