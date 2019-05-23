@@ -8,13 +8,31 @@ from recsys.log_utils import get_logger
 from recsys.utils import get_git_hash, timer
 from scipy.special import logit
 
+import os
+
+from recsys.nn import nn_fit_predict
+
+os.environ['OMP_NUM_THREADS'] = '1'
+import gc
+
+from multiprocessing.pool import ThreadPool
+
+import h5sparse
+import numpy as np
+import pandas as pd
+from recsys.log_utils import get_logger
+from recsys.metric import mrr_fast
+from recsys.utils import timer, get_git_hash
+from sklearn.metrics import roc_auc_score
+
+
 logger = get_logger()
 
 logger.info("Staring submission")
 
 with timer("reading data"):
-    meta = pd.read_hdf("../../data/proc/vectorizer_1/meta.h5", key="data")
-    mat = h5sparse.File("../../data/proc/vectorizer_1/Xcsr.h5", mode="r")["matrix"]
+    meta = pd.read_hdf("../../data/proc/vectorizer_2/meta.h5", key="data")
+    mat = h5sparse.File("../../data/proc/vectorizer_2/Xcsr.h5", mode="r")["matrix"]
 
 with timer("splitting data"):
     train_ind = np.where(meta.is_test == 0)[0]
@@ -28,9 +46,10 @@ with timer("splitting data"):
     gc.collect()
 
 with timer("model fitting"):
-    model = LGBMClassifier(n_estimators=1600, num_leaves=62, n_jobs=-2)
-    model.fit(X_train, meta_train["was_clicked"].values)
-    val_pred = logit(model.predict_proba(X_val)[:, 1])
+    n_cores = 60
+    with ThreadPool(processes=n_cores) as pool:
+        nn_preds = pool.starmap(nn_fit_predict, [((X_train, X_val), meta_train["was_clicked"].values)] * n_cores)
+    val_pred = np.vstack(nn_preds).T.mean(axis=1)
     meta_val["click_proba"] = val_pred
     githash = get_git_hash()
     meta_val.to_csv(f"predictions/model_submit_clf_{githash}.csv", index=False)

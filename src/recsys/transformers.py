@@ -199,12 +199,10 @@ class MinimizeNNZ(BaseEstimator, TransformerMixin):
 
 class SanitizeSparseMatrix(BaseEstimator, TransformerMixin):
     def fit(self, X, y):
-        self.datamax = np.nanmax(X.data)
         return self
 
     def transform(self, X):
         X.data[np.isnan(X.data)] = 0
-        X.data = X.data.clip(0, self.datamax)
         return X
 
 
