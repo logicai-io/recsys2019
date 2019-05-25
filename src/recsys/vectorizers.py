@@ -14,7 +14,8 @@ from recsys.transformers import (
     PandasToNpArray,
     PandasToRecords,
     RankFeatures,
-    SanitizeSparseMatrix)
+    SanitizeSparseMatrix,
+)
 from recsys.utils import logger
 from scipy.sparse import load_npz, save_npz
 from sklearn.compose import ColumnTransformer
@@ -73,6 +74,11 @@ numerical_features_info = [
     ("last_index_diff_3", False),
     ("last_index_diff_4", False),
     ("last_index_diff_5", False),
+    ("last_ts_diff_1", False),
+    ("last_ts_diff_2", False),
+    ("last_ts_diff_3", False),
+    ("last_ts_diff_4", False),
+    ("last_ts_diff_5", False),
     ("last_item_fake_index", False),
     ("last_item_index", False),
     ("last_poi_item_clicks", True),
@@ -115,6 +121,8 @@ numerical_features_info = [
     ("item_impressions_when_last", False),
     ("item_ctr_when_last", False),
     ("item_average_seq_pos", False),
+    # ("similar_users_item_interaction", True),
+    # ("most_similar_item_interaction", True),
     # ("timestamp", False),
     # ("last_clickout_item_stats", True),
     # ("interaction_item_image_unique_num_by_session_id",True),
@@ -130,8 +138,6 @@ numerical_features_info = [
     # ("interaction_item_deals_unique_num_by_timestamp",True),
     # ("interaction_item_deals_unique_num_by_session_id",True),
     # ("average_item_attention", True)
-    # ("similar_users_item_interaction", True),
-    # ("most_similar_item_interaction", True),
     # ("last_item_time_diff_same_user", False),
     # ("last_item_time_diff", False),
     # ("click_sequence_min", False),
@@ -233,12 +239,18 @@ def make_vectorizer_2(
             [
                 (
                     "numerical",
-                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="constant", fill_value=0), StandardScaler()),
+                    make_pipeline(
+                        PandasToNpArray(), SimpleImputer(strategy="constant", fill_value=0), StandardScaler()
+                    ),
                     numerical_features,
                 ),
                 (
                     "numerical_context",
-                    make_pipeline(LagNumericalFeaturesWithinGroup(), SimpleImputer(strategy="constant", fill_value=0), StandardScaler()),
+                    make_pipeline(
+                        LagNumericalFeaturesWithinGroup(),
+                        SimpleImputer(strategy="constant", fill_value=0),
+                        StandardScaler(),
+                    ),
                     numerical_features + ["clickout_id"],
                 ),
                 (
@@ -255,7 +267,7 @@ def make_vectorizer_2(
                 ),
             ]
         ),
-        SanitizeSparseMatrix()
+        SanitizeSparseMatrix(),
     )
 
 

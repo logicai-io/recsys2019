@@ -12,8 +12,8 @@ logger = get_logger()
 logger.info("Staring submission")
 
 with timer("reading data"):
-    meta = pd.read_hdf("../../data/proc/vectorizer_1/meta.h5", key="data")
-    mat = h5sparse.File("../../data/proc/vectorizer_1/Xcsr.h5", mode="r")["matrix"]
+    meta = pd.read_hdf("../../data/proc/vectorizer_2/meta.h5", key="data")
+    mat = h5sparse.File("../../data/proc/vectorizer_2/Xcsr.h5", mode="r")["matrix"]
 
 with timer("splitting data"):
     train_ind = np.where(meta.is_test == 0)[0]
@@ -32,4 +32,4 @@ with timer("model fitting"):
     val_pred = model.predict(X_val)
     meta_val["click_proba"] = val_pred
     githash = get_git_hash()
-    meta_val.to_csv(f"predictions/model_submit_{githash}.csv", index=False)
+    meta_val.to_csv(f"predictions/model_2_submit_{githash}.csv", index=False)

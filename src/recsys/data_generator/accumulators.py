@@ -263,12 +263,14 @@ class IndicesFeatures:
         self.impressions_type = impressions_type
         self.index_key = index_key
         self.last_indices = defaultdict(list)
+        self.last_timestamps = defaultdict(list)
         self.prefix = prefix
 
     def update_acc(self, row):
         # TODO: reset list when there is a change of sort order?
         if row["action_type"] in self.action_types and row[self.index_key] >= 0:
             self.last_indices[(row["user_id"], row[self.impressions_type])].append(row[self.index_key])
+            self.last_timestamps[(row["user_id"], row[self.impressions_type])].append(row["timestamp"])
 
     def get_stats(self, row, item):
         last_n = 5
@@ -276,16 +278,24 @@ class IndicesFeatures:
         last_indices = [-100] * last_n + last_indices_raw
         last_indices = last_indices[-last_n:]
         diff_last_indices = diff(last_indices + [item["rank"]])
+
+        last_ts_raw = self.last_timestamps[(row["user_id"], row[self.impressions_type])]
+        last_ts = [-100] * last_n + last_ts_raw
+        last_ts = last_ts[-last_n:]
+        diff_last_ts = diff(last_ts + [item["rank"]])
+
         output = {}
         for n in range(1, last_n + 1):
             if last_indices[-n] != -100:
                 output[self.prefix + "last_index_{}".format(n)] = last_indices[-n]
                 # output[self.prefix + "last_index_{}_vs_rank".format(n)] = last_indices[-n] - item["rank"]
                 output[self.prefix + "last_index_diff_{}".format(n)] = diff_last_indices[-n]
+                output[self.prefix + "last_ts_diff_{}".format(n)] = diff_last_ts[-n]
             else:
                 output[self.prefix + "last_index_{}".format(n)] = None
                 # output[self.prefix + "last_index_{}_vs_rank".format(n)] = None
                 output[self.prefix + "last_index_diff_{}".format(n)] = None
+                output[self.prefix + "last_ts_diff_{}".format(n)] = None
         n_consecutive = self._calculate_n_consecutive_clicks(last_indices_raw, item["rank"])
         output[self.prefix + "n_consecutive_clicks"] = n_consecutive
         return output
@@ -566,8 +576,9 @@ class SimilarUsersItemInteraction:
         self.item_stats_cached = None
 
     def update_acc(self, row):
-        self.items_users[row["reference"]].add(row["user_id"])
-        self.users_items[row["user_id"]].add(row["reference"])
+        if row["is_test"] != 0:
+            self.items_users[row["reference"]].add(row["user_id"])
+            self.users_items[row["user_id"]].add(row["reference"])
 
     def get_stats(self, row, item):
         items_stats = self.read_stats_from_cache(row)
@@ -705,8 +716,9 @@ class MostSimilarUserItemInteraction:
         self.item_stats_cached = None
 
     def update_acc(self, row):
-        self.items_users[row["reference"]].add(row["user_id"])
-        self.users_items[row["user_id"]].add(row["reference"])
+        if row["is_test"] != 0:
+            self.items_users[row["reference"]].add(row["user_id"])
+            self.users_items[row["user_id"]].add(row["reference"])
 
     def get_stats(self, row, item):
         items_stats = self.read_stats_from_cache(row)
@@ -1272,8 +1284,8 @@ def get_accumulators(hashn=None):
             ),
             PriceFeatures(),
             PriceSimilarity(),
-            # SimilarUsersItemInteraction(),
-            # MostSimilarUserItemInteraction(),
+            SimilarUsersItemInteraction(),
+            MostSimilarUserItemInteraction(),
             GlobalTimestampPerItem(),
             # ItemLooStats(),
             # ItemLooStatsByPlatform("../../../data/item_stats_loo_by_platform.joblib", suffix="_by_platform"),

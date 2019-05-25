@@ -2,7 +2,7 @@ import os
 
 from recsys.nn import nn_fit_predict
 
-os.environ['OMP_NUM_THREADS'] = '1'
+os.environ["OMP_NUM_THREADS"] = "1"
 import gc
 
 from multiprocessing.pool import ThreadPool
@@ -30,8 +30,8 @@ with timer("splitting data"):
     logger.info(f"Train shape {train_ind.shape[0]} Val shape {val_ind.shape[0]}")
     meta_train = meta.iloc[train_ind]
     meta_val = meta.iloc[val_ind]
-    X_train = mat[train_ind.min(): (train_ind.max() + 1)]
-    X_val = mat[val_ind.min(): (val_ind.max() + 1)]
+    X_train = mat[train_ind.min() : (train_ind.max() + 1)]
+    X_val = mat[val_ind.min() : (val_ind.max() + 1)]
     del mat
     gc.collect()
 

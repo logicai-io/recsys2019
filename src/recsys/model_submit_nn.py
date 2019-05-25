@@ -1,18 +1,11 @@
-import gc
+import os
 
-import h5sparse
-import numpy as np
-import pandas as pd
-from lightgbm import LGBMClassifier
-from recsys.log_utils import get_logger
-from recsys.utils import get_git_hash, timer
-from scipy.special import logit
-
+from recsys.nn import nn_fit_predict
 import os
 
 from recsys.nn import nn_fit_predict
 
-os.environ['OMP_NUM_THREADS'] = '1'
+os.environ["OMP_NUM_THREADS"] = "1"
 import gc
 
 from multiprocessing.pool import ThreadPool
@@ -21,10 +14,7 @@ import h5sparse
 import numpy as np
 import pandas as pd
 from recsys.log_utils import get_logger
-from recsys.metric import mrr_fast
 from recsys.utils import timer, get_git_hash
-from sklearn.metrics import roc_auc_score
-
 
 logger = get_logger()
 
@@ -40,8 +30,8 @@ with timer("splitting data"):
     logger.info(f"Train shape {train_ind.shape[0]} Val shape {val_ind.shape[0]}")
     meta_train = meta.iloc[train_ind]
     meta_val = meta.iloc[val_ind]
-    X_train = mat[train_ind.min(): (train_ind.max() + 1)]
-    X_val = mat[val_ind.min(): (val_ind.max() + 1)]
+    X_train = mat[train_ind.min() : (train_ind.max() + 1)]
+    X_val = mat[val_ind.min() : (val_ind.max() + 1)]
     del mat
     gc.collect()
 

@@ -32,8 +32,8 @@ with timer("splitting data"):
 with timer("model fitting"):
     model = LGBMClassifier(n_estimators=1600, num_leaves=62, n_jobs=-2)
     model.fit(X_train, meta_train["was_clicked"].values)
-    val_pred = logit(model.predict_proba(X_val)[:,1])
-    train_pred = logit(model.predict_proba(X_train)[:,1])
+    val_pred = logit(model.predict_proba(X_val)[:, 1])
+    train_pred = logit(model.predict_proba(X_train)[:, 1])
     logger.info("Train AUC {:.4f}".format(roc_auc_score(meta_train["was_clicked"].values, train_pred)))
     logger.info("Val AUC {:.4f}".format(roc_auc_score(meta_val["was_clicked"].values, val_pred)))
     meta_val["click_proba"] = val_pred

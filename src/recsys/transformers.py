@@ -181,6 +181,7 @@ class MinimizeNNZ(BaseEstimator, TransformerMixin):
         self.offsets = []
         for col in X.columns:
             v = X[col]
+            print(col)
             dom = v.value_counts().index[0]
             vmin = v.min()
             vmax = v.max()
