@@ -576,7 +576,7 @@ class SimilarUsersItemInteraction:
         self.item_stats_cached = None
 
     def update_acc(self, row):
-        if row["is_test"] != 0:
+        if row["is_test"] == 0:
             self.items_users[row["reference"]].add(row["user_id"])
             self.users_items[row["user_id"]].add(row["reference"])
 
@@ -716,7 +716,7 @@ class MostSimilarUserItemInteraction:
         self.item_stats_cached = None
 
     def update_acc(self, row):
-        if row["is_test"] != 0:
+        if row["is_test"] == 0:
             self.items_users[row["reference"]].add(row["user_id"])
             self.users_items[row["user_id"]].add(row["reference"])
 
@@ -1306,11 +1306,6 @@ def get_accumulators(hashn=None):
                 get_stats_func=lambda acc, row, item: acc.get((row["user_id"], action_type), 0),
             )
             for action_type in ["filter selection"]
-        ]
-        + [DistinctInteractions(action_type=action_type, by="timestamp") for action_type in ACTIONS_WITH_ITEM_REFERENCE]
-        + [
-            DistinctInteractions(action_type=action_type, by="session_id")
-            for action_type in ACTIONS_WITH_ITEM_REFERENCE
         ]
     )
 
