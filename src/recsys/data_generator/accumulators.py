@@ -576,7 +576,7 @@ class SimilarUsersItemInteraction:
         self.item_stats_cached = None
 
     def update_acc(self, row):
-        if row["is_test"] == 0:
+        if row["is_test"] == "0":
             self.items_users[row["reference"]].add(row["user_id"])
             self.users_items[row["user_id"]].add(row["reference"])
 
@@ -716,7 +716,7 @@ class MostSimilarUserItemInteraction:
         self.item_stats_cached = None
 
     def update_acc(self, row):
-        if row["is_test"] == 0:
+        if row["is_test"] == "0":
             self.items_users[row["reference"]].add(row["user_id"])
             self.users_items[row["user_id"]].add(row["reference"])
 
