@@ -15,6 +15,7 @@ from recsys.transformers import (
     PandasToRecords,
     RankFeatures,
     SanitizeSparseMatrix,
+    DivideByRanking,
 )
 from recsys.utils import logger
 from scipy.sparse import load_npz, save_npz
@@ -193,6 +194,7 @@ def make_vectorizer_1(
                     make_pipeline(LagNumericalFeaturesWithinGroup(offset=2), MinimizeNNZ()),
                     numerical_features_offset_2 + ["clickout_id"],
                 ),
+                ("divide_by_ranking", DivideByRanking(), numerical_features),
                 ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
                 (
                     "numerical_ranking",
