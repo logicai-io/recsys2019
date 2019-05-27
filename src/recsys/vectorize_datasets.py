@@ -4,7 +4,7 @@ from recsys.vectorizers import make_vectorizer_1, VectorizeChunks, make_vectoriz
 logger = get_logger()
 
 if __name__ == "__main__":
-    vectorizer = 2
+    vectorizer = 1
 
     logger = get_logger()
     logger.info("Starting vectorizing")

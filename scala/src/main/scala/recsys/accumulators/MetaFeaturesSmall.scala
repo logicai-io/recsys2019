@@ -4,11 +4,7 @@ import recsys.{Item, Row}
 
 import scala.collection.mutable
 
-class MetaFeatures extends Accumulator {
-  override def update(row: Row): Unit = {
-
-  }
-
+class MetaFeaturesSmall extends Accumulator {
   override def getStats(row: Row, item: Item): mutable.LinkedHashMap[String, Any] = {
     val f = mutable.LinkedHashMap[String, Any]()
     f("src") = row.src

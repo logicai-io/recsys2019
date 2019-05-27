@@ -9,8 +9,15 @@ import recsys.Types._
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
+import recsys.accumulators.{Accumulator, AccumulatorClickout, GraphSimilarityRandomWalk, GraphSimilarityRandomWalkResets, GraphSimilarityUserItem, GraphSimilarityUserItemAction, MetaFeaturesAll, MetaFeaturesId, MetaFeaturesSmall}
 
-object GenerateFeatures {
+class GenerateFeaturesAcc(inputPath: String,
+                          outputPath: String,
+                          accumulators: List[Accumulator] = List(),
+                          accumulatorsClickout: List[AccumulatorClickout] = List(),
+                          addClickout: Boolean = false) {
+
+  type FeaturesMap = mutable.LinkedHashMap[String, Any]
 
   val ACTION_TYPES = List(
     "change of sort order",
@@ -32,39 +39,11 @@ object GenerateFeatures {
     "clickout item"
   )
 
-  private var itemImpressions = mutable.Map[ItemId, Int]().withDefaultValue(0)
-  private var itemClicks      = mutable.Map[ItemId, Int]().withDefaultValue(0)
-  private var itemUserImpressions =
-    mutable.Map[(ItemId, UserId), Int]().withDefaultValue(0)
-  private var itemUserClicks =
-    mutable.Map[(ItemId, UserId), Int]().withDefaultValue(0)
-  private var lastSortOrder =
-    mutable.Map[UserId, String]().withDefaultValue("unk")
-  private var lastFilter = mutable.Map[UserId, String]().withDefaultValue("unk")
-  private var lastPoi    = mutable.Map[UserId, String]().withDefaultValue("unk")
-  private var itemsWithUserInteractionsSet =
-    mutable.Map[UserId, mutable.ArrayBuffer[ItemId]]()
-  private var itemsWithUserSessionInteractionsSet =
-    mutable.Map[(UserId, SessionId), mutable.ArrayBuffer[ItemId]]()
-  private var actionTypesTimestamps =
-    mutable.Map[(UserId, ActionType), Timestamp]()
-  private var actionTypesItemTimestamps =
-    mutable.Map[(UserId, ItemId, ActionType), Timestamp]()
-  private var actionTypesCounter =
-    mutable.Map[(UserId, ActionType), Int]().withDefaultValue(0)
-  private var actionTypesItemCounter =
-    mutable.Map[(UserId, ItemId, ActionType), Int]().withDefaultValue(0)
-  private var lastRefItemByActionType =
-    mutable.Map[(UserId, ActionType), ItemId]().withDefaultValue(DummyItem)
-
   private val itemProperties = readProperties("../data/item_metadata.csv")
-//  private val propFreq       = propertiesFreq(itemProperties)
 
-  def main(args: Array[String]) {
-//    val taskSupport = new ForkJoinTaskSupport(new ForkJoinPool(8))
-
-    val eventsReader = getCSVReader("../data/events_sorted_250k.csv")
-    val writer       = getWriter("../data/events_sorted_trans_scala.csv")
+  def run() {
+    val writer       = getWriter(outputPath)
+    val eventsReader = getCSVReader(inputPath)
 
     val pb            = new ProgressBar("Calculating features", 19715327)
     var headerWritten = false
@@ -74,10 +53,11 @@ object GenerateFeatures {
       val row        = extractRowObj(rawRow, actionType)
 
       if (actionType == "clickout item") {
-//        val itemsPar = row.items.par
-//        itemsPar.tasksupport = taskSupport
-        val itemsFeatures =
+        val itemsFeatures = if (accumulators.nonEmpty) {
           row.items.map(item => extractFeatures(clickoutId, row, item))
+        } else {
+          extractFeaturesClickout(clickoutId, row, row.items)
+        }
         if (!headerWritten) {
           writer.writeHeaders(
             itemsFeatures.head.keys.toList.map(normalizeColumnName)
@@ -93,196 +73,55 @@ object GenerateFeatures {
     }
     writer.close()
     pb.close()
-//    taskSupport.forkJoinPool.shutdown()
   }
 
   private def normalizeColumnName(colName: String): String =
     colName.replace(' ', '_')
 
   private def updateAccumulators(actionType: String, row: Row): Unit = {
-    if (row.actionType == "clickout item") {
-      itemClicks(row.referenceItem) += 1
-      for (itemId <- row.impressions) {
-        itemImpressions(itemId) += 1
-      }
+    for (acc <- accumulatorsClickout) {
+      acc.update(row)
     }
-
-    if (ACTIONS_WITH_ITEM_REF.contains(actionType)) {
-      updateOrCreateSetMap(
-        itemsWithUserInteractionsSet,
-        row.userId,
-        row.referenceItem
-      )
-      updateOrCreateSetMap(
-        itemsWithUserSessionInteractionsSet,
-        (row.userId, row.sessionId),
-        row.referenceItem
-      )
-      actionTypesItemTimestamps(
-        (row.userId, row.referenceItem, row.actionType)
-      ) = row.timestamp
-      actionTypesItemCounter((row.userId, row.referenceItem, row.actionType)) += 1
-      lastRefItemByActionType((row.userId, row.actionType)) = row.referenceItem
+    for (acc <- accumulators) {
+      acc.update(row)
     }
-
-    if (row.actionType == "change of sort order") {
-      lastSortOrder(row.userId) = row.referenceOther
-    }
-
-    if (row.actionType == "filter selection") {
-      lastFilter(row.userId) = row.referenceOther
-    }
-
-    if (row.actionType == "search for poi") {
-      lastPoi(row.userId) = row.referenceOther
-    }
-
-    actionTypesTimestamps((row.userId, row.actionType)) = row.timestamp
-    actionTypesCounter((row.userId, row.actionType)) += 1
   }
 
   private def extractFeatures(clickoutId: ItemId, row: Row, item: Item) = {
     val j           = item.itemId
     val featuresRow = mutable.LinkedHashMap[String, Any]()
-    featuresRow("clickout_id") = clickoutId
-    featuresRow("src") = row.src
-    featuresRow("is_test") = row.isTest
-    featuresRow("user_id") = row.userId
-    featuresRow("session_id") = row.sessionId
-    featuresRow("step") = row.step
-    featuresRow("timestamp") = row.timestamp
-    featuresRow("platform") = row.platform
-    featuresRow("city") = row.city
-    featuresRow("device") = row.device
-    featuresRow("current_filters") = row.currentFilters
-    featuresRow("reference") = row.referenceItem
-    featuresRow("item_id") = item.itemId
-    featuresRow("price") = item.price
-    featuresRow("rank") = item.rank
-    featuresRow("was_clicked") = if (row.referenceItem == item.itemId) 1 else 0
-
-    // get stats
-    featuresRow("item_impressions") = itemImpressions(item.itemId)
-    featuresRow("item_clicks") = itemClicks(item.itemId)
-    featuresRow("item_ctr") = itemClicks(item.itemId).toFloat / (itemImpressions(
-      item.itemId
-    ) + 1)
-    val itemUser = (item.itemId, row.userId)
-    featuresRow("item_user_impressions") = itemUserImpressions(itemUser)
-    featuresRow("item_user_clicks") = itemUserClicks(itemUser)
-    featuresRow("item_user_ctr") = itemUserClicks(itemUser).toFloat / (itemUserImpressions(
-      itemUser
-    ) + 1)
-
-    featuresRow("last_sort_order") = lastSortOrder(row.userId)
-    featuresRow("last_filter_selection") = lastFilter(row.userId)
-    featuresRow("last_poi") = lastPoi(row.userId)
-
-    featuresRow("avg_jaccard_to_previous_interactions") = {
-      calcAvgItemSim(itemsWithUserInteractionsSet, row.userId, item)
+    if (addClickout) {
+      featuresRow("clickout_id") = clickoutId
     }
-    featuresRow("avg_jaccard_to_previous_interactions_session") = calcAvgItemSim(
-      itemsWithUserSessionInteractionsSet,
-      (row.userId, row.sessionId),
-      item
-    )
-
-    for (actionType <- ACTION_TYPES) {
-      featuresRow(s"${actionType}_last_timestamp") = math.min(
-        row.timestamp -
-          actionTypesTimestamps.getOrElse((row.userId, actionType), 0),
-        1000000
-      )
-      featuresRow(s"${actionType}_count") = actionTypesCounter(
-        (row.userId, actionType)
-      )
+    for (acc <- accumulators) {
+      for ((k, v) <- acc.getStats(row, item)) {
+        featuresRow(k) = v
+      }
     }
-
-    for (actionType <- ACTIONS_WITH_ITEM_REF) {
-      featuresRow(s"${actionType}_item_last_timestamp") = math.min(
-        row.timestamp -
-          actionTypesItemTimestamps
-            .getOrElse((row.userId, item.itemId, actionType), 0),
-        1000000
-      )
-      featuresRow(s"${actionType}_item_count") = actionTypesItemCounter(
-        (row.userId, item.itemId, actionType)
-      )
-      featuresRow(s"${actionType}_last_ref_jaccard") = calcItemSim(
-        lastRefItemByActionType((row.userId, actionType)),
-        item.itemId
-      )
-      featuresRow(s"${actionType}_same_last_item") =
-        if (lastRefItemByActionType((row.userId, actionType)) == item.itemId) 1
-        else 0
-    }
-
     featuresRow
   }
 
-  private def calcItemSim(
-      itemA: ItemId,
-      itemB: ItemId,
-      freq: Boolean = false
-  ) = {
-    if (itemA == DummyItem) {
-      0.0
-    } else {
-      val itemAProp = itemProperties.getOrElse(itemA, Set[Int]())
-      if (itemAProp.nonEmpty) {
-        val itemBProp = itemProperties.getOrElse(itemB, Set[Int]())
-        if (itemBProp.nonEmpty) {
-          val intersection = itemAProp intersect itemBProp
-          val union        = itemAProp union itemBProp
-          if (freq) {
-            //        intersection
-            //          .map(1.0 / propFreq(_))
-            //          .sum / union.map(1.0 / propFreq(_)).sum
-            0.0
-          } else {
-            intersection.size.toDouble / (union.size + 1)
-          }
-        } else {
-          0.0
-        }
-      } else {
-        0.0
-      }
+  def mergeWith[K, V](xs: collection.mutable.LinkedHashMap[K, V], ys: collection.mutable.LinkedHashMap[K, V])(
+      f: (V, V) => V): collection.mutable.LinkedHashMap[K, V] = {
+    val ns = collection.mutable.LinkedHashMap[K, V]()
+    (xs.keySet ++ ys.keySet).foreach { k =>
+      if (!xs.isDefinedAt(k)) ns.update(k, ys(k))
+      else if (!ys.isDefinedAt(k)) ns.update(k, xs(k))
+      else ns.update(k, f(xs(k), ys(k)))
+    }
+    ns
+  }
+
+  def mergeArrays(a: Array[FeaturesMap], b: Array[FeaturesMap]): Array[FeaturesMap] = {
+    a.zip(b).map { x =>
+      mergeWith(x._1, x._2)((a, b) => a)
     }
   }
 
-  private def calcAvgItemSim[K](
-      map: mutable.Map[K, mutable.ArrayBuffer[ItemId]],
-      key: K,
-      item: Item
-  ) = {
-    if (map contains key) {
-      val propItem        = itemProperties(item.itemId)
-      val prvInteractions = map(key).distinct
-      if (propItem.nonEmpty & prvInteractions.nonEmpty) {
-        val sim = prvInteractions.map(itemProperties).map { prvItem =>
-          prvItem.intersect(propItem).size.toDouble / (prvItem
-            .union(propItem)
-            .size + 1)
-        }
-        sim.sum / sim.size
-      } else {
-        0.0
-      }
-    } else {
-      0.0
-    }
-  }
-
-  private def updateOrCreateSetMap[K, V](
-      map: mutable.Map[K, mutable.ArrayBuffer[V]],
-      key: K,
-      value: V
-  ): Unit = {
-    if (!map.contains(key)) {
-      map(key) = mutable.ArrayBuffer[V]()
-    }
-    map(key).append(value)
+  private def extractFeaturesClickout(clickoutId: ItemId, row: Row, items: Array[Item]): Array[FeaturesMap] = {
+    val allFeatures    = accumulatorsClickout.map(acc => acc.getStats(row, items))
+    val featuresMerged = allFeatures.reduce(mergeArrays)
+    featuresMerged
   }
 
   private def extractRowObj(rawRow: Record, actionType: String) = {
@@ -383,5 +222,59 @@ object GenerateFeatures {
       properties: mutable.Map[Types.ItemId, Set[String]]
   ) = {
     properties.values.flatten.groupBy(identity).mapValues(_.size)
+  }
+}
+
+object GenerateFeaturesAcc {
+  val inputPath = "../data/events_sorted.csv"
+  def main(args: Array[String]) {
+    generateFeatures(
+      "../data/features/graph_similarity.csv",
+      List(
+        new GraphSimilarityUserItem(featureName = "graph_similarity_user_item_clickout", actionTypes = List(CLICKOUT)),
+        new GraphSimilarityUserItem(featureName = "graph_similarity_user_item_search",
+                                    actionTypes = List(SEARCH_FOR_ITEM)),
+        new GraphSimilarityUserItem(featureName = "graph_similarity_user_item_interaction_info",
+                                    actionTypes = List(INTERACTION_INFO)),
+        new GraphSimilarityUserItem(featureName = "graph_similarity_user_item_interaction_img",
+                                    actionTypes = List(INTERACTION_IMG)),
+        new GraphSimilarityUserItem(featureName = "graph_similarity_user_item_intearction_deal",
+                                    actionTypes = List(INTERACTION_DEAL)),
+        new GraphSimilarityUserItem(featureName = "graph_similarity_user_item_all_interactions",
+                                    actionTypes = ACTIONS_WITH_ITEM_REF)
+      ),
+      overwrite=true
+    )
+    generateFeatures("../data/features/_meta_feautres_all.csv", List(new MetaFeaturesAll()), addClickout = true)
+    generateFeatures("../data/features/_meta_features_small.csv", List(new MetaFeaturesSmall()), addClickout = true)
+    generateFeatures("../data/features/_meta_features_id.csv", List(new MetaFeaturesId()), addClickout = true)
+    generateFeatures("../data/features/_meta_features_id.csv", List(new MetaFeaturesId()), addClickout = true)
+    generateFeatures(
+      "../data/features/graph_similarity_user_item_random_walk.csv",
+      accumulatorsClickouts =
+        List(new GraphSimilarityRandomWalk("graph_similarity_user_item_random_walk", actionTypes = ACTIONS_WITH_ITEM_REF)),
+      overwrite = true
+    )
+    generateFeatures(
+      "../data/features/graph_similarity_user_item_random_walk_resets.csv",
+      accumulatorsClickouts =
+        List(new GraphSimilarityRandomWalkResets("graph_similarity_user_item_random_walk_resets", actionTypes = ACTIONS_WITH_ITEM_REF))
+    )
+  }
+
+  private def generateFeatures(outputPath: String,
+                               accumulators: List[Accumulator] = List(),
+                               accumulatorsClickouts: List[AccumulatorClickout] = List(),
+                               addClickout: Boolean = false,
+                               overwrite: Boolean = false): Unit = {
+    if (new java.io.File(outputPath).exists && !overwrite) {
+      println(f"Skipping $outputPath")
+    } else {
+      println(f"Generating $outputPath")
+      val generateFeatures =
+        new GenerateFeaturesAcc(inputPath, outputPath, accumulators, accumulatorsClickouts, addClickout)
+      generateFeatures.run()
+
+    }
   }
 }
