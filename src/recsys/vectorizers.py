@@ -15,16 +15,16 @@ from recsys.transformers import (
     PandasToRecords,
     RankFeatures,
     SanitizeSparseMatrix,
-    DivideByRanking,
-)
+    SparsityFilter, DivideByRanking)
 from recsys.utils import logger
 from scipy.sparse import load_npz, save_npz
 from sklearn.compose import ColumnTransformer
+from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler, KBinsDiscretizer
+from sklearn.preprocessing import StandardScaler
 
 numerical_features_info = [
     ("avg_price_similarity", True),
@@ -124,6 +124,16 @@ numerical_features_info = [
     ("item_average_seq_pos", False),
     ("similar_users_item_interaction", True),
     ("most_similar_item_interaction", True),
+    ("graph_similarity_user_item_random_walk", True),
+    ("graph_similarity_user_item_clickout", True),
+    ("graph_similarity_user_item_search", True),
+    ("graph_similarity_user_item_interaction_info", True),
+    ("graph_similarity_user_item_interaction_img", True),
+    ("graph_similarity_user_item_intearction_deal", True),
+    ("graph_similarity_user_item_all_interactions", True),
+    ("graph_similarity_user_item_random_walk_resets", True),
+    # ("avg_properties_similarity", True),
+    # ("avg_properties_similarity_norm", True)
     # ("timestamp", False),
     # ("last_clickout_item_stats", True),
     # ("interaction_item_image_unique_num_by_session_id",True),
@@ -170,10 +180,10 @@ numerical_features_offset_2 = ["was_interaction_info", "was_interaction_img", "l
 
 
 def make_vectorizer_1(
-    categorical_features=categorical_features_py,
-    numerical_features=numerical_features_py,
-    numerical_features_offset_2=numerical_features_offset_2,
-    numerical_features_for_ranking=numerical_features_for_ranking_py,
+        categorical_features=categorical_features_py,
+        numerical_features=numerical_features_py,
+        numerical_features_offset_2=numerical_features_offset_2,
+        numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
     return make_pipeline(
         FeatureEng(),
@@ -194,7 +204,7 @@ def make_vectorizer_1(
                     make_pipeline(LagNumericalFeaturesWithinGroup(offset=2), MinimizeNNZ()),
                     numerical_features_offset_2 + ["clickout_id"],
                 ),
-                ("divide_by_ranking", DivideByRanking(), numerical_features),
+                # ("divide_by_ranking", DivideByRanking(), numerical_features),
                 ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
                 (
                     "numerical_ranking",
@@ -230,10 +240,10 @@ def make_vectorizer_1(
 
 
 def make_vectorizer_2(
-    categorical_features=categorical_features_py,
-    numerical_features=numerical_features_py,
-    numerical_features_offset_2=numerical_features_offset_2,
-    numerical_features_for_ranking=numerical_features_for_ranking_py,
+        categorical_features=categorical_features_py,
+        numerical_features=numerical_features_py,
+        numerical_features_offset_2=numerical_features_offset_2,
+        numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
     return make_pipeline(
         FeatureEng(),

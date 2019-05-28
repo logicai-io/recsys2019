@@ -9,7 +9,7 @@ import recsys.Types._
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
-import recsys.accumulators.{Accumulator, AccumulatorClickout, GraphSimilarityRandomWalk, GraphSimilarityRandomWalkResets, GraphSimilarityUserItem, GraphSimilarityUserItemAction, MetaFeaturesAll, MetaFeaturesId, MetaFeaturesSmall}
+import recsys.accumulators.{Accumulator, AccumulatorClickout, GraphSimilarityRandomWalk, GraphSimilarityRandomWalkResets, GraphSimilarityUserItem, GraphSimilarityUserItemAction, ItemOriginality, MetaFeaturesAll, MetaFeaturesId, MetaFeaturesSmall}
 
 class GenerateFeaturesAcc(inputPath: String,
                           outputPath: String,
@@ -39,11 +39,9 @@ class GenerateFeaturesAcc(inputPath: String,
     "clickout item"
   )
 
-  private val itemProperties = readProperties("../data/item_metadata.csv")
-
   def run() {
     val writer       = getWriter(outputPath)
-    val eventsReader = getCSVReader(inputPath)
+    val eventsReader = CSVReader.getCSVReader(inputPath)
 
     val pb            = new ProgressBar("Calculating features", 19715327)
     var headerWritten = false
@@ -191,43 +189,16 @@ class GenerateFeaturesAcc(inputPath: String,
       "unk"
     }
   }
-
-  private def getCSVReader(filePath: String) = {
-    val settings = new CsvParserSettings()
-    settings.setHeaderExtractionEnabled(true)
-    val reader = new CsvParser(settings)
-    val it     = reader.iterateRecords(new File(filePath), "UTF-8")
-    it.iterator()
-  }
-
-  private def readProperties(path: String) = {
-    val itemPropertiesReader = getCSVReader(path)
-    val itemProperties =
-      mutable.OpenHashMap[ItemId, mutable.BitSet]().withDefaultValue(mutable.BitSet())
-    val propMap = mutable.Map[String, Int]()
-    for (row <- itemPropertiesReader) {
-      val itemId     = row.getInt("item_id")
-      val properties = row.getString("properties").split('|')
-      for (prop <- properties) {
-        if (!propMap.contains(prop)) {
-          propMap(prop) = propMap.size
-        }
-      }
-      itemProperties(itemId) = mutable.BitSet(properties.map(propMap): _*)
-    }
-    itemProperties
-  }
-
-  private def propertiesFreq(
-      properties: mutable.Map[Types.ItemId, Set[String]]
-  ) = {
-    properties.values.flatten.groupBy(identity).mapValues(_.size)
-  }
 }
 
 object GenerateFeaturesAcc {
   val inputPath = "../data/events_sorted.csv"
   def main(args: Array[String]) {
+    generateFeatures("../data/features/_meta_feautres_all.csv", List(new MetaFeaturesAll()), addClickout = true)
+    generateFeatures("../data/features/_meta_features_small.csv", List(new MetaFeaturesSmall()), addClickout = true)
+    generateFeatures("../data/features/_meta_features_id.csv", List(new MetaFeaturesId()), addClickout = true)
+    generateFeatures("../data/features/_meta_features_id.csv", List(new MetaFeaturesId()), addClickout = true)
+
     generateFeatures(
       "../data/features/graph_similarity.csv",
       List(
@@ -242,23 +213,23 @@ object GenerateFeaturesAcc {
                                     actionTypes = List(INTERACTION_DEAL)),
         new GraphSimilarityUserItem(featureName = "graph_similarity_user_item_all_interactions",
                                     actionTypes = ACTIONS_WITH_ITEM_REF)
-      ),
-      overwrite=true
+      )
     )
-    generateFeatures("../data/features/_meta_feautres_all.csv", List(new MetaFeaturesAll()), addClickout = true)
-    generateFeatures("../data/features/_meta_features_small.csv", List(new MetaFeaturesSmall()), addClickout = true)
-    generateFeatures("../data/features/_meta_features_id.csv", List(new MetaFeaturesId()), addClickout = true)
-    generateFeatures("../data/features/_meta_features_id.csv", List(new MetaFeaturesId()), addClickout = true)
     generateFeatures(
       "../data/features/graph_similarity_user_item_random_walk.csv",
       accumulatorsClickouts =
         List(new GraphSimilarityRandomWalk("graph_similarity_user_item_random_walk", actionTypes = ACTIONS_WITH_ITEM_REF)),
-      overwrite = true
     )
     generateFeatures(
       "../data/features/graph_similarity_user_item_random_walk_resets.csv",
       accumulatorsClickouts =
         List(new GraphSimilarityRandomWalkResets("graph_similarity_user_item_random_walk_resets", actionTypes = ACTIONS_WITH_ITEM_REF))
+    )
+
+    generateFeatures(
+      "../data/features/item_originality.csv",
+      accumulatorsClickouts = List(new ItemOriginality()),
+      overwrite = true
     )
   }
 
