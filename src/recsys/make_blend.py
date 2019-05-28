@@ -14,7 +14,7 @@ events = pd.read_csv("../../data/events_click_rev.csv")
 
 def join_events(df):
     df = pd.merge(df, events, on=["user_id", "session_id", "step"])
-    return df #[df["clickout_step_rev"] == 1]
+    return df  # [df["clickout_step_rev"] == 1]
 
 
 models = [
@@ -25,7 +25,7 @@ models = [
     "7937c520a0a230a9d06b9030ebcdc73f8372305d",
     "7f439f9956aa97213dd15397faea4b0fef0a2152",
     "d2c1eff343a5048da32abf64f3a5daf0f7bc0025",
-    "c54984729d08d9be23797967fb658f7f66b01b9c"
+    "c54984729d08d9be23797967fb658f7f66b01b9c",
 ]
 
 predictions = []
@@ -40,15 +40,15 @@ for p in predictions:
 
 def opt(v):
     final["click_proba"] = 0
-    for c,pred in zip(v, predictions):
-        final["click_proba"] += c*pred["click_proba"]
+    for c, pred in zip(v, predictions):
+        final["click_proba"] += c * pred["click_proba"]
     mrr = mrr_fast(final, "click_proba")
     print(v)
     logger.info(f"MRR {mrr}")
     return -mrr
 
 
-coefs = fmin(opt, [1,] * len(predictions))
+coefs = fmin(opt, [1] * len(predictions))
 mrr = mrr_fast(final, "click_proba")
 
 submissions = []

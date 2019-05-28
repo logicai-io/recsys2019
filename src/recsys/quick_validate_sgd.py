@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore")
 nrows = 2000000
 df = pd.read_csv("../../data/events_sorted_trans_all.csv", nrows=nrows)
 
-for fn in glob.glob("../../data/features/graph*.csv"): # + glob.glob("../../data/features/item*.csv") :
+for fn in glob.glob("../../data/features/graph*.csv"):  # + glob.glob("../../data/features/item*.csv") :
     new_df = pd.read_csv(fn, nrows=nrows)
     for col in new_df.columns:
         print(col)
@@ -33,12 +33,13 @@ def mrr_metric(train_data, preds):
     mrr = mrr_fast_v2(train_data, preds, df_val["clickout_id"].values)
     return "error", mrr, True
 
-for alpha in [0.1,0.03,0.01]:
+
+for alpha in [0.1, 0.03, 0.01]:
     model = SGDClassifier(loss="log", n_iter=1, alpha=alpha, shuffle=False)
     model.fit(mat_train, df_train["was_clicked"])
 
-    df_train["click_proba"] = model.predict_proba(mat_train)[:,1]
-    df_val["click_proba"] = model.predict_proba(mat_val)[:,1]
+    df_train["click_proba"] = model.predict_proba(mat_train)[:, 1]
+    df_val["click_proba"] = model.predict_proba(mat_val)[:, 1]
 
     print(mrr_fast(df_val, "click_proba"), mrr_fast(df_train, "click_proba"))
 print("By rank")

@@ -15,7 +15,9 @@ from recsys.transformers import (
     PandasToRecords,
     RankFeatures,
     SanitizeSparseMatrix,
-    SparsityFilter, DivideByRanking)
+    SparsityFilter,
+    DivideByRanking,
+)
 from recsys.utils import logger
 from scipy.sparse import load_npz, save_npz
 from sklearn.compose import ColumnTransformer
@@ -124,14 +126,14 @@ numerical_features_info = [
     ("item_average_seq_pos", False),
     ("similar_users_item_interaction", True),
     ("most_similar_item_interaction", True),
-    ("graph_similarity_user_item_random_walk", True),
-    ("graph_similarity_user_item_clickout", True),
-    ("graph_similarity_user_item_search", True),
-    ("graph_similarity_user_item_interaction_info", True),
-    ("graph_similarity_user_item_interaction_img", True),
-    ("graph_similarity_user_item_intearction_deal", True),
-    ("graph_similarity_user_item_all_interactions", True),
-    ("graph_similarity_user_item_random_walk_resets", True),
+    # ("graph_similarity_user_item_random_walk", True),
+    # ("graph_similarity_user_item_clickout", True),
+    # ("graph_similarity_user_item_search", True),
+    # ("graph_similarity_user_item_interaction_info", True),
+    # ("graph_similarity_user_item_interaction_img", True),
+    # ("graph_similarity_user_item_intearction_deal", True),
+    # ("graph_similarity_user_item_all_interactions", True),
+    # ("graph_similarity_user_item_random_walk_resets", True),
     # ("avg_properties_similarity", True),
     # ("avg_properties_similarity_norm", True)
     # ("timestamp", False),
@@ -180,10 +182,10 @@ numerical_features_offset_2 = ["was_interaction_info", "was_interaction_img", "l
 
 
 def make_vectorizer_1(
-        categorical_features=categorical_features_py,
-        numerical_features=numerical_features_py,
-        numerical_features_offset_2=numerical_features_offset_2,
-        numerical_features_for_ranking=numerical_features_for_ranking_py,
+    categorical_features=categorical_features_py,
+    numerical_features=numerical_features_py,
+    numerical_features_offset_2=numerical_features_offset_2,
+    numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
     return make_pipeline(
         FeatureEng(),
@@ -240,10 +242,10 @@ def make_vectorizer_1(
 
 
 def make_vectorizer_2(
-        categorical_features=categorical_features_py,
-        numerical_features=numerical_features_py,
-        numerical_features_offset_2=numerical_features_offset_2,
-        numerical_features_for_ranking=numerical_features_for_ranking_py,
+    categorical_features=categorical_features_py,
+    numerical_features=numerical_features_py,
+    numerical_features_offset_2=numerical_features_offset_2,
+    numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
     return make_pipeline(
         FeatureEng(),

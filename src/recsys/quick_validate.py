@@ -13,7 +13,7 @@ warnings.filterwarnings("ignore")
 nrows = 2000000
 df = pd.read_csv("../../data/events_sorted_trans_all.csv", nrows=nrows)
 
-for fn in glob.glob("../../data/features/graph*.csv") + glob.glob("../../data/features/sgd*.csv") :
+for fn in glob.glob("../../data/features/graph*.csv") + glob.glob("../../data/features/sgd*.csv"):
     new_df = pd.read_csv(fn, nrows=nrows)
     for col in new_df.columns:
         print(col)

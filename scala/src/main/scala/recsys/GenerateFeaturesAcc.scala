@@ -3,13 +3,13 @@ package recsys
 import java.io.{File, StringWriter}
 
 import com.univocity.parsers.common.record.Record
-import com.univocity.parsers.csv.{CsvParser, CsvParserSettings, CsvWriter, CsvWriterSettings}
+import com.univocity.parsers.csv.{CsvWriter, CsvWriterSettings}
 import me.tongfei.progressbar.ProgressBar
 import recsys.Types._
+import recsys.accumulators._
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
-import recsys.accumulators.{Accumulator, AccumulatorClickout, GraphSimilarityRandomWalk, GraphSimilarityRandomWalkResets, GraphSimilarityUserItem, GraphSimilarityUserItemAction, ItemOriginality, MetaFeaturesAll, MetaFeaturesId, MetaFeaturesSmall}
 
 class GenerateFeaturesAcc(inputPath: String,
                           outputPath: String,
@@ -217,13 +217,14 @@ object GenerateFeaturesAcc {
     )
     generateFeatures(
       "../data/features/graph_similarity_user_item_random_walk.csv",
-      accumulatorsClickouts =
-        List(new GraphSimilarityRandomWalk("graph_similarity_user_item_random_walk", actionTypes = ACTIONS_WITH_ITEM_REF)),
+      accumulatorsClickouts = List(
+        new GraphSimilarityRandomWalk("graph_similarity_user_item_random_walk", actionTypes = ACTIONS_WITH_ITEM_REF)),
     )
     generateFeatures(
       "../data/features/graph_similarity_user_item_random_walk_resets.csv",
-      accumulatorsClickouts =
-        List(new GraphSimilarityRandomWalkResets("graph_similarity_user_item_random_walk_resets", actionTypes = ACTIONS_WITH_ITEM_REF))
+      accumulatorsClickouts = List(
+        new GraphSimilarityRandomWalkResets("graph_similarity_user_item_random_walk_resets",
+                                            actionTypes = ACTIONS_WITH_ITEM_REF))
     )
 
     generateFeatures(
