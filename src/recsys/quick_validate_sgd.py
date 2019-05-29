@@ -7,13 +7,14 @@ from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast, mrr_fast_v2
 from recsys.utils import group_lengths
 from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2
+from sklearn.linear_model import SGDClassifier
 
 warnings.filterwarnings("ignore")
 
 nrows = 2000000
 df = pd.read_csv("../../data/events_sorted_trans_all.csv", nrows=nrows)
 
-for fn in glob.glob("../../data/features/graph*.csv") + glob.glob("../../data/features/sgd*.csv"):
+for fn in glob.glob("../../data/features/graph*.csv"):  # + glob.glob("../../data/features/item*.csv") :
     new_df = pd.read_csv(fn, nrows=nrows)
     for col in new_df.columns:
         print(col)
@@ -21,7 +22,7 @@ for fn in glob.glob("../../data/features/graph*.csv") + glob.glob("../../data/fe
 
 df_train, df_val = split_by_timestamp(df)
 
-vectorizer = make_vectorizer_1()
+vectorizer = make_vectorizer_2()
 mat_train = vectorizer.fit_transform(df_train, df_train["was_clicked"])
 print(mat_train.shape)
 mat_val = vectorizer.transform(df_val)
@@ -33,22 +34,14 @@ def mrr_metric(train_data, preds):
     return "error", mrr, True
 
 
-model = LGBMRanker(learning_rate=0.05, n_estimators=900, min_child_samples=5, min_child_weight=0.00001, n_jobs=-2)
-model.fit(
-    mat_train,
-    df_train["was_clicked"],
-    group=group_lengths(df_train["clickout_id"]),
-    # sample_weight=np.where(df_train["clickout_step_rev"]==1,2,1),
-    verbose=True,
-    eval_set=[(mat_val, df_val["was_clicked"])],
-    eval_group=[group_lengths(df_val["clickout_id"])],
-    eval_metric=mrr_metric,
-)
+for alpha in [0.1, 0.03, 0.01]:
+    model = SGDClassifier(loss="log", n_iter=1, alpha=alpha, shuffle=False)
+    model.fit(mat_train, df_train["was_clicked"])
 
-df_train["click_proba"] = model.predict(mat_train)
-df_val["click_proba"] = model.predict(mat_val)
+    df_train["click_proba"] = model.predict_proba(mat_train)[:, 1]
+    df_val["click_proba"] = model.predict_proba(mat_val)[:, 1]
 
-print(mrr_fast(df_val, "click_proba"))
+    print(mrr_fast(df_val, "click_proba"), mrr_fast(df_train, "click_proba"))
 print("By rank")
 for n in range(1, 10):
     print(n, mrr_fast(df_val[df_val["clickout_step_rev"] == n], "click_proba"))

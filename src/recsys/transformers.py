@@ -278,3 +278,15 @@ class FeaturesAtAbsoluteRank(BaseEstimator, TransformerMixin):
             return (X_all[cols].fillna(0).values - X_all[orig_cols].fillna(0).values).astype(np.float32)
         else:
             return X_all[cols].fillna(0).astype(np.float32)
+
+
+class DivideByRanking(BaseEstimator, TransformerMixin):
+    def fit(self, X, y):
+        return self
+
+    def transform(self, X):
+        for col in X.columns:
+            if col == "rank":
+                continue
+            X[col] = X[col] / (X["rank"] + 1)
+        return X
