@@ -64,7 +64,7 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X.drop(["datetime", "datetime_local"], axis=1, inplace=True)
 
         price_rank = joblib.load(PRICE_RANK_PER_ITEM)
-        X = pd.merge(X, price_rank, on=["item_id", "price"])
+        X = pd.merge(X, price_rank, how="left", on=["item_id", "price"])
 
         for col in X.columns:
             if X[col].dtype == np.bool:
