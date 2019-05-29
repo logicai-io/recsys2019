@@ -44,9 +44,10 @@ unk | 0.6272 | 0.6237 | 0.6782
 @c4993e | XXXXXX | 0.6297b | 0.6815
 @7937c5 | XXXXXX | 0.6284 | 0.6820
 @7f439f | XXXXXX | 0.6292 | 0.6821
+@eb6c4a | XXXXXX | 0.6847v | 0.6823
 
 b - blend of models, otherwise the results are for single models
-
+v - fix validation to include the last full day of the training data and only last clickouts
 ```
 
 Feather
