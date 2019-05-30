@@ -7,6 +7,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from recsys.constants import COUNTRY_CODES
+from recsys.timestamp import convert_dt_to_timezone
 from recsys.utils import reduce_mem_usage
 from scipy.sparse import csr_matrix
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -15,6 +16,7 @@ PATH_TO_IMM = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_map
 METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_dense.csv"
 PRICE_PCT_PER_CITY = pathlib.Path().absolute().parents[1] / "data" / "price_pct_by_city.joblib"
 PRICE_PCT_PER_PLATFORM = pathlib.Path().absolute().parents[1] / "data" / "price_pct_by_platform.joblib"
+PRICE_RANK_PER_ITEM = pathlib.Path().absolute().parents[1] / "data" / "item_prices_rank.joblib"
 
 
 class FeatureEng(BaseEstimator, TransformerMixin):
@@ -52,6 +54,17 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         price_pct_by_city = joblib.load(PRICE_PCT_PER_PLATFORM)
         keys = list(zip(X["platform"], X["price"]))
         X["price_pct_by_platform"] = [price_pct_by_city[k] for k in keys]
+
+        X["datetime"] = X["timestamp"].map(arrow.get)
+        X["datetime_local"] = X.apply(convert_dt_to_timezone, axis=1)
+        X["datetime_hour"] = X["datetime"].map(lambda x: x.hour)
+        X["datetime_minute"] = X["datetime"].map(lambda x: x.minute)
+        X["datetime_local_hour"] = X["datetime"].map(lambda x: x.hour)
+        X["datetime_local_minute"] = X["datetime"].map(lambda x: x.minute)
+        X.drop(["datetime", "datetime_local"], axis=1, inplace=True)
+
+        price_rank = joblib.load(PRICE_RANK_PER_ITEM)
+        X = pd.merge(X, price_rank, how="left", on=["item_id", "price"])
 
         for col in X.columns:
             if X[col].dtype == np.bool:
