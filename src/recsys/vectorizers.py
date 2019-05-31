@@ -29,6 +29,38 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 numerical_features_info = [
+    ("mean_price_before", True),
+    ("mean_price_before_vs_item_price", True),
+    ("min_price_before", True),
+    ("min_price_before_vs_item_price", True),
+    ("max_price_before", True),
+    ("max_price_before_vs_item_price", True),
+    ("mean_price_after", True),
+    ("mean_price_after_vs_item_price", True),
+    ("min_price_after", True),
+    ("min_price_after_vs_item_price", True),
+    ("max_price_after", True),
+    ("max_price_after_vs_item_price", True),
+    ("min_price", True),
+    ("min_price_vs_item_price", True),
+    ("max_price", True),
+    ("max_price_vs_item_price", True),
+    ("price_rank_before", True),
+    ("price_rank_norm_before", True),
+    ("price_rank_after", True),
+    ("price_rank_norm_after", True),
+    ("impressions_pos_norm", True),
+    ("min_price_first3_vs_item_price", True),
+    ("max_price_first3_vs_item_price", True),
+    ("mean_price_first3_vs_item_price", True),
+    ("price_vs_price_prev_3", True),
+    ("price_vs_price_prev_2", True),
+    ("price_vs_price_prev_1", True),
+    ("price_vs_price_next_1", True),
+    ("price_vs_price_next_2", True),
+    ("min_price_previous3_vs_item_price", True),
+    ("max_price_previous3_vs_item_price", False),
+    ("mean_price_previous3_vs_item_price", True),
     ("avg_price_similarity", True),
     ("avg_price_similarity_to_interacted_items", True),
     ("avg_price_similarity_to_interacted_session_items", True),
@@ -327,7 +359,10 @@ class VectorizeChunks:
 
     def save_to_one_flie_csrs(self, fns):
         save_as = os.path.join(self.output_folder, "Xcsr.h5")
-        os.unlink(save_as)
+        try:
+            os.unlink(save_as)
+        except:
+            pass
         h5f = h5sparse.File(save_as)
         first = True
         for fn in fns:
