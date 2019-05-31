@@ -1,5 +1,5 @@
-from csv import DictReader, DictWriter
-
+import numpy as np
+import datatable as dt
 from recsys.log_utils import get_logger
 from tqdm import tqdm
 
@@ -7,35 +7,24 @@ logger = get_logger()
 
 logger.info("Starting splitting")
 
-header = []
-
-# split the data so that train/val/test are continguous
-outputs_tr = [
-    DictWriter(open("../../data/proc/raw_csv/01_train_{:04d}.csv".format(chunk_id), "wt"), fieldnames=header)
-    for chunk_id in range(25)
-]
-outputs_va = [DictWriter(open("../../data/proc/raw_csv/02_val_0001.csv", "wt"), fieldnames=header)]
-outputs_te = [
-    DictWriter(open("../../data/proc/raw_csv/03_test_{:04d}.csv".format(chunk_id), "wt"), fieldnames=header)
-    for chunk_id in range(4)
-]
-
-reader = DictReader(open("../../data/events_sorted_trans_all.csv"))
-
-for i, row in tqdm(enumerate(reader)):
-    if i == 0:
-        for output in outputs_tr + outputs_va + outputs_te:
-            output.fieldnames = row.keys()
-            output.writeheader()
-    if (row["is_val"] == "0") and (row["is_test"] == "0"):
-        find = int(row["clickout_id"]) % 25
-        outputs_tr[find].writerow(row)
-    elif (row["is_val"] == "1") and (row["is_test"] == "0"):
-        outputs_va[0].writerow(row)
-    elif row["is_test"] == "1":
-        find = int(row["clickout_id"]) % 4
-        outputs_te[find].writerow(row)
+df = dt.fread("../../data/events_sorted_trans_all.csv")
+filenames = []
+for i in tqdm(range(df.shape[0])):
+    if (df[i, "is_val"] == False) and (df[i, "is_test"] == False):
+        find = int(df[i, "clickout_id"]) % 25
+        filenames.append(f"02_val_{find:04d}.csv")
+    elif (df[i, "is_val"] == True) and (df[i, "is_test"] == False):
+        find = 1
+        filenames.append(f"02_val_{find:04d}.csv")
+    elif df[i, "is_test"] == True:
+        find = int(df[i, "clickout_id"]) % 4
+        filenames.append(f"03_test_{find:04d}.csv")
     else:
-        raise ValueError("Shouldn't happen")
+        raise (ValueError("Shouldn't happen"))
 
-logger.info("Stop splitting")
+filenames = np.array(filenames)
+
+for filename in tqdm(set(filenames)):
+    df[np.where(filenames == filename)[0], :].to_csv("../../data/proc/raw_csv/" + filename)
+
+logger.info("End splitting")
