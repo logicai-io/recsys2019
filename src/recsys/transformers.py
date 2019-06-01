@@ -294,7 +294,7 @@ class FeaturesAtAbsoluteRank(BaseEstimator, TransformerMixin):
 
 
 class DivideByRanking(BaseEstimator, TransformerMixin):
-    def fit(self, X, y):
+    def fit(self, X, y=None):
         return self
 
     def transform(self, X):
