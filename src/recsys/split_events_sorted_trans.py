@@ -12,13 +12,13 @@ filenames = []
 for i in tqdm(range(df.shape[0])):
     if (df[i, "is_val"] == False) and (df[i, "is_test"] == False):
         find = int(df[i, "clickout_id"]) % 25
-        filenames.append(f"02_val_{find}.csv")
+        filenames.append(f"01_train_{find:04d}.csv")
     elif (df[i, "is_val"] == True) and (df[i, "is_test"] == False):
         find = 1
-        filenames.append(f"02_val_{find}.csv")
+        filenames.append(f"02_val_{find:04d}.csv")
     elif df[i, "is_test"] == True:
         find = int(df[i, "clickout_id"]) % 4
-        filenames.append(f"03_test_{find}.csv")
+        filenames.append(f"03_test_{find:04d}.csv")
     else:
         raise (ValueError("Shouldn't happen"))
 
