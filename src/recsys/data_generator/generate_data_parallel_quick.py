@@ -10,4 +10,4 @@ for n in range(8):
 for p in ps:
     p.wait()
 
-os.system("paste -d, ../../../data/events_sorted_trans_0{0..7}.csv ../../../data/price_features.csv > ../../../data/events_sorted_trans_all.csv")
+os.system("paste -d, ../../../data/events_sorted_trans_0{0..7}.csv > ../../../data/events_sorted_trans_all.csv")
