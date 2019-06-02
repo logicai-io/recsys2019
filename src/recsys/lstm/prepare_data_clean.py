@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-DEBUG = 100000
+DEBUG = 1000000
 
 
 def get_index_clicked(row):
@@ -63,16 +63,16 @@ def convert_session_df(df_session):
         'search for item cat': ['NA'] * n,
         'search for poi cat': ['NA'] * n,
 
-        'count action': [1] * n,
-        'time spent': [0] * n,
-        'timestamp diff': [0] * n
+        'count action num': [1] * n,
+        'time spent num': [0] * n,
+        'timestamp diff num': [0] * n
     }
     for i, obs in enumerate(session[:-1]):
         sequences['action type cat'][i] = obs['action_type']
-        sequences['time spent'][i] = obs['timestamp_max'] - obs['timestamp_min']
-        sequences['timestamp diff'][i] = max(0, obs['timestamp_next_min'] - obs['timestamp_max'])
+        sequences['time spent num'][i] = obs['timestamp_max'] - obs['timestamp_min']
+        sequences['timestamp diff num'][i] = max(0, obs['timestamp_next_min'] - obs['timestamp_max'])
 
-        sequences['count action'][i] = obs['timestamp_count']
+        sequences['count action num'][i] = obs['timestamp_count']
         if obs['index_clicked'] != 'UNK':
             sequences[obs['action_type'] + " cat"][i] = obs['index_clicked']
             sequences[obs['action_type'] + " num"][i] = int(obs['index_clicked'])
@@ -128,4 +128,4 @@ if __name__ == '__main__':
         for _, df_session in tqdm(df_no_dup.groupby(["user_id", "session_id"])):
             session_info = convert_session_df(df_session)
             if session_info:
-                out.write(json.dumps(session_info))
+                out.writelines(json.dumps(session_info)+"\n")
