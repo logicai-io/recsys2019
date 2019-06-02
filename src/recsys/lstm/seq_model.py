@@ -70,7 +70,7 @@ def oof_seq_predictions(test_path, train_path, val_path):
 
 if __name__ == '__main__':
     oof_predictions = concat_oof_predictions()
-    oof_predictions.to_csv("../../../data/lstm/oof_predictions_user_session.csv")
+    oof_predictions.to_csv("../../../data/lstm/oof_predictions_user_session.csv", index=False)
 
     oof_predictions = concat_oof_predictions_user()
-    oof_predictions.to_csv("../../../data/lstm/oof_predictions_user.csv")
+    oof_predictions.to_csv("../../../data/lstm/oof_predictions_user.csv", index=False)

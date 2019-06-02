@@ -70,9 +70,11 @@ class FeatureEng(BaseEstimator, TransformerMixin):
 
         lstm_user_session = pd.read_csv(LSTM_USER_SESSION).rename(columns={'prob': 'lstm_user_session_prob'})
         X = pd.merge(X, lstm_user_session, how="left", on=["user_id", "session_id", "item_id", "step"])
+        X["lstm_user_session_prob"].fillna(-1, inplace=True)
 
         lstm_user = pd.read_csv(LSTM_USER).rename(columns={'prob': 'lstm_user_prob'})
         X = pd.merge(X, lstm_user, how="left", on=["user_id", "session_id", "item_id", "step"])
+        X["lstm_user_prob"].fillna(-1, inplace=True)
 
         for col in X.columns:
             if X[col].dtype == np.bool:
