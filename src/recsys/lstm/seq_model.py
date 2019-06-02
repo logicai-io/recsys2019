@@ -21,18 +21,13 @@ model = create_model(vect)
 
 lb_encoder = LabelBinarizer()
 
-y_train_raw = [int(r['index_clicked']) if r['index_clicked'] != 'UNK' else 30 for r in train_data]
-y_val_raw = [int(r['index_clicked']) if r['index_clicked'] != 'UNK' else 30  for r in val_data]
+y_train_raw = [int(r["index_clicked"]) if r["index_clicked"] != "UNK" else 30 for r in train_data]
+y_val_raw = [int(r["index_clicked"]) if r["index_clicked"] != "UNK" else 30 for r in val_data]
 
 y_train_enc = lb_encoder.fit_transform(y_train_raw)
 y_val_enc = lb_encoder.transform(y_val_raw)
 
-model.fit(train_data_tr, 
-          y_train_enc, 
-          validation_data=(val_data_tr, y_val_enc), 
-          epochs=20, 
-          batch_size=512, 
-          shuffle=True)
+model.fit(train_data_tr, y_train_enc, validation_data=(val_data_tr, y_val_enc), epochs=20, batch_size=512, shuffle=True)
 
 train_preds = model.predict(train_data_tr, batch_size=512, verbose=True)
 val_preds = model.predict(val_data_tr, batch_size=512, verbose=True)

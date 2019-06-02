@@ -4,7 +4,7 @@ from typing import List, Iterable
 
 import numpy as np
 
-UNKNOWN_TOKEN = 'UNK'
+UNKNOWN_TOKEN = "UNK"
 UNKNOWN_TOKEN_POS = 0
 
 
@@ -24,7 +24,7 @@ def get_most_common(seq, encode_unknown, size):
     return most_common
 
 
-class BaseListVectorizer():
+class BaseListVectorizer:
     def __init__(self, encode_unknown: bool = True, size=10000, onehot: bool = True):
         self.encode_unknown = encode_unknown
         self.size = size
@@ -38,7 +38,7 @@ class BaseListVectorizer():
             most_common = [UNKNOWN_TOKEN]
         else:
             most_common = []
-        most_common += [word for word, freq in counter.most_common()][:self.size - 1]
+        most_common += [word for word, freq in counter.most_common()][: self.size - 1]
         return most_common
 
     @property
@@ -122,7 +122,7 @@ class NestedListVectorizer(BaseListVectorizer):
         self.size = size
         self.onehot = onehot
 
-    def fit(self, tokens_nested_list: List[Iterable[str]]) -> 'NestedListVectorizer':
+    def fit(self, tokens_nested_list: List[Iterable[str]]) -> "NestedListVectorizer":
         most_common = self.get_most_common(list(chain(*tokens_nested_list)))
         self.idx = build_reversed_index(most_common)
         return self
@@ -141,14 +141,14 @@ class NestedListVectorizer(BaseListVectorizer):
         return data
 
 
-class DeepListVectorizer():
+class DeepListVectorizer:
     def __init__(self, depth: int = 1, size: int = None, onehot: bool = True, encode_unknown: bool = True):
         self.depth = depth
         self.size = size
         self.onehot = onehot
         self.encode_unknown = encode_unknown
 
-    def fit(self, seq: List) -> 'DeepListVectorizer':
+    def fit(self, seq: List) -> "DeepListVectorizer":
         queue = deque(list(zip(repeat(0), seq)))
         elements = []
         while queue:
@@ -166,7 +166,7 @@ class DeepListVectorizer():
         return self.rebuild(seq, depth=0)
 
     def build_vector(self, id):
-        onehot = [0]*len(self.idx)
+        onehot = [0] * len(self.idx)
         onehot[id] = 1
         return onehot
 
@@ -186,13 +186,15 @@ class DeepListVectorizer():
                 output.append(self.rebuild(el, depth + 1))
             return output
         else:
-            raise ValueError('Wrong depth for list indexer')
+            raise ValueError("Wrong depth for list indexer")
 
 
-if __name__ == '__main__':
-    vectorizer = DeepListVectorizer(depth=1, onehot=False) #DeepListVectorizer(depth=1, onehot=False)
-    tokens = [['growbots', '-', 'title', 'paragraph', '1', 'paragraph', '2'],
-              ['growbots', '-', 'title', 'paragraph', '1', 'paragraph', '2'],
-              ['growbots', '-', 'title', 'paragraph', '1', 'paragraph', '2']]
+if __name__ == "__main__":
+    vectorizer = DeepListVectorizer(depth=1, onehot=False)  # DeepListVectorizer(depth=1, onehot=False)
+    tokens = [
+        ["growbots", "-", "title", "paragraph", "1", "paragraph", "2"],
+        ["growbots", "-", "title", "paragraph", "1", "paragraph", "2"],
+        ["growbots", "-", "title", "paragraph", "1", "paragraph", "2"],
+    ]
     vectorizer.fit(tokens)
     print(vectorizer.transform(tokens))

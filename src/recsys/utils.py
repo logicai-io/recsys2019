@@ -1,3 +1,4 @@
+import hashlib
 import itertools as it
 import time
 from contextlib import contextmanager
@@ -72,3 +73,7 @@ def group_time(t):
 def get_git_hash():
     repo = git.Repo(search_parent_directories=True)
     return repo.head.object.hexsha
+
+
+def hash_str_to_int(s):
+    return int(hashlib.sha1(s.encode("utf-8")).hexdigest(), 16) % (10 ** 8)
