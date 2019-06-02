@@ -17,6 +17,8 @@ METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_
 PRICE_PCT_PER_CITY = pathlib.Path().absolute().parents[1] / "data" / "price_pct_by_city.joblib"
 PRICE_PCT_PER_PLATFORM = pathlib.Path().absolute().parents[1] / "data" / "price_pct_by_platform.joblib"
 PRICE_RANK_PER_ITEM = pathlib.Path().absolute().parents[1] / "data" / "item_prices_rank.joblib"
+LSTM_USER_SESSION = pathlib.Path().absolute().parents[1] / "data" / "lstm" / "oof_predictions_user_session.csv"
+LSTM_USER = pathlib.Path().absolute().parents[1] / "data" / "lstm" / "oof_predictions_user.csv"
 
 
 class FeatureEng(BaseEstimator, TransformerMixin):
@@ -65,6 +67,12 @@ class FeatureEng(BaseEstimator, TransformerMixin):
 
         price_rank = joblib.load(PRICE_RANK_PER_ITEM)
         X = pd.merge(X, price_rank, how="left", on=["item_id", "price"])
+
+        lstm_user_session = pd.read_csv(LSTM_USER_SESSION).rename(columns={'prob': 'lstm_user_session_prob'})
+        X = pd.merge(X, lstm_user_session, how="left", on=["user_id", "session_id", "step"])
+
+        lstm_user = pd.read_csv(LSTM_USER).rename(columns={'prob': 'lstm_user_prob'})
+        X = pd.merge(X, lstm_user, how="left", on=["user_id", "session_id", "step"])
 
         for col in X.columns:
             if X[col].dtype == np.bool:

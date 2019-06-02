@@ -139,6 +139,8 @@ numerical_features_info = [
     ("price_range", True),
     ("price_range_div", True),
     ("price_relative_to_min", True),
+    ("lstm_user_session_prob", True),
+    ("lstm_user_prob", True),
     # ("graph_similarity_user_item_random_walk", True),
     # ("graph_similarity_user_item_clickout", True),
     # ("graph_similarity_user_item_search", True),

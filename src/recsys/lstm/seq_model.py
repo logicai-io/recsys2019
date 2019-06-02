@@ -1,9 +1,10 @@
-import pandas as pd
 import gzip
 import json
 
+import pandas as pd
 from recsys.lstm.seq_utils import SeqVectorizer, calc_mrr, create_model, prepare_predictions
 from sklearn.preprocessing import LabelBinarizer
+
 
 def concat_oof_predictions():
     train_path_a = "../../../data/lstm/seq_user_session_train_hash_0.ndjson.gzip"
@@ -14,6 +15,21 @@ def concat_oof_predictions():
     train_path_b = "../../../data/lstm/seq_user_session_train_hash_1.ndjson.gzip"
     val_path_b = "../../../data/lstm/seq_user_session_train_hash_0.ndjson.gzip"
     test_path_b = "../../../data/lstm/seq_user_session_test_hash_0.ndjson.gzip"
+    test_preds_df_b, val_preds_df_b = oof_seq_predictions(test_path_b, train_path_b, val_path_b)
+
+    all_preds_df = pd.concat([val_preds_df_a, test_preds_df_a, val_preds_df_b, test_preds_df_b], axis=0)
+    return all_preds_df
+
+
+def concat_oof_predictions_user():
+    train_path_a = "../../../data/lstm/seq_user_train_hash_0.ndjson.gzip"
+    val_path_a = "../../../data/lstm/seq_user_train_hash_1.ndjson.gzip"
+    test_path_a = "../../../data/lstm/seq_user_test_hash_1.ndjson.gzip"
+    test_preds_df_a, val_preds_df_a = oof_seq_predictions(test_path_a, train_path_a, val_path_a)
+
+    train_path_b = "../../../data/lstm/seq_user_train_hash_1.ndjson.gzip"
+    val_path_b = "../../../data/lstm/seq_user_train_hash_0.ndjson.gzip"
+    test_path_b = "../../../data/lstm/seq_user_test_hash_0.ndjson.gzip"
     test_preds_df_b, val_preds_df_b = oof_seq_predictions(test_path_b, train_path_b, val_path_b)
 
     all_preds_df = pd.concat([val_preds_df_a, test_preds_df_a, val_preds_df_b, test_preds_df_b], axis=0)
@@ -55,3 +71,6 @@ def oof_seq_predictions(test_path, train_path, val_path):
 if __name__ == '__main__':
     oof_predictions = concat_oof_predictions()
     oof_predictions.to_csv("../../../data/lstm/oof_predictions_user_session.csv")
+
+    oof_predictions = concat_oof_predictions_user()
+    oof_predictions.to_csv("../../../data/lstm/oof_predictions_user.csv")
