@@ -155,7 +155,7 @@ def create_model(vect: SeqVectorizer):
     )
 
     masked = ks.layers.Masking(mask_value=-100.0)(concat_seq)
-    rnn_layer1 = ks.layers.LSTM(64)(masked)
+    rnn_layer1 = ks.layers.Bidirectional(ks.layers.LSTM(64))(masked)
 
     platform_emb = ks.layers.Embedding(len(vect.vectorizers["platform"].idx), 5)(platform_input)
     city_emb = ks.layers.Embedding(len(vect.vectorizers["city"].idx), 5)(city_input)
@@ -202,7 +202,7 @@ def prepare_predictions(val_data, val_preds):
         row = val_data[n]
         for item_idx in range(n_items):
             item_id = row["final_impressions"][item_idx]
-            prob = val_preds[n,item_idx]
+            prob = val_preds[n, item_idx]
             records.append((row["user_id"], row["session_id"], row["step"], item_id, prob))
     df = pd.DataFrame.from_records(records, columns=["user_id", "session_id", "step", "item_id", "prob"])
     return df

@@ -113,9 +113,9 @@ def main(nrows):
 
     # this is to remove the duplicate actions
     df["break_point"] = (
-            (df["reference"] != df["reference"])
-            | (df["action_type"] != df["action_type_prv"])
-            | (df["session_id"] != df["session_id_prv"])
+        (df["reference"] != df["reference"])
+        | (df["action_type"] != df["action_type_prv"])
+        | (df["session_id"] != df["session_id_prv"])
     )
     df["break_point_cumsum"] = df.groupby(["user_id", "session_id"])["break_point"].cumsum()
 
@@ -142,24 +142,29 @@ def main(nrows):
                 "clickout_step_rev",
             ]
         )
-            .agg({"timestamp": ["min", "max", "count"], "timestamp_next": ["max", "min"], "step": ["min"]})
-            .reset_index()
+        .agg({"timestamp": ["min", "max", "count"], "timestamp_next": ["max", "min"], "step": ["min"]})
+        .reset_index()
     )
     df_no_dup.columns = ["_".join(col).strip("_") for col in df_no_dup.columns.values]
     df_no_dup["hash"] = df_no_dup["user_id"].map(hash_str_to_int) % 2
 
     pool = Pool(8)
-    for src in ["train", "test"]:
-        for hash_val in [0, 1]:
-            with gzip.open(f"../../../data/lstm/seq_user_session_{src}_hash_{hash_val}.ndjson.gzip", "wt") as out:
-                generator = df_no_dup[(df_no_dup["src"] == src) & (df_no_dup["hash"] == hash_val)].groupby(
-                    ["user_id", "session_id"]
-                )
-                save_parallel(generator, out, pool)
 
-            with gzip.open(f"../../../data/lstm/seq_user_{src}_hash_{hash_val}.ndjson.gzip", "wt") as out:
-                generator = df_no_dup[(df_no_dup["src"] == src) & (df_no_dup["hash"] == hash_val)].groupby(["user_id"])
-                save_parallel(generator, out, pool)
+    # save training
+    src = "train"
+    for hash_val in [0, 1]:
+        with gzip.open(f"../../../data/lstm/seq_user_session_{src}_hash_{hash_val}.ndjson.gzip", "wt") as out:
+            generator = df_no_dup[(df_no_dup["src"] == src) & (df_no_dup["hash"] == hash_val)].groupby(
+                ["user_id", "session_id"]
+            )
+            save_parallel(generator, out, pool)
+
+    # save all
+    for hash_val in [0, 1]:
+        with gzip.open(f"../../../data/lstm/seq_user_session_all_hash_{hash_val}.ndjson.gzip", "wt") as out:
+            generator = df_no_dup[(df_no_dup["hash"] == hash_val)].groupby(["user_id", "session_id"])
+            save_parallel(generator, out, pool)
+
     pool.close()
 
 
