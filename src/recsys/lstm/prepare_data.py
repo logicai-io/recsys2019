@@ -4,12 +4,13 @@ import json
 import click
 import numpy as np
 import pandas as pd
-from multiprocess.pool import Pool
+from multiprocessing.pool import Pool
 from recsys.utils import hash_str_to_int
 from tqdm import tqdm
 
 
 def get_index_clicked(row):
+    row["reference"] = str(row["reference"])
     if not row["reference"].isnumeric():
         return "UNK"
     item_id = int(row["reference"])
@@ -24,6 +25,7 @@ def get_index_clicked(row):
 
 
 def get_price_clicked(row):
+    row["reference"] = str(row["reference"])
     if not row["reference"].isnumeric():
         return 0
     item_id = int(row["reference"])
