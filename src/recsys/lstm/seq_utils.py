@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 import keras as ks
+import pandas as pd
 import numpy as np
 from recsys.lstm.seq_vectorizers import DeepListVectorizer
 from recsys.metric import mrr_fast_v2
@@ -161,9 +162,9 @@ def create_model(vect: SeqVectorizer):
 
     concat = ks.layers.concatenate([ks.layers.Flatten()(platform_emb), prices_input, device_input, rnn_layer1])
 
-    dense_1 = ks.layers.Dense(128, activation="relu")(concat)
+    dense_1 = ks.layers.Dense(256, activation="relu")(concat)
     drop_1 = ks.layers.Dropout(0.25)(dense_1)
-    dense_2 = ks.layers.Dense(128, activation="relu")(drop_1)
+    dense_2 = ks.layers.Dense(256, activation="relu")(drop_1)
     output = ks.layers.Dense(26, activation="softmax")(dense_2)
 
     model = ks.Model(
@@ -191,3 +192,17 @@ def create_model(vect: SeqVectorizer):
     model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
 
     return model
+
+
+def prepare_predictions(val_data, val_preds):
+    # user_id, session_id, step, item_id, prob
+    records = []
+    for n in range(val_preds.shape[0]):
+        n_items = len(val_data[n]["final_impressions"])
+        row = val_data[n]
+        for item_idx in range(n_items):
+            item_id = row["final_impressions"][item_idx]
+            prob = val_preds[n,item_idx]
+            records.append((row["user_id"], row["session_id"], row["step"], item_id, prob))
+    df = pd.DataFrame.from_records(records, columns=["user_id", "session_id", "step", "item_id", "prob"])
+    return df

@@ -187,14 +187,3 @@ class DeepListVectorizer:
             return output
         else:
             raise ValueError("Wrong depth for list indexer")
-
-
-if __name__ == "__main__":
-    vectorizer = DeepListVectorizer(depth=1, onehot=False)  # DeepListVectorizer(depth=1, onehot=False)
-    tokens = [
-        ["growbots", "-", "title", "paragraph", "1", "paragraph", "2"],
-        ["growbots", "-", "title", "paragraph", "1", "paragraph", "2"],
-        ["growbots", "-", "title", "paragraph", "1", "paragraph", "2"],
-    ]
-    vectorizer.fit(tokens)
-    print(vectorizer.transform(tokens))
