@@ -139,14 +139,10 @@ numerical_features_info = [
     ("price_range", True),
     ("price_range_div", True),
     ("price_relative_to_min", True),
-    # ("graph_similarity_user_item_random_walk", True),
-    # ("graph_similarity_user_item_clickout", True),
-    # ("graph_similarity_user_item_search", True),
-    # ("graph_similarity_user_item_interaction_info", True),
-    # ("graph_similarity_user_item_interaction_img", True),
-    # ("graph_similarity_user_item_intearction_deal", True),
-    # ("graph_similarity_user_item_all_interactions", True),
-    # ("graph_similarity_user_item_random_walk_resets", True),
+    ("freq", True),
+    ("price_freq_rank_asc", True),
+    ("price_freq_share", True),
+    ("price_freq_share_rank_asc", True),
     # ("avg_properties_similarity", True),
     # ("avg_properties_similarity_norm", True)
     # ("timestamp", False),
@@ -217,7 +213,7 @@ def make_vectorizer_1(
                 (
                     "numerical_context_offset_2",
                     make_pipeline(LagNumericalFeaturesWithinGroup(offset=2), MinimizeNNZ()),
-                    numerical_features_offset_2 + ["clickout_id"],
+                    numerical_features + ["clickout_id"],
                 ),
                 # ("divide_by_ranking", DivideByRanking(), numerical_features),
                 ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
@@ -313,7 +309,7 @@ class VectorizeChunks:
             self.vectorizer = self.vectorizer()
             self.vectorizer.fit(df)
         filenames = Parallel(n_jobs=self.n_jobs)(
-            delayed(self.vectorize_one)(fn) for fn in sorted(glob.glob(self.input_files))
+            delayed(self.vectorize_one)(fn) for fn in sorted(glob.glob(self.input_files), reverse=True)
         )
         metadata_fns, csr_fns = list(zip(*filenames))
         self.save_to_one_file_metadata(metadata_fns)
@@ -327,7 +323,10 @@ class VectorizeChunks:
 
     def save_to_one_flie_csrs(self, fns):
         save_as = os.path.join(self.output_folder, "Xcsr.h5")
-        os.unlink(save_as)
+        try:
+            os.unlink(save_as)
+        except:
+            pass
         h5f = h5sparse.File(save_as)
         first = True
         for fn in fns:
