@@ -133,8 +133,8 @@ numerical_features_info = [
     ("price_rank_asc", True),
     ("price_rank_desc", True),
     ("price_rank_asc_pct", True),
-    ("min_price", True),
-    ("max_price", True),
+    ("min_price_hist", True),
+    ("max_price_hist", True),
     ("count_price", True),
     ("price_range", True),
     ("price_range_div", True),
@@ -217,7 +217,7 @@ def make_vectorizer_1(
                 (
                     "numerical_context_offset_2",
                     make_pipeline(LagNumericalFeaturesWithinGroup(offset=2), MinimizeNNZ()),
-                    numerical_features_offset_2 + ["clickout_id"],
+                    numerical_features_for_ranking + ["clickout_id"],
                 ),
                 # ("divide_by_ranking", DivideByRanking(), numerical_features),
                 ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
@@ -313,8 +313,9 @@ class VectorizeChunks:
             self.vectorizer = self.vectorizer()
             self.vectorizer.fit(df)
         filenames = Parallel(n_jobs=self.n_jobs)(
-            delayed(self.vectorize_one)(fn) for fn in sorted(glob.glob(self.input_files))
+            delayed(self.vectorize_one)(fn) for fn in sorted(glob.glob(self.input_files), reverse=True)
         )
+        filenames = sorted(filenames, key=lambda x: x[0])
         metadata_fns, csr_fns = list(zip(*filenames))
         self.save_to_one_file_metadata(metadata_fns)
         self.save_to_one_flie_csrs(csr_fns)
