@@ -1,13 +1,12 @@
 import gzip
 import json
 
+import click
 import numpy as np
 import pandas as pd
 from multiprocess.pool import Pool
 from recsys.utils import hash_str_to_int
 from tqdm import tqdm
-
-DEBUG = 1_000_000
 
 
 def get_index_clicked(row):
@@ -98,8 +97,10 @@ def convert_session_df(df_session):
     return session_info
 
 
-if __name__ == "__main__":
-    df = pd.read_csv("../../../data/events_sorted.csv", nrows=DEBUG)
+@click.command()
+@click.option("--nrows", type=int, default=None, help="Number of rows from events to use")
+def main(nrows):
+    df = pd.read_csv("../../../data/events_sorted.csv", nrows=nrows)
 
     df = df.sort_values(["user_id", "session_id", "step"])
     df["clickout_step_rev"][df["action_type"] != "clickout item"] = 0
@@ -110,9 +111,9 @@ if __name__ == "__main__":
 
     # this is to remove the duplicate actions
     df["break_point"] = (
-        (df["reference"] != df["reference"])
-        | (df["action_type"] != df["action_type_prv"])
-        | (df["session_id"] != df["session_id_prv"])
+            (df["reference"] != df["reference"])
+            | (df["action_type"] != df["action_type_prv"])
+            | (df["session_id"] != df["session_id_prv"])
     )
     df["break_point_cumsum"] = df.groupby(["user_id", "session_id"])["break_point"].cumsum()
 
@@ -139,29 +140,35 @@ if __name__ == "__main__":
                 "clickout_step_rev",
             ]
         )
-        .agg({"timestamp": ["min", "max", "count"], "timestamp_next": ["max", "min"], "step": ["min"]})
-        .reset_index()
+            .agg({"timestamp": ["min", "max", "count"], "timestamp_next": ["max", "min"], "step": ["min"]})
+            .reset_index()
     )
     df_no_dup.columns = ["_".join(col).strip("_") for col in df_no_dup.columns.values]
-
     df_no_dup["hash"] = df_no_dup["user_id"].map(hash_str_to_int) % 2
 
+    pool = Pool(8)
     for src in ["train", "test"]:
         for hash_val in [0, 1]:
-            with gzip.open(f"seq_user_session_{src}_hash_{hash_val}.ndjson.gzip", "wt") as out:
-                for _, df_session in tqdm(
-                    df_no_dup[(df_no_dup["src"] == src) & (df_no_dup["hash"] == hash_val)].groupby(
-                        ["user_id", "session_id"]
-                    )
-                ):
-                    session_info = convert_session_df(df_session)
-                    if session_info:
-                        out.writelines(json.dumps(session_info) + "\n")
+            with gzip.open(f"../../../data/lstm/seq_user_session_{src}_hash_{hash_val}.ndjson.gzip", "wt") as out:
+                generator = df_no_dup[(df_no_dup["src"] == src) & (df_no_dup["hash"] == hash_val)].groupby(
+                    ["user_id", "session_id"]
+                )
+                save_parallel(generator, out, pool)
 
-            with gzip.open(f"seq_user_{src}_hash_{hash_val}.ndjson.gzip", "wt") as out:
-                for _, df_session in tqdm(
-                    df_no_dup[(df_no_dup["src"] == src) & (df_no_dup["hash"] == hash_val)].groupby(["user_id"])
-                ):
-                    session_info = convert_session_df(df_session)
-                    if session_info:
-                        out.writelines(json.dumps(session_info) + "\n")
+            with gzip.open(f"../../../data/lstm/seq_user_{src}_hash_{hash_val}.ndjson.gzip", "wt") as out:
+                generator = df_no_dup[(df_no_dup["src"] == src) & (df_no_dup["hash"] == hash_val)].groupby(["user_id"])
+                save_parallel(generator, out, pool)
+    pool.close()
+
+
+def save_parallel(generator, out, pool):
+    parallel_gen = pool.imap_unordered(
+        convert_session_df, (df_session for _, df_session in tqdm(generator)), chunksize=400
+    )
+    for session_info in parallel_gen:
+        if session_info:
+            out.writelines(json.dumps(session_info) + "\n")
+
+
+if __name__ == "__main__":
+    main()
