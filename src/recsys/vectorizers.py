@@ -139,6 +139,9 @@ numerical_features_info = [
     ("price_range", True),
     ("price_range_div", True),
     ("price_relative_to_min", True),
+    ("item_stats_distance", True),
+    ("item_stats_rating", True),
+    ("item_stats_popularity", True),
     # ("graph_similarity_user_item_random_walk", True),
     # ("graph_similarity_user_item_clickout", True),
     # ("graph_similarity_user_item_search", True),
@@ -228,11 +231,11 @@ def make_vectorizer_1(
                 ),
                 ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=2), "properties"),
                 (
-                    "last_filter",
+                    "current_filters",
                     CountVectorizer(
                         preprocessor=lambda x: "UNK" if x != x else x, tokenizer=lambda x: x.split("|"), min_df=2
                     ),
-                    "last_filter",
+                    "current_filters",
                 ),
                 (
                     "alltime_filters",

@@ -1171,13 +1171,6 @@ def get_accumulators(hashn=None):
             get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
         ),
         StatsAcc(
-            name="last_filter",
-            action_types=["filter selection", "search for destination", "search for poi"],
-            acc={},
-            updater=lambda acc, row: set_key(acc, row["user_id"], row["current_filters"]),
-            get_stats_func=lambda acc, row, item: acc.get(row["user_id"], ""),
-        ),
-        StatsAcc(
             name="user_item_interactions_list",
             action_types=ACTIONS_WITH_ITEM_REFERENCE,
             acc=defaultdict(set),
@@ -1287,7 +1280,7 @@ def get_accumulators(hashn=None):
         GlobalTimestampPerItem(),
         # ItemLooStats(),
         # ItemLooStatsByPlatform("../../../data/item_stats_loo_by_platform.joblib", suffix="_by_platform"),
-        # ClickSequenceFeatures(),
+        ClickSequenceFeatures(),
         TimeSinceSessionStart(),
         TimeSinceUserStart(),
         NumberOfSessions(),
