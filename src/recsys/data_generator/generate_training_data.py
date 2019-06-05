@@ -22,6 +22,7 @@ class FeatureGenerator:
         obs["clickout_id"] = clickout_id
         obs["rank"] = rank
         obs["price"] = price
+        obs["current_filters"] = row["current_filters"]
         obs["clickout_step_rev"] = row["clickout_step_rev"]
         obs["clickout_step"] = row["clickout_step"]
         obs["clickout_max_step"] = row["clickout_max_step"]

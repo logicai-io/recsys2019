@@ -168,6 +168,77 @@ class ClickSequenceFeatures:
         return len(compressed_with_rank), (len(compressed_with_rank) / len(compressed_without_rank))
 
 
+class FakeClickSequenceFeatures:
+    def __init__(self):
+        self.current_impression = {}
+        self.sequences = defaultdict(list)
+        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
+
+    def update_acc(self, row):
+        if row["action_type"] in self.action_types:
+            key = (row["user_id"], row["session_id"])
+            self.sequences[key].append(row["fake_index_interacted"])
+
+    def get_stats(self, row, item):
+        key = (row["user_id"], row["session_id"])
+        obs = {}
+        sequence = self.sequences[key]
+
+        if sequence:
+            obs["fake_click_sequence_min"] = min(sequence)
+            obs["fake_click_sequence_max"] = max(sequence)
+            obs["fake_click_sequence_min_norm"] = obs["fake_click_sequence_min"] - item["rank"]
+            obs["fake_click_sequence_max_norm"] = obs["fake_click_sequence_max"] - item["rank"]
+            obs["fake_click_sequence_len"] = len(sequence)
+            obs["fake_click_sequence_sd"] = stdev(sequence) if len(sequence) > 1 else 0
+            obs["fake_click_sequence_mean"] = mean(sequence)
+            obs["fake_click_sequence_mean_norm"] = obs["fake_click_sequence_mean"] - item["rank"]
+            obs["fake_click_sequence_gzip_len"], obs["fake_click_sequence_entropy"] = self._seq_entropy(
+                sequence, item["rank"]
+            )
+        else:
+            obs["fake_click_sequence_min"] = -1000
+            obs["fake_click_sequence_max"] = -1000
+            obs["fake_click_sequence_min_norm"] = -1000
+            obs["fake_click_sequence_max_norm"] = -1000
+            obs["fake_click_sequence_len"] = -1000
+            obs["fake_click_sequence_sd"] = -1000
+            obs["fake_click_sequence_mean"] = -1000
+            obs["fake_click_sequence_mean_norm"] = -1000
+            obs["fake_click_sequence_gzip_len"] = -1000
+            obs["fake_click_sequence_entropy"] = -1000
+        return obs
+
+    def _seq_entropy(self, sequence, rank):
+        seq = ",".join([str(el) for el in sequence]).encode("utf-8")
+        seq_with_rank = ",".join([str(el) for el in sequence + [rank]]).encode("utf-8")
+        compressed_with_rank = gzip.compress(seq_with_rank)
+        compressed_without_rank = gzip.compress(seq)
+        return len(compressed_with_rank), (len(compressed_with_rank) / len(compressed_without_rank))
+
+
+class Last10Actions:
+    def __init__(self):
+        self.current_impression = {}
+        self.sequences = defaultdict(list)
+        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
+
+    def update_acc(self, row):
+        if row["action_type"] in self.action_types:
+            key = (row["user_id"], row["session_id"])
+            self.sequences[key].append((row["action_type"], row["fake_index_interacted"]))
+
+    def get_stats(self, row, item):
+        key = (row["user_id"], row["session_id"])
+        obs = {}
+        sequence = [(None, None)] * 10 + self.sequences[key]
+        for n in range(10):
+            action, ind = sequence[-n]
+            obs[f"cat_action_index_{n}"] = "{}{}".format(action, ind) if action else ""
+            obs[f"cat_action_index_{n}_norm"] = "{}{}".format(action, item["rank"] - ind) if action else ""
+        return obs
+
+
 class ClickProbabilityClickOffsetTimeOffset:
     def __init__(
         self,
@@ -1171,13 +1242,6 @@ def get_accumulators(hashn=None):
             get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
         ),
         StatsAcc(
-            name="last_filter",
-            action_types=["filter selection", "search for destination", "search for poi"],
-            acc={},
-            updater=lambda acc, row: set_key(acc, row["user_id"], row["current_filters"]),
-            get_stats_func=lambda acc, row, item: acc.get(row["user_id"], ""),
-        ),
-        StatsAcc(
             name="user_item_interactions_list",
             action_types=ACTIONS_WITH_ITEM_REFERENCE,
             acc=defaultdict(set),
@@ -1231,7 +1295,7 @@ def get_accumulators(hashn=None):
                 acc, (row["user_id"], row["reference"], "interaction item image"), row["timestamp"]
             ),
             get_stats_func=lambda acc, row, item: min(
-                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "interaction item image"), 0), 1000000
+                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "interaction item image"), 0), 1_000_000
             ),
         ),
         StatsAcc(
@@ -1242,7 +1306,7 @@ def get_accumulators(hashn=None):
                 acc, (row["user_id"], row["reference"], "clickout item"), row["timestamp"]
             ),
             get_stats_func=lambda acc, row, item: min(
-                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "clickout item"), 0), 1000000
+                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "clickout item"), 0), 1_000_000
             ),
         ),
         StatsAcc(
@@ -1287,13 +1351,15 @@ def get_accumulators(hashn=None):
         GlobalTimestampPerItem(),
         # ItemLooStats(),
         # ItemLooStatsByPlatform("../../../data/item_stats_loo_by_platform.joblib", suffix="_by_platform"),
-        # ClickSequenceFeatures(),
+        ClickSequenceFeatures(),
+        FakeClickSequenceFeatures(),
         TimeSinceSessionStart(),
         TimeSinceUserStart(),
         NumberOfSessions(),
         AllFilters(),
         ItemCTRInSequence(),
         ItemCTRRankWeighted(),
+        Last10Actions(),
     ] + [
         StatsAcc(
             name="{}_count".format(action_type.replace(" ", "_")),

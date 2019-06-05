@@ -17,6 +17,9 @@ METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_
 PRICE_PCT_PER_CITY = pathlib.Path().absolute().parents[1] / "data" / "price_pct_by_city.joblib"
 PRICE_PCT_PER_PLATFORM = pathlib.Path().absolute().parents[1] / "data" / "price_pct_by_platform.joblib"
 PRICE_RANK_PER_ITEM = pathlib.Path().absolute().parents[1] / "data" / "item_prices_rank.joblib"
+ITEM_STATS_DISTANCE = pathlib.Path().absolute().parents[1] / "data" / "item_sort_by_distance_stats.joblib"
+ITEM_STATS_RATING = pathlib.Path().absolute().parents[1] / "data" / "item_sort_by_rating_stats.joblib"
+ITEM_STATS_POPULARITY = pathlib.Path().absolute().parents[1] / "data" / "item_sort_by_popularity_stats.joblib"
 
 
 class FeatureEng(BaseEstimator, TransformerMixin):
@@ -40,7 +43,7 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X = pd.merge(X, metadata_dense, how="left", on="item_id")
         X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)
         X["is_rank_greater_than_prv_click"] = (X["rank"] > X["last_item_index"]).astype(np.int32)
-        X["last_filter"].fillna("", inplace=True)
+        X["current_filters"].fillna("", inplace=True)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
         X["last_poi"].fillna("", inplace=True)
         X["alltime_filters"].fillna("", inplace=True)
@@ -65,6 +68,14 @@ class FeatureEng(BaseEstimator, TransformerMixin):
 
         price_rank = joblib.load(PRICE_RANK_PER_ITEM)
         X = pd.merge(X, price_rank, how="left", on=["item_id", "price"])
+
+        for stats_path, name in [
+            (ITEM_STATS_DISTANCE, "distance"),
+            (ITEM_STATS_RATING, "rating"),
+            (ITEM_STATS_POPULARITY, "popularity"),
+        ]:
+            stats = joblib.load(stats_path)
+            X[f"item_stats_{name}"] = X["item_id"].map(stats)
 
         for col in X.columns:
             if X[col].dtype == np.bool:
