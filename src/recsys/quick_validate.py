@@ -6,21 +6,17 @@ from lightgbm import LGBMRanker, LGBMRankerMRR
 from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast, mrr_fast_v2
 from recsys.utils import group_lengths
-from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2
+from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2, make_vectorizer_3
 
 warnings.filterwarnings("ignore")
 
-nrows = 2000000
-df = pd.read_csv("../../data/events_sorted_trans_all.csv", nrows=nrows)
+def read_data():
+    nrows = 2000000
+    df = pd.read_csv("../../data/events_sorted_trans_all.csv", nrows=nrows)
+    df_train, df_val = split_by_timestamp(df)
+    return df_train, df_val
 
-for fn in glob.glob("../../data/features/graph*.csv") + glob.glob("../../data/features/sgd*.csv"):
-    new_df = pd.read_csv(fn, nrows=nrows)
-    for col in new_df.columns:
-        print(col)
-        df[col] = new_df[col]
-
-df_train, df_val = split_by_timestamp(df)
-
+df_train, df_val = read_data()
 vectorizer = make_vectorizer_1()
 mat_train = vectorizer.fit_transform(df_train, df_train["was_clicked"])
 print(mat_train.shape)

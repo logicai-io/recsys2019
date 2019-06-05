@@ -260,7 +260,12 @@ def make_vectorizer_1(
                 ),
                 (
                     "numerical_ranking",
-                    make_pipeline(RankFeatures(), MinimizeNNZ()),
+                    make_pipeline(RankFeatures(ascending=False), MinimizeNNZ()),
+                    numerical_features_for_ranking + ["clickout_id"],
+                ),
+                (
+                    "numerical_ranking_rev",
+                    make_pipeline(RankFeatures(ascending=True), MinimizeNNZ()),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
                 ("properties", CountVectorizer(tokenizer=lambda x: x, lowercase=False, min_df=2), "properties"),
@@ -333,6 +338,38 @@ def make_vectorizer_2(
         ),
         SanitizeSparseMatrix(),
     )
+
+
+
+def make_vectorizer_3(
+    categorical_features=categorical_features_py,
+    numerical_features=numerical_features_py,
+    numerical_features_offset_2=numerical_features_offset_2,
+    numerical_features_for_ranking=numerical_features_for_ranking_py,
+):
+    return make_pipeline(
+        FeatureEng(),
+        ColumnTransformer(
+            [
+                (
+                    "numerical",
+                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="constant", fill_value=-9999)),
+                    numerical_features,
+                ),
+                (
+                    "numerical_ranking",
+                    make_pipeline(RankFeatures(ascending=False), MinimizeNNZ()),
+                    numerical_features_for_ranking + ["clickout_id"],
+                ),
+                (
+                    "numerical_ranking_rev",
+                    make_pipeline(RankFeatures(ascending=True), MinimizeNNZ()),
+                    numerical_features_for_ranking + ["clickout_id"],
+                ),
+            ]
+        ),
+    )
+
 
 
 class VectorizeChunks:
