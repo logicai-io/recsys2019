@@ -234,12 +234,12 @@ class ItemIDS():
         for n, item_id in enumerate(row["impressions"]):
             obs[f"item_id_at_{n}"] = int(item_id)
             obs[f"item_id_at_{n}_norm"] = int(item["item_id"]) - int(item_id)
-            if n == 0:
-                obs[f"item_id_at_max"] = obs[f"item_id_at_{n}_norm"]
-                obs[f"item_id_at_min"] = obs[f"item_id_at_{n}_norm"]
-            else:
-                obs[f"item_id_at_max"] = max(obs[f"item_id_max_diff"], obs[f"item_id_at_{n}_norm"])
-                obs[f"item_id_at_min"] = min(obs[f"item_id_min_diff"], obs[f"item_id_at_{n}_norm"])
+            # if n == 0:
+            #     obs[f"item_id_at_max"] = obs[f"item_id_at_{n}_norm"]
+            #     obs[f"item_id_at_min"] = obs[f"item_id_at_{n}_norm"]
+            # else:
+            #     obs[f"item_id_max_diff"] = max(obs[f"item_id_max_diff"], obs[f"item_id_at_{n}_norm"])
+            #     obs[f"item_id_min_diff"] = min(obs[f"item_id_min_diff"], obs[f"item_id_at_{n}_norm"])
         return obs
 
 
