@@ -19,8 +19,6 @@ feature_generator = FeatureGenerator(
 )
 feature_generator.generate_features()
 
-
-
 df = pd.read_csv(csv)
 # oof_predictions = pd.read_csv("../../data/lstm/oof_predictions_user.csv")
 # df = pd.merge(df, oof_predictions, how="left", on=["user_id", "session_id", "item_id", "step"])
