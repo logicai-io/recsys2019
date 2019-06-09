@@ -189,6 +189,13 @@ numerical_features_info = [
     ("fake_click_sequence_mean_norm", False),
     ("fake_click_sequence_gzip_len", False),
     ("fake_click_sequence_entropy", False),
+    
+    ("price_rem", False),
+    ("are_price_sorted", False),
+    ("are_price_sorted_rev", False),
+    ("prices_sorted_until", False),
+    ("prices_sorted_until_current_rank", False),
+    ("wrong_price_sorting", False),
 ]
 
 numerical_features_for_ranking_py = [f for f, rank in numerical_features_info if rank]
@@ -252,7 +259,6 @@ def make_vectorizer_1(
                     make_pipeline(LagNumericalFeaturesWithinGroup(offset=2), MinimizeNNZ()),
                     numerical_features_offset_2 + ["clickout_id"],
                 ),
-                # ("divide_by_ranking", DivideByRanking(), numerical_features),
                 (
                     "categorical",
                     make_pipeline(PandasToRecords(), DictVectorizer(), SparsityFilter(min_nnz=5)),
@@ -342,13 +348,38 @@ def make_vectorizer_2(
 
 
 def make_vectorizer_3(
-    categorical_features=categorical_features_py,
     numerical_features=numerical_features_py,
-    numerical_features_offset_2=numerical_features_offset_2,
     numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
     return make_pipeline(
         FeatureEng(),
+        ColumnTransformer(
+            [
+                (
+                    "numerical",
+                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="constant", fill_value=-9999)),
+                    numerical_features,
+                ),
+                (
+                    "numerical_ranking",
+                    make_pipeline(RankFeatures(ascending=False), MinimizeNNZ()),
+                    numerical_features_for_ranking + ["clickout_id"],
+                ),
+                (
+                    "numerical_ranking_rev",
+                    make_pipeline(RankFeatures(ascending=True), MinimizeNNZ()),
+                    numerical_features_for_ranking + ["clickout_id"],
+                ),
+            ]
+        ),
+    )
+
+
+def make_vectorizer_3_no_eng(
+    numerical_features=numerical_features_py,
+    numerical_features_for_ranking=numerical_features_for_ranking_py,
+):
+    return make_pipeline(
         ColumnTransformer(
             [
                 (
