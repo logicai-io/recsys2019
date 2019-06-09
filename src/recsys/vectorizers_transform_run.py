@@ -12,7 +12,7 @@ import time
 
 def run_one(vectorizer_path, output_folder, fn):
     # sleep for some time
-    sleep(int(random()*10*60))
+    sleep(int(random()*60))
     print(fn, "started")
     args = ["python", "vectorizer_transform.py",
             "--vectorizer_path", vectorizer_path,
