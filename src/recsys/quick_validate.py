@@ -11,7 +11,7 @@ from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2, make_vector
 warnings.filterwarnings("ignore")
 
 def read_data():
-    nrows = 2000000
+    nrows = 200000
     df = pd.read_csv("../../data/events_sorted_trans_all.csv", nrows=nrows)
     for fn in glob.glob("../../data/features/comp*.csv"):
         new_df = pd.read_csv(fn, nrows=nrows)
@@ -22,6 +22,7 @@ def read_data():
     return df_train, df_val
 
 df_train, df_val = read_data()
+assert False
 vectorizer = make_vectorizer_1()
 mat_train = vectorizer.fit_transform(df_train, df_train["was_clicked"])
 print(mat_train.shape)
