@@ -6,19 +6,21 @@ from functools import partial
 from random import random
 from time import sleep
 
-from multiprocess.pool import Pool
+from multiprocessing.pool import Pool
 from recsys.vectorizers import VectorizeChunks
 import time
 
 def run_one(vectorizer_path, output_folder, fn):
     # sleep for some time
-    sleep(int(random()*5*60))
+    sleep(int(random()*10*60))
+    print(fn, "started")
     args = ["python", "vectorizer_transform.py",
             "--vectorizer_path", vectorizer_path,
             "--input", fn,
             "--output_folder", output_folder]
     p = subprocess.Popen(args)
     p.wait()
+    print(fn, "finished")
     return 1
 
 if __name__ == '__main__':
@@ -28,7 +30,8 @@ if __name__ == '__main__':
     ps = []
 
     with Pool(10) as pool:
-        pool.map_async(partial(run_one, vectorizer_path, output_folder), sorted(glob.glob(input_files)))
+        m = pool.imap_unordered(partial(run_one, vectorizer_path, output_folder), sorted(glob.glob(input_files)))
+        results = list(m)
 
     # for fn in sorted(glob.glob(input_files)):
     #     print(fn)
