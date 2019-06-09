@@ -6,12 +6,6 @@ from time import sleep
 
 from recsys.vectorizers import VectorizeChunks
 
-ps = []
-for n in range(8):
-    ps.append(p)
-
-for p in ps:
-    p.wait()
 
 if __name__ == '__main__':
     vectorizer_path = "../../data/proc/vectorizer_1/vectorizer.joblib"
@@ -19,9 +13,10 @@ if __name__ == '__main__':
     output_folder = "../../data/proc/vectorizer_1/"
     ps = []
     for fn in sorted(glob.glob(input_files)):
+        print(fn)
         args = ["python", "vectorizer_transform.py",
                 "--vectorizer_path", vectorizer_path,
-                "--input_files", input_files,
+                "--input", fn,
                 "--output_folder", output_folder]
         p = subprocess.Popen(args)
         ps.append(p)
