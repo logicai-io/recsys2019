@@ -476,8 +476,10 @@ class VectorizeChunks:
         logger.info(f"Vectorize {fn}")
         fname_h5 = fn.split("/")[-1].replace(".csv", ".h5")
         fname_npz = fn.split("/")[-1].replace(".csv", ".npz")
+        metadata_save_as = os.path.join(self.output_folder, "chunks", fname_h5)
+        sparse_matrix_save_as = os.path.join(self.output_folder, "chunks", fname_npz)
 
-        if self.join_only:
+        if self.join_only or os.path.exists(metadata_save_as):
             return (fname_h5, fname_npz)
 
         df = pd.read_csv(fn)
@@ -499,9 +501,9 @@ class VectorizeChunks:
                 "is_val",
                 "was_clicked",
             ]
-        ].to_hdf(os.path.join(self.output_folder, "chunks", fname_h5), key="data", mode="w")
+        ].to_hdf(metadata_save_as, key="data", mode="w")
 
-        save_npz(os.path.join(self.output_folder, "chunks", fname_npz), mat)
+        save_npz(sparse_matrix_save_as, mat)
 
         gc.collect()
 
