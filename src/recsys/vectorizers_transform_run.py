@@ -26,7 +26,7 @@ def run_one(vectorizer_path, output_folder, fn):
 if __name__ == '__main__':
     vectorizer_path = "../../data/proc/vectorizer_1/vectorizer.joblib"
     input_files = "../../data/proc/raw_csv/*.csv"
-    output_folder = "../../data/proc/vectorizer_1_v2/"
+    output_folder = "../../data/proc/vectorizer_1/"
     ps = []
 
     with Pool(10) as pool:
