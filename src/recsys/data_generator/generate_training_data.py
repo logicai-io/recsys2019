@@ -121,7 +121,7 @@ class FeatureGenerator:
 @click.option("--hashn", type=int, default=None, help="Chunk number")
 def main(limit, hashn):
     print(hashn)
-    save_as = "../../../data/events_sorted_trans_%02d.csv" % (hashn)
+    save_as = "../../../data/events_sorted_trans_%03d.csv" % (hashn)
     accumulators = get_accumulators(hashn)
     feature_generator = FeatureGenerator(
         limit=limit,

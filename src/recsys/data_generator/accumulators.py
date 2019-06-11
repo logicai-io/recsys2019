@@ -1106,7 +1106,7 @@ class ActionsTracker:
     def __init__(self):
         self.action_types = ALL_ACTIONS
         self.all_events_list = defaultdict(lambda: defaultdict(list))
-        self.int_events_list = defaultdict(lambda: defaultdict(list))
+        self.int_events_list = defaultdict(list)
         self.max_timestamp = defaultdict(int)
 
     def update_acc(self, row: Dict):
@@ -1118,9 +1118,7 @@ class ActionsTracker:
 
         self.all_events_list[row["user_id"]][row["action_type"]].append(new_row)
         if row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE:
-            self.int_events_list[row["user_id"]][row["action_type"]].append(new_row)
-
-        self.max_timestamp[row["user_id"]] = max(row["timestamp"], self.max_timestamp[row["user_id"]])
+            self.int_events_list[row["user_id"]].append(new_row)
 
     def prepare_new_row(self, row):
         new_row = {}
@@ -1133,27 +1131,34 @@ class ActionsTracker:
 
     def get_stats(self, row, item):
         all_events_list = self.all_events_list[row["user_id"]]
-        max_timestamp = self.max_timestamp[row["user_id"]]
+        max_timestamp = row["timestamp"]
         obs = {}
         for action_type in all_events_list.keys():
-            for event_num, row in enumerate(all_events_list[action_type][::-1]):
-                impressions = row["fake_impressions"]
-                prices = row["fake_prices"].split("|")
+            for event_num, new_row in enumerate(all_events_list[action_type][::-1][:10]):
+                impressions = new_row["fake_impressions"]
+                prices = new_row["fake_prices"].split("|")
                 # import ipdb; ipdb.set_trace()
-                if event_num <= 10:
-                    if action_type == "clickout item":
-                        for rank, (item_id, price) in enumerate(zip(impressions, prices)):
-                            price = int(price)
-                            obs[f"co_price_{rank:02d}_{event_num:02d}"] = log1p(price)
+                if action_type == "clickout item" and event_num <= 1:
+                    for rank, (item_id, price) in enumerate(zip(impressions, prices)):
+                        price = int(price)
+                        obs[f"co_price_{rank:02d}_{event_num:02d}"] = log1p(price)
 
-                    obs[f"{action_type}_{event_num:02d}_timestamp"] = log1p(max_timestamp - row["timestamp"])
-                    if row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE:
-                        impressions = row["fake_impressions"]
-                        if row["reference"] in impressions and not (event_num == 0 and action_type == "clickout_item"):
-                            obs[f"{action_type}_rank_{event_num:02d}"] = impressions.index(row["reference"]) + 1
-                            obs[f"{action_type}_rank_{event_num:02d}_rel"] = item["rank"] - impressions.index(
-                                row["reference"]
-                            )
+                obs[f"{action_type}_{event_num:02d}_timestamp"] = log1p(max_timestamp - new_row["timestamp"])
+                if new_row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE:
+                    impressions = new_row["fake_impressions"]
+                    if new_row["reference"] in impressions:
+                        obs[f"{action_type}_rank_{event_num:02d}"] = impressions.index(new_row["reference"]) + 1
+                        obs[f"{action_type}_rank_{event_num:02d}_rel"] = item["rank"] - impressions.index(
+                            new_row["reference"]
+                        )
+
+        int_events_list = self.int_events_list[row["user_id"]]
+        for event_num, new_row in enumerate(int_events_list[::-1][:10]):
+            obs[f"interaction_{event_num:02d}_timestamp"] = log1p(max_timestamp - new_row["timestamp"])
+            impressions = new_row["fake_impressions"]
+            if new_row["reference"] in impressions:
+                obs[f"interaction_rank_{event_num:02d}"] = impressions.index(new_row["reference"]) + 1
+                obs[f"interaction_rank_{event_num:02d}_rel"] = item["rank"] - impressions.index(new_row["reference"])
 
         return {"actions_tracker": json.dumps(obs)}
 
@@ -1477,8 +1482,6 @@ def get_accumulators(hashn=None):
         SimilarUsersItemInteraction(),
         MostSimilarUserItemInteraction(),
         GlobalTimestampPerItem(),
-        # ItemLooStats(),
-        # ItemLooStatsByPlatform("../../../data/item_stats_loo_by_platform.joblib", suffix="_by_platform"),
         ClickSequenceFeatures(),
         FakeClickSequenceFeatures(),
         TimeSinceSessionStart(),
@@ -1504,7 +1507,7 @@ def get_accumulators(hashn=None):
     ]
 
     if hashn is not None:
-        accumulators = [acc for i, acc in enumerate(accumulators) if i % 8 == hashn]
+        accumulators = [acc for i, acc in enumerate(accumulators) if i % 32 == hashn]
         print("N acc", hashn, len(accumulators))
 
     return accumulators

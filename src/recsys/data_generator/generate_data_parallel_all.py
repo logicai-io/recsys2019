@@ -2,7 +2,7 @@ import subprocess
 import os
 
 ps = []
-for n in range(8):
+for n in range(32):
     args = ["python", "generate_training_data.py", "--hashn", str(n)]
     p = subprocess.Popen(args)
     ps.append(p)

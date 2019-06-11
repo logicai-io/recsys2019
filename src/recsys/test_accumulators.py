@@ -1,18 +1,18 @@
 import json
+
 import pandas as pd
 from lightgbm import LGBMRanker
 from recsys.data_generator.accumulators import (
-    PriceSorted,
-    ItemIDS,
-    DistinctInteractions,
     ACTIONS_WITH_ITEM_REFERENCE,
     ActionsTracker,
+    DistinctInteractions,
+    PriceSorted,
 )
 from recsys.data_generator.generate_training_data import FeatureGenerator
 from recsys.df_utils import split_by_timestamp
-from recsys.metric import mrr_fast_v2, mrr_fast
+from recsys.metric import mrr_fast, mrr_fast_v2
 from recsys.utils import group_lengths
-from recsys.vectorizers import make_vectorizer_3, make_vectorizer_3_no_eng
+from recsys.vectorizers import make_vectorizer_3_no_eng
 
 accumulators = [
     PriceSorted(),
@@ -20,6 +20,20 @@ accumulators = [
     DistinctInteractions(name="clickout", action_types=["clickout item"]),
     DistinctInteractions(name="interact", action_types=ACTIONS_WITH_ITEM_REFERENCE),
 ]
+
+"""
+0.6343673589319019
+By rank
+1 0.666705136967124
+2 0.6199764010371607
+3 0.5973204551587935
+4 0.5839764046757063
+5 0.5968199125460283
+6 0.5641159715544564
+7 0.5731059145366546
+8 0.5312000449384351
+9 0.6131196728885805
+"""
 
 csv = "../../data/events_sorted_trans_mini.csv"
 feature_generator = FeatureGenerator(
