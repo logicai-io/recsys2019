@@ -217,7 +217,7 @@ class FakeClickSequenceFeatures:
         return len(compressed_with_rank), (len(compressed_with_rank) / len(compressed_without_rank))
 
 
-class ItemIDS():
+class ItemIDS:
     def __init__(self):
         self.action_types = ["clickout item"]
 
@@ -1386,7 +1386,7 @@ def get_accumulators(hashn=None):
         ItemCTRInSequence(),
         ItemCTRRankWeighted(),
         Last10Actions(),
-        ItemIDS()
+        ItemIDS(),
     ] + [
         StatsAcc(
             name="{}_count".format(action_type.replace(" ", "_")),

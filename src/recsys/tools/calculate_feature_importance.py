@@ -15,10 +15,7 @@ def main(src, dst, limit):
     # df = df[df["is_impression_the_same"] == True]
     results = []
     for col in tqdm(list(df_train.columns)[-52:]):
-        if (
-            df_train[col].dtype in [np.int, np.float]
-            and col != "was_clicked"
-        ):
+        if df_train[col].dtype in [np.int, np.float] and col != "was_clicked":
             results.append((col, mrr_fast(df_train, col)))
             df_train[col + "_rank"] = df_train.groupby("clickout_id")[col].rank("max", ascending=False)
             mrr_rank = mrr_fast(df_train, col + "_rank")
