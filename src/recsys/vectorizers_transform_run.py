@@ -10,26 +10,34 @@ from multiprocessing.pool import Pool
 from recsys.vectorizers import VectorizeChunks
 import time
 
+
 def run_one(vectorizer_path, output_folder, fn):
     # sleep for some time
-    sleep(int(random()*60))
+    sleep(int(random() * 60 * 5))
     print(fn, "started")
-    args = ["python", "vectorizer_transform.py",
-            "--vectorizer_path", vectorizer_path,
-            "--input", fn,
-            "--output_folder", output_folder]
+    args = [
+        "python",
+        "vectorizer_transform.py",
+        "--vectorizer_path",
+        vectorizer_path,
+        "--input",
+        fn,
+        "--output_folder",
+        output_folder,
+    ]
     p = subprocess.Popen(args)
     p.wait()
     print(fn, "finished")
     return 1
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     vectorizer_path = "../../data/proc/vectorizer_1/vectorizer.joblib"
     input_files = "../../data/proc/raw_csv/*.csv"
-    output_folder = "../../data/proc/vectorizer_1_v2/"
+    output_folder = "../../data/proc/vectorizer_1/"
     ps = []
 
-    with Pool(10) as pool:
+    with Pool(6) as pool:
         m = pool.imap_unordered(partial(run_one, vectorizer_path, output_folder), sorted(glob.glob(input_files)))
         results = list(m)
 
