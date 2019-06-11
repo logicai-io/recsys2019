@@ -20,6 +20,7 @@ from recsys.data_generator.accumulators_helpers import (
 from recsys.data_generator.jaccard_sim import ItemPriceSim, JaccardItemSim
 from recsys.log_utils import get_logger
 from recsys.utils import group_time
+from scipy.stats import pearsonr
 
 ACTION_SHORTENER = {
     "change of sort order": "a",
@@ -1056,6 +1057,34 @@ class ItemCTRInSequence:
         return obs
 
 
+class PriceSorted:
+    
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        
+    def update_acc(self, row):
+        pass
+        
+    def get_stats(self, row, item):
+        prices = row["prices"]
+        obs = {}
+        obs["price_rem"] = item["price"] % 100
+        obs["are_price_sorted"] = int(prices == sorted(prices))
+        obs["are_price_sorted_rev"] = int(prices == sorted(prices, reverse=True))
+
+        # calculates the point until the prices are sorted
+        obs["prices_sorted_until"] = 0
+        for n in range(len(prices)):
+            prices_sorted = int(prices == sorted(prices))
+            if not prices_sorted:
+                break
+            obs["prices_sorted_until"] = n
+
+        obs["prices_sorted_until_current_rank"] = int(item["rank"] < n)
+        should_be_sorted = int("Sort by Price" in row["current_filters"])
+        obs["wrong_price_sorting"] = int(should_be_sorted and not obs["are_price_sorted"])
+        return obs
+
 def group_accumulators(accumulators):
     accs_by_action_type = defaultdict(list)
     for acc in accumulators:
@@ -1387,6 +1416,7 @@ def get_accumulators(hashn=None):
         ItemCTRRankWeighted(),
         Last10Actions(),
         ItemIDS(),
+        PriceSorted()
     ] + [
         StatsAcc(
             name="{}_count".format(action_type.replace(" ", "_")),
