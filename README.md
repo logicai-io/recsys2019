@@ -47,6 +47,7 @@ unk | 0.6272 | 0.6237 | 0.6782
 @eb6c4a | XXXXXX | 0.6847v | 0.6823
 @ed0938 | 0.6706c | 0.6856 | 0.6827p
 @b52a3d | 0.6710c | 0.6859 | 0.6837b
+@bdeaf8 | XXXXXX | 0.6867 | 0.6847be
 
 - b - blend of models, otherwise the results are for single models
 - v - fix validation to include the last full day of the training data and only last clickouts
