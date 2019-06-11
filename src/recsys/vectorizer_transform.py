@@ -37,5 +37,6 @@ def main(vectorizer_path, input, output_folder):
     ].to_hdf(os.path.join(output_folder, "chunks", fname_h5), key="data", mode="w")
     save_npz(os.path.join(output_folder, "chunks", fname_npz), mat)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

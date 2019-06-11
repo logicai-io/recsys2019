@@ -30,11 +30,15 @@ with timer("splitting data"):
     gc.collect()
 
 with timer("model fitting"):
-    model = XGBRanker(n_estimators=150, learning_rate=0.1, subsample=0.9, objective='rank:pairwise')
-    model.fit(X_train, meta_train["was_clicked"].values, group=group_lengths(meta_train["clickout_id"].values),
+    model = XGBRanker(n_estimators=150, learning_rate=0.1, subsample=0.9, objective="rank:pairwise")
+    model.fit(
+        X_train,
+        meta_train["was_clicked"].values,
+        group=group_lengths(meta_train["clickout_id"].values),
         eval_set=[(X_train, meta_train["was_clicked"].values), (X_val, meta_val["was_clicked"].values)],
         eval_group=[group_lengths(meta_train["clickout_id"].values), group_lengths(meta_val["clickout_id"].values)],
-        verbose=True)
+        verbose=True,
+    )
     val_pred = model.predict(X_val)
     train_pred = model.predict(X_train)
     logger.info("Train AUC {:.4f}".format(roc_auc_score(meta_train["was_clicked"].values, train_pred)))

@@ -10,11 +10,13 @@ from recsys.vectorizers import make_vectorizer_1, make_vectorizer_2, make_vector
 
 warnings.filterwarnings("ignore")
 
+
 def read_data():
     nrows = 200000
     df = pd.read_csv("../../data/events_sorted_trans_all.csv", nrows=nrows)
     df_train, df_val = split_by_timestamp(df)
     return df_train, df_val
+
 
 df_train, df_val = read_data()
 assert False

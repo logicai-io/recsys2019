@@ -18,13 +18,13 @@ def join_events(df):
 
 
 models = [
-"ed093863252d7a631e4ec45585459c5c23ca556d",
-"eb6c4a7ebf082f0a4e9d1de0a26563d1426b220b",
-"b1ca28d7513cbfa03d789fc078bda8435491418c",
-"857d156f5093ac96d6cc12c9df2064f1d7fb458d",
-"7b72223b7337409b3dd08eebd4bb8b032b642bdf",
-"bdeaf88e4e4085337041afa965d69585bf8f7182",
-"7ec17c9bbfae3b0d9fae0518f0cf8aa2b9069116"
+    "ed093863252d7a631e4ec45585459c5c23ca556d",
+    "eb6c4a7ebf082f0a4e9d1de0a26563d1426b220b",
+    "b1ca28d7513cbfa03d789fc078bda8435491418c",
+    "857d156f5093ac96d6cc12c9df2064f1d7fb458d",
+    "7b72223b7337409b3dd08eebd4bb8b032b642bdf",
+    "bdeaf88e4e4085337041afa965d69585bf8f7182",
+    "7ec17c9bbfae3b0d9fae0518f0cf8aa2b9069116",
 ]
 
 predictions = []
@@ -38,6 +38,7 @@ for p in predictions:
     print(mrr_fast(p, "click_proba"))
 
 final = predictions[-1].copy()
+
 
 def opt(v):
     final["click_proba"] = 0

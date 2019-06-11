@@ -189,54 +189,52 @@ numerical_features_info = [
     ("fake_click_sequence_mean_norm", False),
     ("fake_click_sequence_gzip_len", False),
     ("fake_click_sequence_entropy", False),
-    
-('clickout_counter_vs_interaction_counter_mean',True),
-('mean_rank_counter_mean',True),
-('identifier_counter_min_after',True),
-('interaction_counter_pure',True),
-('identifier_counter_max_after',True),
-('identifier_counter_mean_before_vs_item',True),
-('identifier_counter_prev_2_vs_item',True),
-('interaction_counter_max_vs_item',True),
-('interaction_counter_mean',False),
-('mean_rank_counter_mean_after_vs_item',True),
-('mean_rank_counter_rank_norm_after',False),
-('mean_rank_counter_max_vs_item',False),
-('mean_rank_counter_min',False),
-('impression_counter_prev_1_vs_item',False),
-('impression_counter_mean_before_vs_item',True),
-('clickout_counter_vs_impression_counter_max_after',True),
-('clickout_counter_vs_impression_counter_max_before',True),
-('identifier_counter_rank_norm_after',False),
-('impression_counter_rank_norm',False),
-('impression_counter_mean_prev_3_vs_item',True),
-('clickout_counter_vs_interaction_counter_pure',True),
-('clickout_counter_vs_impression_counter_mean_before_vs_item',True),
-('clickout_counter_vs_impression_counter_mean_first_3_vs_item',True),
-('top_7_impression_counter_next_2_vs_item',True),
-('top_7_impression_counter_rank_norm_before',True),
-('clickout_counter_mean_after_vs_item',True),
-('clickout_counter_vs_interaction_counter_min_before_vs_item',True),
-('top_7_impression_counter_max_after_vs_item',False),
-('clickout_counter_vs_impression_counter_rank_after',True),
-('impression_counter_min_before',False),
-('interaction_counter_prev_1_vs_item',False),
-('clickout_counter_vs_interaction_counter_prev_2_vs_item',True),
-('top_7_impression_counter_prev_2_vs_item',False),
-('interaction_counter_prev_3_vs_item',False),
-('interaction_counter_vs_impression_counter_max_after_vs_item',True),
-('identifier_counter_rank_norm',True),
-('clickout_counter_vs_impression_counter_mean_prev_3_vs_item',True),
-('identifier_counter_rank_norm_before',True),
-('interaction_counter_prev_2_vs_item',False),
-('identifier_counter_rank',True),
-('identifier_counter_rank_before',True),
-('clickout_counter_next_2_vs_item',True),
-('top_7_impression_counter_min_before',True),
-('clickout_counter_vs_interaction_counter_max',True),
-('interaction_counter_vs_impression_counter_min_after_vs_item',True),
-('clickout_counter_vs_impression_counter_min_after_vs_item',True),
-    
+    ("clickout_counter_vs_interaction_counter_mean", True),
+    ("mean_rank_counter_mean", True),
+    ("identifier_counter_min_after", True),
+    ("interaction_counter_pure", True),
+    ("identifier_counter_max_after", True),
+    ("identifier_counter_mean_before_vs_item", True),
+    ("identifier_counter_prev_2_vs_item", True),
+    ("interaction_counter_max_vs_item", True),
+    ("interaction_counter_mean", False),
+    ("mean_rank_counter_mean_after_vs_item", True),
+    ("mean_rank_counter_rank_norm_after", False),
+    ("mean_rank_counter_max_vs_item", False),
+    ("mean_rank_counter_min", False),
+    ("impression_counter_prev_1_vs_item", False),
+    ("impression_counter_mean_before_vs_item", True),
+    ("clickout_counter_vs_impression_counter_max_after", True),
+    ("clickout_counter_vs_impression_counter_max_before", True),
+    ("identifier_counter_rank_norm_after", False),
+    ("impression_counter_rank_norm", False),
+    ("impression_counter_mean_prev_3_vs_item", True),
+    ("clickout_counter_vs_interaction_counter_pure", True),
+    ("clickout_counter_vs_impression_counter_mean_before_vs_item", True),
+    ("clickout_counter_vs_impression_counter_mean_first_3_vs_item", True),
+    ("top_7_impression_counter_next_2_vs_item", True),
+    ("top_7_impression_counter_rank_norm_before", True),
+    ("clickout_counter_mean_after_vs_item", True),
+    ("clickout_counter_vs_interaction_counter_min_before_vs_item", True),
+    ("top_7_impression_counter_max_after_vs_item", False),
+    ("clickout_counter_vs_impression_counter_rank_after", True),
+    ("impression_counter_min_before", False),
+    ("interaction_counter_prev_1_vs_item", False),
+    ("clickout_counter_vs_interaction_counter_prev_2_vs_item", True),
+    ("top_7_impression_counter_prev_2_vs_item", False),
+    ("interaction_counter_prev_3_vs_item", False),
+    ("interaction_counter_vs_impression_counter_max_after_vs_item", True),
+    ("identifier_counter_rank_norm", True),
+    ("clickout_counter_vs_impression_counter_mean_prev_3_vs_item", True),
+    ("identifier_counter_rank_norm_before", True),
+    ("interaction_counter_prev_2_vs_item", False),
+    ("identifier_counter_rank", True),
+    ("identifier_counter_rank_before", True),
+    ("clickout_counter_next_2_vs_item", True),
+    ("top_7_impression_counter_min_before", True),
+    ("clickout_counter_vs_interaction_counter_max", True),
+    ("interaction_counter_vs_impression_counter_min_after_vs_item", True),
+    ("clickout_counter_vs_impression_counter_min_after_vs_item", True),
 ]
 
 numerical_features_for_ranking_py = [f for f, rank in numerical_features_info if rank]
@@ -274,11 +272,14 @@ categorical_features_py = [
 ]
 numerical_features_offset_2 = ["was_interaction_info", "was_interaction_img", "last_index_diff_5"]
 
+
 def identity(x):
     return x
 
+
 def fillna_with_unk(x):
     return "UNK" if x != x else x
+
 
 def split_by_pipe(x):
     return x.split("|")
@@ -328,16 +329,12 @@ def make_vectorizer_1(
                 ("properties", CountVectorizer(tokenizer=identity, lowercase=False, min_df=2), "properties"),
                 (
                     "current_filters",
-                    CountVectorizer(
-                        preprocessor=fillna_with_unk, tokenizer=split_by_pipe, min_df=2
-                    ),
+                    CountVectorizer(preprocessor=fillna_with_unk, tokenizer=split_by_pipe, min_df=2),
                     "current_filters",
                 ),
                 (
                     "alltime_filters",
-                    CountVectorizer(
-                        preprocessor=fillna_with_unk, tokenizer=split_by_pipe, min_df=2
-                    ),
+                    CountVectorizer(preprocessor=fillna_with_unk, tokenizer=split_by_pipe, min_df=2),
                     "alltime_filters",
                 ),
                 ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
@@ -397,7 +394,6 @@ def make_vectorizer_2(
     )
 
 
-
 def make_vectorizer_3(
     categorical_features=categorical_features_py,
     numerical_features=numerical_features_py,
@@ -426,7 +422,6 @@ def make_vectorizer_3(
             ]
         ),
     )
-
 
 
 class VectorizeChunks:
