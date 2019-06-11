@@ -187,36 +187,40 @@ numerical_features_info = [
     ("fake_click_sequence_mean_norm", False),
     ("fake_click_sequence_gzip_len", False),
     ("fake_click_sequence_entropy", False),
-    ('clickout_counter_vs_interaction_counter_mean', False),
-    ('mean_rank_counter_mean', False),
-    ('identifier_counter_min_after', False),
-    ('interaction_counter_pure', False),
-    ('identifier_counter_max_after', False),
-    ('identifier_counter_mean_before_vs_item', False),
-    ('identifier_counter_prev_2_vs_item', False),
-    ('interaction_counter_max_vs_item', False),
-    ('interaction_counter_mean', False),
-    ('mean_rank_counter_mean_after_vs_item', False),
-    ('mean_rank_counter_rank_norm_after', False),
-    ('mean_rank_counter_max_vs_item', False),
-    ('mean_rank_counter_min', False),
-    ('impression_counter_prev_1_vs_item', False),
-    ('impression_counter_mean_before_vs_item', False),
-    ('clickout_counter_vs_impression_counter_max_after', False),
-    ('clickout_counter_vs_impression_counter_max_before', False),
-    ('identifier_counter_rank_norm_after', False),
-    ('impression_counter_rank_norm', False),
-    ('impression_counter_mean_prev_3_vs_item', False),
-    ('clickout_counter_vs_interaction_counter_pure', False),
-    ('impression_counter_min_before_vs_item', False),
-    ('top_7_impression_counter_mean_first_3_vs_item', False),
-    ('interaction_counter_vs_impression_counter_max_before', False),
+    ("clickout_counter_vs_interaction_counter_mean", False),
+    ("mean_rank_counter_mean", False),
+    ("identifier_counter_min_after", False),
+    ("interaction_counter_pure", False),
+    ("identifier_counter_max_after", False),
+    ("identifier_counter_mean_before_vs_item", False),
+    ("identifier_counter_prev_2_vs_item", False),
+    ("interaction_counter_max_vs_item", False),
+    ("interaction_counter_mean", False),
+    ("mean_rank_counter_mean_after_vs_item", False),
+    ("mean_rank_counter_rank_norm_after", False),
+    ("mean_rank_counter_max_vs_item", False),
+    ("mean_rank_counter_min", False),
+    ("impression_counter_prev_1_vs_item", False),
+    ("impression_counter_mean_before_vs_item", False),
+    ("clickout_counter_vs_impression_counter_max_after", False),
+    ("clickout_counter_vs_impression_counter_max_before", False),
+    ("identifier_counter_rank_norm_after", False),
+    ("impression_counter_rank_norm", False),
+    ("impression_counter_mean_prev_3_vs_item", False),
+    ("clickout_counter_vs_interaction_counter_pure", False),
+    ("impression_counter_min_before_vs_item", False),
+    ("top_7_impression_counter_mean_first_3_vs_item", False),
+    ("interaction_counter_vs_impression_counter_max_before", False),
     ("price_rem", False),
     ("are_price_sorted", False),
     ("are_price_sorted_rev", False),
     ("prices_sorted_until", False),
     ("prices_sorted_until_current_rank", False),
     ("wrong_price_sorting", False),
+    ("clickout_uniq_interactions", False),
+    ("clickout_item_uniq_prob", True),
+    ("interact_uniq_interactions", False),
+    ("interact_item_uniq_prob", True),
 ]
 
 numerical_features_for_ranking_py = [f for f, rank in numerical_features_info if rank]
@@ -268,10 +272,10 @@ def split_by_pipe(x):
 
 
 def make_vectorizer_1(
-        categorical_features=categorical_features_py,
-        numerical_features=numerical_features_py,
-        numerical_features_offset_2=numerical_features_offset_2,
-        numerical_features_for_ranking=numerical_features_for_ranking_py,
+    categorical_features=categorical_features_py,
+    numerical_features=numerical_features_py,
+    numerical_features_offset_2=numerical_features_offset_2,
+    numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
     return make_pipeline(
         FeatureEng(),
@@ -332,10 +336,10 @@ def make_vectorizer_1(
 
 
 def make_vectorizer_2(
-        categorical_features=categorical_features_py,
-        numerical_features=numerical_features_py,
-        numerical_features_offset_2=numerical_features_offset_2,
-        numerical_features_for_ranking=numerical_features_for_ranking_py,
+    categorical_features=categorical_features_py,
+    numerical_features=numerical_features_py,
+    numerical_features_offset_2=numerical_features_offset_2,
+    numerical_features_for_ranking=numerical_features_for_ranking_py,
 ):
     return make_pipeline(
         FeatureEng(),
@@ -376,8 +380,7 @@ def make_vectorizer_2(
 
 
 def make_vectorizer_3(
-    numerical_features=numerical_features_py,
-    numerical_features_for_ranking=numerical_features_for_ranking_py,
+    numerical_features=numerical_features_py, numerical_features_for_ranking=numerical_features_for_ranking_py
 ):
     return make_pipeline(
         FeatureEng(),
@@ -403,10 +406,7 @@ def make_vectorizer_3(
     )
 
 
-def make_vectorizer_3_no_eng(
-    numerical_features=numerical_features_py,
-    numerical_features_for_ranking=numerical_features_for_ranking_py,
-):
+def make_vectorizer_3_no_eng(numerical_features, numerical_features_for_ranking):
     return make_pipeline(
         ColumnTransformer(
             [
@@ -425,8 +425,9 @@ def make_vectorizer_3_no_eng(
                     make_pipeline(RankFeatures(ascending=True), MinimizeNNZ()),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
+                ("actions_tracker", DictVectorizer(), "actions_tracker"),
             ]
-        ),
+        )
     )
 
 

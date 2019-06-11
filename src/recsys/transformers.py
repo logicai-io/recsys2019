@@ -36,6 +36,7 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X["item_id_cat"] = X["item_id"].map(str)
         X["country_eq_platform"] = (X["country"].map(COUNTRY_CODES) == X["platform"]).astype(np.int32)
         X["last_event_ts_dict"] = X["last_event_ts"].map(json.loads)
+        X["actions_tracker"] = X["actions_tracker"].map(json.loads)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
         X["last_poi_item_ctr"] = X["last_poi_item_clicks"] / (X["last_poi_item_impressions"] + 1)
         X["user_item_ctr"] = X["clickout_user_item_clicks"] / (X["clickout_user_item_impressions"] + 1)
