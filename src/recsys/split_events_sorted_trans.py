@@ -14,7 +14,7 @@ for i in tqdm(range(df.shape[0])):
         find = int(df[i, "clickout_id"]) % 25
         filenames.append(f"01_train_{find:04d}.csv")
     elif (df[i, "is_val"] == True) and (df[i, "is_test"] == False):
-        find = 1
+        find = int(df[i, "clickout_id"]) % 2
         filenames.append(f"02_val_{find:04d}.csv")
     elif df[i, "is_test"] == True:
         find = int(df[i, "clickout_id"]) % 4

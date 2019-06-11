@@ -217,6 +217,32 @@ class FakeClickSequenceFeatures:
         return len(compressed_with_rank), (len(compressed_with_rank) / len(compressed_without_rank))
 
 
+class ItemIDS:
+    def __init__(self):
+        self.action_types = ["clickout item"]
+
+    def update_acc(self, row):
+        pass
+
+    def get_stats(self, row, item):
+        obs = {}
+        for n in range(25):
+            obs[f"item_id_at_{n}"] = 0
+            obs[f"item_id_at_{n}_norm"] = 0
+        min_diff = None
+        max_diff = None
+        for n, item_id in enumerate(row["impressions"]):
+            obs[f"item_id_at_{n}"] = int(item_id)
+            obs[f"item_id_at_{n}_norm"] = int(item["item_id"]) - int(item_id)
+            # if n == 0:
+            #     obs[f"item_id_at_max"] = obs[f"item_id_at_{n}_norm"]
+            #     obs[f"item_id_at_min"] = obs[f"item_id_at_{n}_norm"]
+            # else:
+            #     obs[f"item_id_max_diff"] = max(obs[f"item_id_max_diff"], obs[f"item_id_at_{n}_norm"])
+            #     obs[f"item_id_min_diff"] = min(obs[f"item_id_min_diff"], obs[f"item_id_at_{n}_norm"])
+        return obs
+
+
 class Last10Actions:
     def __init__(self):
         self.current_impression = {}
@@ -1295,7 +1321,7 @@ def get_accumulators(hashn=None):
                 acc, (row["user_id"], row["reference"], "interaction item image"), row["timestamp"]
             ),
             get_stats_func=lambda acc, row, item: min(
-                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "interaction item image"), 0), 1_000_000
+                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "interaction item image"), 0), 1000000
             ),
         ),
         StatsAcc(
@@ -1306,7 +1332,7 @@ def get_accumulators(hashn=None):
                 acc, (row["user_id"], row["reference"], "clickout item"), row["timestamp"]
             ),
             get_stats_func=lambda acc, row, item: min(
-                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "clickout item"), 0), 1_000_000
+                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "clickout item"), 0), 1000000
             ),
         ),
         StatsAcc(
@@ -1360,6 +1386,7 @@ def get_accumulators(hashn=None):
         ItemCTRInSequence(),
         ItemCTRRankWeighted(),
         Last10Actions(),
+        ItemIDS(),
     ] + [
         StatsAcc(
             name="{}_count".format(action_type.replace(" ", "_")),
