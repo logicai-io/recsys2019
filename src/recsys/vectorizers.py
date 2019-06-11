@@ -325,6 +325,7 @@ def make_vectorizer_1(
                 ("last_10_actions", CountVectorizer(ngram_range=(3, 3), tokenizer=list, min_df=2), "last_10_actions"),
                 ("last_poi_bow", CountVectorizer(min_df=5), "last_poi"),
                 ("last_event_ts_dict", DictVectorizer(), "last_event_ts_dict"),
+                ("actions_tracker", DictVectorizer(), "actions_tracker"),
                 (
                     "absolute_rank_0_norm",
                     FeaturesAtAbsoluteRank(rank=0, normalize=True),
