@@ -1488,8 +1488,10 @@ def get_accumulators(hashn=None):
         ItemCTRInSequence(),
         ItemCTRRankWeighted(),
         Last10Actions(),
-        ItemIDS(),
         PriceSorted(),
+        ActionsTracker(),
+        DistinctInteractions(name="clickout", action_types=["clickout item"]),
+        DistinctInteractions(name="interact", action_types=ACTIONS_WITH_ITEM_REFERENCE),
     ] + [
         StatsAcc(
             name="{}_count".format(action_type.replace(" ", "_")),
