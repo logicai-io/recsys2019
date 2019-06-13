@@ -2,6 +2,8 @@ import gzip
 import json
 from collections import defaultdict
 from statistics import mean, stdev
+from typing import Dict
+from math import log1p
 
 import joblib
 from recsys.data_generator.accumulators_helpers import (
@@ -20,6 +22,7 @@ from recsys.data_generator.accumulators_helpers import (
 from recsys.data_generator.jaccard_sim import ItemPriceSim, JaccardItemSim
 from recsys.log_utils import get_logger
 from recsys.utils import group_time
+from scipy.stats import pearsonr
 
 ACTION_SHORTENER = {
     "change of sort order": "a",
@@ -227,19 +230,9 @@ class ItemIDS:
     def get_stats(self, row, item):
         obs = {}
         for n in range(25):
-            obs[f"item_id_at_{n}"] = 0
-            obs[f"item_id_at_{n}_norm"] = 0
-        min_diff = None
-        max_diff = None
+            obs[f"item_id_at_{n:02d}"] = 0
         for n, item_id in enumerate(row["impressions"]):
-            obs[f"item_id_at_{n}"] = int(item_id)
-            obs[f"item_id_at_{n}_norm"] = int(item["item_id"]) - int(item_id)
-            # if n == 0:
-            #     obs[f"item_id_at_max"] = obs[f"item_id_at_{n}_norm"]
-            #     obs[f"item_id_at_min"] = obs[f"item_id_at_{n}_norm"]
-            # else:
-            #     obs[f"item_id_max_diff"] = max(obs[f"item_id_max_diff"], obs[f"item_id_at_{n}_norm"])
-            #     obs[f"item_id_min_diff"] = min(obs[f"item_id_min_diff"], obs[f"item_id_at_{n}_norm"])
+            obs[f"item_id_at_{n:02d}"] = int(item_id) // 10000
         return obs
 
 
@@ -608,20 +601,45 @@ class ItemCTRByKey:
 
 
 class DistinctInteractions:
-    def __init__(self, action_type, by="timestamp"):
-        self.action_types = [action_type]
-        self.counter = defaultdict(set)
-        self.by = by
+    def __init__(self, name, action_types, by="timestamp"):
+        self.name = name
+        self.action_types = action_types
+        self.counter = defaultdict(int)
+        self.item_set = defaultdict(set)
 
     def update_acc(self, row):
-        key = (row["user_id"], row["reference"])
-        self.counter[key].add(row[self.by])
+        key = row["user_id"]
+        if row["reference"].isnumeric():
+            self.item_set[key].add(int(row["reference"]))
+            self.counter[key] += 1
 
     def get_stats(self, row, item):
-        key = (row["user_id"], item["item_id"])
-        output = {}
-        output["{}_unique_num_by_{}".format(self.action_types[0].replace(" ", "_"), self.by)] = len(self.counter[key])
-        return output
+        key = row["user_id"]
+        uniq = len(self.item_set[key])
+        all = self.counter[key]
+
+        """
+        If the interactions are unique so for example there were 10 interactions with 10 items
+        then the probability of another unique interaction is very high (rule of succession = 11/12).
+        
+        uniq interactions = 10
+        all interactions = 10
+        
+        item  was_interaction  prob
+        A     true             1-11/12 = 0.08333
+        B     true             1-11/12 = 0.08333       
+        C     false            11/12   = 0.91666
+        D     false            11/12   = 0.91666
+        """
+
+        obs = {}
+        obs[f"{self.name}_uniq_interactions"] = uniq / (all + 1)
+        if int(item["item_id"]) in self.item_set[key]:
+            obs[f"{self.name}_item_uniq_prob"] = 1 - ((uniq + 1) / (all + 2))
+        else:
+            obs[f"{self.name}_item_uniq_prob"] = (uniq + 1) / (all + 2)
+
+        return obs
 
 
 class MouseSpeed:
@@ -1056,6 +1074,95 @@ class ItemCTRInSequence:
         return obs
 
 
+class PriceSorted:
+    def __init__(self):
+        self.action_types = ["clickout item"]
+
+    def update_acc(self, row):
+        pass
+
+    def get_stats(self, row, item):
+        prices = row["prices"]
+        obs = {}
+        obs["price_rem"] = item["price"] % 100
+        obs["are_price_sorted"] = int(prices == sorted(prices))
+        obs["are_price_sorted_rev"] = int(prices == sorted(prices, reverse=True))
+
+        # calculates the point until the prices are sorted
+        obs["prices_sorted_until"] = 0
+        for n in range(len(prices)):
+            prices_sorted = int(prices == sorted(prices))
+            if not prices_sorted:
+                break
+            obs["prices_sorted_until"] = n
+
+        obs["prices_sorted_until_current_rank"] = int(item["rank"] < n)
+        should_be_sorted = int("Sort by Price" in row["current_filters"])
+        obs["wrong_price_sorting"] = int(should_be_sorted and not obs["are_price_sorted"])
+        return obs
+
+
+class ActionsTracker:
+    def __init__(self):
+        self.action_types = ALL_ACTIONS
+        self.all_events_list = defaultdict(lambda: defaultdict(list))
+        self.int_events_list = defaultdict(list)
+        self.max_timestamp = defaultdict(int)
+
+    def update_acc(self, row: Dict):
+        if self.max_timestamp[row["user_id"]] == 0:
+            self.max_timestamp[row["user_id"]] = row["timestamp"]
+
+        # aggregate to lists
+        new_row = self.prepare_new_row(row)
+
+        self.all_events_list[row["user_id"]][row["action_type"]].append(new_row)
+        if row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE:
+            self.int_events_list[row["user_id"]].append(new_row)
+
+    def prepare_new_row(self, row):
+        new_row = {}
+        new_row["action_type"] = row["action_type"]
+        new_row["timestamp"] = row["timestamp"]
+        new_row["reference"] = row["reference"]
+        new_row["fake_prices"] = row["fake_prices"]
+        new_row["fake_impressions"] = row["fake_impressions"]
+        return new_row
+
+    def get_stats(self, row, item):
+        all_events_list = self.all_events_list[row["user_id"]]
+        max_timestamp = row["timestamp"]
+        obs = {}
+        for action_type in all_events_list.keys():
+            for event_num, new_row in enumerate(all_events_list[action_type][::-1][:10]):
+                impressions = new_row["fake_impressions"]
+                prices = new_row["fake_prices"].split("|")
+                # import ipdb; ipdb.set_trace()
+                if action_type == "clickout item" and event_num <= 1:
+                    for rank, (item_id, price) in enumerate(zip(impressions, prices)):
+                        price = int(price)
+                        obs[f"co_price_{rank:02d}_{event_num:02d}"] = log1p(price)
+
+                obs[f"{action_type}_{event_num:02d}_timestamp"] = log1p(max_timestamp - new_row["timestamp"])
+                if new_row["action_type"] in ACTIONS_WITH_ITEM_REFERENCE:
+                    impressions = new_row["fake_impressions"]
+                    if new_row["reference"] in impressions:
+                        obs[f"{action_type}_rank_{event_num:02d}"] = impressions.index(new_row["reference"]) + 1
+                        obs[f"{action_type}_rank_{event_num:02d}_rel"] = item["rank"] - impressions.index(
+                            new_row["reference"]
+                        )
+
+        int_events_list = self.int_events_list[row["user_id"]]
+        for event_num, new_row in enumerate(int_events_list[::-1][:10]):
+            obs[f"interaction_{event_num:02d}_timestamp"] = log1p(max_timestamp - new_row["timestamp"])
+            impressions = new_row["fake_impressions"]
+            if new_row["reference"] in impressions:
+                obs[f"interaction_rank_{event_num:02d}"] = impressions.index(new_row["reference"]) + 1
+                obs[f"interaction_rank_{event_num:02d}_rel"] = item["rank"] - impressions.index(new_row["reference"])
+
+        return {"actions_tracker": json.dumps(obs)}
+
+
 def group_accumulators(accumulators):
     accs_by_action_type = defaultdict(list)
     for acc in accumulators:
@@ -1321,7 +1428,7 @@ def get_accumulators(hashn=None):
                 acc, (row["user_id"], row["reference"], "interaction item image"), row["timestamp"]
             ),
             get_stats_func=lambda acc, row, item: min(
-                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "interaction item image"), 0), 1000000
+                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "interaction item image"), 0), 1_000_000
             ),
         ),
         StatsAcc(
@@ -1332,7 +1439,7 @@ def get_accumulators(hashn=None):
                 acc, (row["user_id"], row["reference"], "clickout item"), row["timestamp"]
             ),
             get_stats_func=lambda acc, row, item: min(
-                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "clickout item"), 0), 1000000
+                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "clickout item"), 0), 1_000_000
             ),
         ),
         StatsAcc(
@@ -1375,8 +1482,6 @@ def get_accumulators(hashn=None):
         SimilarUsersItemInteraction(),
         MostSimilarUserItemInteraction(),
         GlobalTimestampPerItem(),
-        # ItemLooStats(),
-        # ItemLooStatsByPlatform("../../../data/item_stats_loo_by_platform.joblib", suffix="_by_platform"),
         ClickSequenceFeatures(),
         FakeClickSequenceFeatures(),
         TimeSinceSessionStart(),
@@ -1386,7 +1491,10 @@ def get_accumulators(hashn=None):
         ItemCTRInSequence(),
         ItemCTRRankWeighted(),
         Last10Actions(),
-        ItemIDS(),
+        PriceSorted(),
+        ActionsTracker(),
+        DistinctInteractions(name="clickout", action_types=["clickout item"]),
+        DistinctInteractions(name="interact", action_types=ACTIONS_WITH_ITEM_REFERENCE),
     ] + [
         StatsAcc(
             name="{}_count".format(action_type.replace(" ", "_")),
@@ -1399,7 +1507,7 @@ def get_accumulators(hashn=None):
     ]
 
     if hashn is not None:
-        accumulators = [acc for i, acc in enumerate(accumulators) if i % 8 == hashn]
+        accumulators = [acc for i, acc in enumerate(accumulators) if i % 32 == hashn]
         print("N acc", hashn, len(accumulators))
 
     return accumulators
