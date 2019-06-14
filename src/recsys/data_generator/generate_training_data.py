@@ -29,6 +29,10 @@ class FeatureGenerator:
         features = self.update_obs_with_acc(obs, row)
         del obs["fake_impressions"]
         del obs["fake_impressions_raw"]
+        for col in ["fake_impressions_v2_user", "fake_impressions_v2_user_session",
+                    "fake_impressions_v2_user_resets", "fake_impressions_v2_user_session_resets"]:
+            del obs[col]
+            del obs[col + "_raw"]
         del obs["fake_prices"]
         del obs["impressions"]
         del obs["impressions_hash"]
@@ -98,6 +102,17 @@ class FeatureGenerator:
                 if row["reference"] in row["fake_impressions"]
                 else -1000
             )
+            
+            for col in ["fake_impressions_v2_user", "fake_impressions_v2_user_session", 
+                        "fake_impressions_v2_user_resets", "fake_impressions_v2_user_session_resets"]:
+                row[col + "_raw"] = row[col]
+                row[col] = row[col].split("|")
+                row[col + "_index"] = (
+                    row[col].index(row["reference"])
+                    if row["reference"] in row[col]
+                    else -1000
+                )
+
 
             if row["action_type"] == "clickout item":
                 row["impressions_raw"] = row["impressions"]

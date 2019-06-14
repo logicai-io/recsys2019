@@ -1,6 +1,6 @@
 import gzip
 import json
-from collections import defaultdict
+from collections import defaultdict, Counter
 from statistics import mean, stdev
 from typing import Dict
 from math import log1p
@@ -265,11 +265,13 @@ class ClickProbabilityClickOffsetTimeOffset:
         action_types=None,
         impressions_type="impressions_raw",
         index_col="index_clicked",
+        probs_path="../../../data/click_probs_by_index.joblib"
     ):
         self.name = name
         self.action_types = action_types
         self.index_col = index_col
         self.impressions_type = impressions_type
+        self.probs_path = probs_path
         # tracks the impression per user
         self.current_impression = defaultdict(str)
         self.last_timestamp = {}
@@ -277,7 +279,7 @@ class ClickProbabilityClickOffsetTimeOffset:
         self.read_probs()
 
     def read_probs(self):
-        self.probs = joblib.load("../../../data/click_probs_by_index.joblib")
+        self.probs = joblib.load(self.probs_path)
 
     def update_acc(self, row):
         self.current_impression[row["user_id"]] = row[self.impressions_type]
@@ -1161,6 +1163,77 @@ class ActionsTracker:
                 obs[f"interaction_rank_{event_num:02d}_rel"] = item["rank"] - impressions.index(new_row["reference"])
 
         return {"actions_tracker": json.dumps(obs)}
+
+
+class PairwiseCTR():
+
+    LEFT_WON = -1
+    RIGHT_WON = 1
+    DRAW = 0
+
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.pairs = defaultdict(Counter)
+
+    def update_acc(self, row: Dict):
+        impressions = list(map(int, row["impressions"]))
+        ref = int(row["reference"])
+        for bigr in self.zipngram3(impressions, 2):
+            l, r = bigr
+            if ref == l:
+                self.pairs[bigr].update([self.LEFT_WON])
+            elif ref == r:
+                self.pairs[bigr].update([self.RIGHT_WON])
+            else:
+                self.pairs[bigr].update([self.DRAW])
+
+    def get_stats(self, row, item):
+        impressions = list(map(int, row["impressions"]))
+        position = item["rank"]
+
+        try:
+            prv_item = impressions[position-1]
+        except IndexError:
+            prv_item = None
+        this_item = impressions[position]
+        try:
+            next_item = impressions[position+1]
+        except IndexError:
+            next_item = None
+
+        obs = {}
+        obs["pairwise_1_ctr_left_won"] = self.pairs[(prv_item, this_item)][self.LEFT_WON]
+        obs["pairwise_1_ctr_right_won"] = self.pairs[(prv_item, this_item)][self.RIGHT_WON]
+        obs["pairwise_1_ctr_draw"] = self.pairs[(prv_item, this_item)][self.DRAW]
+        obs["pairwise_1_rel"] = obs["pairwise_1_ctr_left_won"] / (obs["pairwise_1_ctr_right_won"]+1)
+        obs["pairwise_2_ctr_left_won"] = self.pairs[(this_item, next_item)][self.LEFT_WON]
+        obs["pairwise_2_ctr_right_won"] = self.pairs[(this_item, next_item)][self.RIGHT_WON]
+        obs["pairwise_2_ctr_draw"] = self.pairs[(this_item, next_item)][self.DRAW]
+        obs["pairwise_2_rel"] = obs["pairwise_2_ctr_left_won"] / (obs["pairwise_2_ctr_right_won"]+1)
+        return obs
+
+    def zipngram3(self, words, n=2):
+        return zip(*[words[i:] for i in range(n)])
+
+
+class RankOfItemsFreshClickout():
+
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.positions = defaultdict(Counter)
+
+    def update_acc(self, row: Dict):
+        if int(row["step"]) <= 2:
+            impressions = list(map(int, row["impressions"]))
+            for rank, item_id in enumerate(impressions):
+                self.positions[item_id].update([rank])
+
+    def get_stats(self, row, item):
+        obs = {}
+        s = sum([cnt for cnt in self.positions[int(item["item_id"])].values()])
+        avg = sum([rank*cnt for rank,cnt in self.positions[int(item["item_id"])].items()])/(s+1)
+        obs["average_fresh_rank"] = avg
+        return obs
 
 
 def group_accumulators(accumulators):
