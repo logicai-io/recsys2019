@@ -585,6 +585,8 @@ class GlobalClickoutTimestamp():
         self.last_user = {}
 
     def update_acc(self, row):
+        if not row["reference"].isnumeric():
+            return
         self.last_ts[int(row["reference"])] = row["timestamp"]
         self.last_user[int(row["reference"])] = row["user_id"]
 
@@ -1198,6 +1200,8 @@ class PairwiseCTR():
         self.pairs = defaultdict(Counter)
 
     def update_acc(self, row: Dict):
+        if not row["reference"].isnumeric():
+            return
         impressions = list(map(int, row["impressions"]))
         ref = int(row["reference"])
         for bigr in self.zipngram3(impressions, 2):
