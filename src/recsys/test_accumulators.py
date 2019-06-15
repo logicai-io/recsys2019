@@ -1,18 +1,22 @@
 import json
 
 import pandas as pd
-from lightgbm import LGBMRanker
+import numpy as np
+from lightgbm import LGBMRanker, LGBMClassifier
 from recsys.data_generator.accumulators import (
     ACTIONS_WITH_ITEM_REFERENCE,
     ActionsTracker,
     DistinctInteractions,
     PriceSorted,
-    PairwiseCTR, RankOfItemsFreshClickout, ClickProbabilityClickOffsetTimeOffset)
+    PairwiseCTR, RankOfItemsFreshClickout, ClickProbabilityClickOffsetTimeOffset, GlobalClickoutTimestamp,
+    SequenceClickout, RankBasedCTR)
 from recsys.data_generator.generate_training_data import FeatureGenerator
 from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast, mrr_fast_v2
 from recsys.utils import group_lengths
 from recsys.vectorizers import make_vectorizer_3_no_eng
+from tqdm import tqdm
+from scipy import sparse as sp
 
 """
 for col in ["fake_impressions_v2_user", "fake_impressions_v2_user_session", 
@@ -27,6 +31,9 @@ accumulators = [
     DistinctInteractions(name="interact", action_types=ACTIONS_WITH_ITEM_REFERENCE),
     PairwiseCTR(),
     RankOfItemsFreshClickout(),
+    GlobalClickoutTimestamp(),
+    SequenceClickout(),
+    RankBasedCTR()
     # ClickProbabilityClickOffsetTimeOffset(
     #     name="fake_clickout_prob_time_position_offset",
     #     action_types=ACTIONS_WITH_ITEM_REFERENCE,
@@ -77,6 +84,19 @@ By rank
 7 0.6063154068154069
 8 0.556917981366362
 9 0.5236013986013986
+
+
+0.6272691141456231
+By rank
+1 0.6655270761353442
+2 0.602912678571626
+3 0.5723195447128363
+4 0.5820829925710631
+5 0.5596296676257162
+6 0.5626214755254666
+7 0.6316358136342608
+8 0.5626260839680572
+9 0.5318723175746586
 """
 
 """
@@ -95,7 +115,7 @@ By rank
 
 csv = "../../data/events_sorted_trans_mini.csv"
 feature_generator = FeatureGenerator(
-    limit=500000,
+    limit=1000000,
     accumulators=accumulators,
     save_only_features=False,
     input="../../data/events_sorted.csv",
@@ -114,7 +134,6 @@ mat_train = vectorizer.fit_transform(df_train, df_train["was_clicked"])
 print(mat_train.shape)
 mat_val = vectorizer.transform(df_val)
 print(mat_val.shape)
-
 
 def mrr_metric(train_data, preds):
     mrr = mrr_fast_v2(train_data, preds, df_val["clickout_id"].values)
@@ -160,4 +179,43 @@ df_train["click_proba"] = model.predict(df_train[features])
 df_val["click_proba"] = model.predict(df_val[features])
 print(mrr_fast(df_val, "click_proba"))
 for fname, imp in zip(features, model.feature_importances_):
-    print(fname, imp, mrr_fast(df_val, fname))
+    df_val[fname+"m"] = -df_val[fname]
+    print(fname, imp, max(mrr_fast(df_val.sample(frac=1), fname+"m"), mrr_fast(df_val.sample(frac=1), fname)))
+
+
+"""
+
+def transpose_mat(mat_train, df_train):
+    mat_train_t = np.zeros((df_train["clickout_id"].nunique(), mat_train.shape[1]*25), dtype=np.float32)
+    mat_clickout_row = dict(zip(df_train["clickout_id"].unique(), np.arange(df_train["clickout_id"].nunique())))
+    mat_clickout_y = dict(zip(df_train["clickout_id"], df_train["index_clicked"]))
+    n_rows = mat_train.shape[0]
+    n_cols = mat_train.shape[1]
+    ranks = df_train["rank"].values
+    clickouts = df_train["clickout_id"].values
+    for i in tqdm(range(n_rows)):
+        rank = ranks[i]
+        i_t = mat_clickout_row[clickouts[i]]
+        for j in range(n_cols):
+            j_t = rank*n_cols + j
+            mat_train_t[i_t, j_t] = mat_train[i, j]
+    y_train_t = pd.Series(df_train["clickout_id"].unique()).map(mat_clickout_y)
+    return sp.csr_matrix(mat_train_t), y_train_t
+
+
+mat_train_t, y_train_t = transpose_mat(mat_train, df_train)
+mat_val_t, y_val_t = transpose_mat(mat_val, df_val)
+
+model = LGBMClassifier(learning_rate=0.1, n_estimators=100, min_child_samples=5, min_child_weight=0.00001, verbose=1, n_jobs=-2)
+model.fit(
+    sp.csr_matrix(mat_train_t),
+    y_train_t,
+    eval_set=[(sp.csr_matrix(mat_val_t), y_val_t)],
+)
+
+val_pred_proba = model.predict_proba(sp.csr_matrix(mat_val_t))[:,1:]
+val_pred_proba_sort = np.argsort(-val_pred_proba, axis=1)
+val_pred_proba_sort[np.arange(val_pred_proba.shape[0]), y_val_t]
+
+assert False
+"""
