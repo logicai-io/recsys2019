@@ -1,6 +1,11 @@
 import pandas as pd
-from recsys.data_generator.accumulators import (GlobalClickoutTimestamp, PairwiseCTR, RankBasedCTR,
-                                                RankOfItemsFreshClickout, SequenceClickout)
+from recsys.data_generator.accumulators import (
+    GlobalClickoutTimestamp,
+    PairwiseCTR,
+    RankBasedCTR,
+    RankOfItemsFreshClickout,
+    SequenceClickout,
+)
 from recsys.data_generator.generate_training_data import FeatureGenerator
 from recsys.utils import get_sort_index
 from recsys.vectorizers import make_vectorizer_4

@@ -30,7 +30,18 @@ with timer("splitting data"):
     gc.collect()
 
 with timer("model fitting"):
-    model = XGBRanker(n_estimators=1500, learning_rate=0.1, subsample=0.9, objective="rank:pairwise", tree_method="hist", grow_policy="lossguide",gamma=1.0, max_depth=0, max_leaves=255, min_child_weight=100)
+    model = XGBRanker(
+        n_estimators=1500,
+        learning_rate=0.1,
+        subsample=0.9,
+        objective="rank:pairwise",
+        tree_method="hist",
+        grow_policy="lossguide",
+        gamma=1.0,
+        max_depth=0,
+        max_leaves=255,
+        min_child_weight=100,
+    )
     model.fit(
         X_train,
         meta_train["was_clicked"].values,

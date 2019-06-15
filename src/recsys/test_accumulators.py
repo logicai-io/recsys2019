@@ -8,8 +8,13 @@ from recsys.data_generator.accumulators import (
     ActionsTracker,
     DistinctInteractions,
     PriceSorted,
-    PairwiseCTR, RankOfItemsFreshClickout, ClickProbabilityClickOffsetTimeOffset, GlobalClickoutTimestamp,
-    SequenceClickout, RankBasedCTR)
+    PairwiseCTR,
+    RankOfItemsFreshClickout,
+    ClickProbabilityClickOffsetTimeOffset,
+    GlobalClickoutTimestamp,
+    SequenceClickout,
+    RankBasedCTR,
+)
 from recsys.data_generator.generate_training_data import FeatureGenerator
 from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast, mrr_fast_v2
@@ -135,6 +140,7 @@ print(mat_train.shape)
 mat_val = vectorizer.transform(df_val)
 print(mat_val.shape)
 
+
 def mrr_metric(train_data, preds):
     mrr = mrr_fast_v2(train_data, preds, df_val["clickout_id"].values)
     return "error", mrr, True
@@ -179,8 +185,8 @@ df_train["click_proba"] = model.predict(df_train[features])
 df_val["click_proba"] = model.predict(df_val[features])
 print(mrr_fast(df_val, "click_proba"))
 for fname, imp in zip(features, model.feature_importances_):
-    df_val[fname+"m"] = -df_val[fname]
-    print(fname, imp, max(mrr_fast(df_val.sample(frac=1), fname+"m"), mrr_fast(df_val.sample(frac=1), fname)))
+    df_val[fname + "m"] = -df_val[fname]
+    print(fname, imp, max(mrr_fast(df_val.sample(frac=1), fname + "m"), mrr_fast(df_val.sample(frac=1), fname)))
 
 
 """
