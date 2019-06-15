@@ -221,6 +221,21 @@ numerical_features_info = [
     ("clickout_item_uniq_prob", True),
     ("interact_uniq_interactions", False),
     ("interact_item_uniq_prob", True),
+    ("pairwise_1_ctr_left_won", False),
+    ("pairwise_1_ctr_right_won", False),
+    ("pairwise_1_ctr_draw", False),
+    ("pairwise_1_rel", False),
+    ("pairwise_2_ctr_left_won", False),
+    ("pairwise_2_ctr_right_won", False),
+    ("pairwise_2_ctr_draw", False),
+    ("pairwise_2_rel", False),
+    ("average_fresh_rank", False),
+    ("average_fresh_rank_rel", False),
+    ("last_item_timestamp", False),
+    ("last_item_click_same_user", False),
+    ("item_was_in_prv_clickout", False),
+    ("item_clickouts_intersection", False),
+    ("rank_based_ctr", False),
 ]
 
 numerical_features_for_ranking_py = [f for f, rank in numerical_features_info if rank]
@@ -450,7 +465,7 @@ def make_vectorizer_4(numerical_features, numerical_features_for_ranking):
                     "numerical_ranking_rev",
                     make_pipeline(RankFeatures(ascending=True), MinimizeNNZ()),
                     numerical_features_for_ranking + ["clickout_id"],
-                )
+                ),
             ]
         )
     )
