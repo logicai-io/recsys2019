@@ -351,7 +351,7 @@ def make_vectorizer_2(
                     make_pipeline(
                         PandasToNpArray(), SimpleImputer(strategy="constant", fill_value=0), StandardScaler()
                     ),
-                    numerical_features,
+                    numerical_features + ps_features,
                 ),
                 (
                     "numerical_context",
@@ -427,6 +427,30 @@ def make_vectorizer_3_no_eng(numerical_features, numerical_features_for_ranking)
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
                 ("actions_tracker", DictVectorizer(), "actions_tracker"),
+            ]
+        )
+    )
+
+
+def make_vectorizer_4(numerical_features, numerical_features_for_ranking):
+    return make_pipeline(
+        ColumnTransformer(
+            [
+                (
+                    "numerical",
+                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="constant", fill_value=-9999)),
+                    numerical_features,
+                ),
+                (
+                    "numerical_ranking",
+                    make_pipeline(RankFeatures(ascending=False), MinimizeNNZ()),
+                    numerical_features_for_ranking + ["clickout_id"],
+                ),
+                (
+                    "numerical_ranking_rev",
+                    make_pipeline(RankFeatures(ascending=True), MinimizeNNZ()),
+                    numerical_features_for_ranking + ["clickout_id"],
+                )
             ]
         )
     )
