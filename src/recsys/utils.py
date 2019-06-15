@@ -72,3 +72,15 @@ def group_time(t):
 def get_git_hash():
     repo = git.Repo(search_parent_directories=True)
     return repo.head.object.hexsha
+
+
+def get_sort_index(row):
+    if (row["is_val"] == False) and (row["is_test"] == False):
+        find = int(row[i, "clickout_id"]) % 25
+        return f"01_train_{find:04d}"
+    elif (row["is_val"] == True) and (row["is_test"] == False):
+        find = int(row["clickout_id"]) % 2
+        return f"02_val_{find:04d}"
+    elif row["is_test"] == True:
+        find = int(row["clickout_id"]) % 4
+        return f"03_test_{find:04d}"

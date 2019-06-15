@@ -1203,6 +1203,8 @@ class PairwiseCTR():
         if not row["reference"].isnumeric():
             return
         impressions = list(map(int, row["impressions"]))
+        if not row["reference"].isnumeric():
+            return
         ref = int(row["reference"])
         for bigr in self.zipngram3(impressions, 2):
             l, r = bigr
