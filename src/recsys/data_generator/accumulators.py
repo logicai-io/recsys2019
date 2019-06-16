@@ -1956,6 +1956,7 @@ def get_accumulators(hashn=None):
         GlobalClickoutTimestamp(),
         SequenceClickout(),
         RankBasedCTR(),
+        ItemAverageRank(),
         UserItemAttentionSpan(),
         SameImpressionsDifferentUser(),
         SameFakeImpressionsDifferentUser(),
