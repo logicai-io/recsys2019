@@ -315,3 +315,41 @@ class DivideByRanking(BaseEstimator, TransformerMixin):
                 continue
             X[col] = X[col] / (X["rank"] + 1)
         return X
+
+
+class Normalize01(BaseEstimator, TransformerMixin):
+    def __init__(self, drop_clickout_id=True, ascending=False):
+        self.drop_clickout_id = drop_clickout_id
+        self.ascending = ascending
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        for col in X.columns:
+            if col != "clickout_id":
+                col_min = X.groupby("clickout_id")[col].min()
+                col_max = X.groupby("clickout_id")[col].max()
+                X[col + "_scaled"] = (X[col] - col_min) / (col_max - col_min)
+        if self.drop_clickout_id:
+            X.drop("clickout_id", axis=1, inplace=True)
+        return X
+
+
+class NormalizeMean(BaseEstimator, TransformerMixin):
+    def __init__(self, drop_clickout_id=True, ascending=False):
+        self.drop_clickout_id = drop_clickout_id
+        self.ascending = ascending
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        for col in X.columns:
+            if col != "clickout_id":
+                col_mean = X.groupby("clickout_id")[col].mean()
+                col_sd = X.groupby("clickout_id")[col].sd()
+                X[col + "_scaled"] = X[col] - col_mean
+        if self.drop_clickout_id:
+            X.drop("clickout_id", axis=1, inplace=True)
+        return X

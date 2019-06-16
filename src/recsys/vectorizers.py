@@ -16,7 +16,7 @@ from recsys.transformers import (
     RankFeatures,
     SanitizeSparseMatrix,
     SparsityFilter,
-)
+    Normalize01)
 from recsys.utils import logger
 from scipy.sparse import load_npz, save_npz
 from sklearn.compose import ColumnTransformer
@@ -223,19 +223,31 @@ numerical_features_info = [
     ("interact_item_uniq_prob", True),
     ("pairwise_1_ctr_left_won", False),
     ("pairwise_1_ctr_right_won", False),
-    ("pairwise_1_ctr_draw", False),
+    ("pairwise_1_ctr_draw", True),
     ("pairwise_1_rel", False),
     ("pairwise_2_ctr_left_won", False),
     ("pairwise_2_ctr_right_won", False),
     ("pairwise_2_ctr_draw", False),
     ("pairwise_2_rel", False),
-    ("average_fresh_rank", False),
+    ("average_fresh_rank", True),
     ("average_fresh_rank_rel", False),
-    ("last_item_timestamp", False),
+    ("last_item_timestamp", True),
     ("last_item_click_same_user", False),
     ("item_was_in_prv_clickout", False),
     ("item_clickouts_intersection", False),
     ("rank_based_ctr", False),
+    ("item_last_rank",False),
+    ("item_avg_rank",False),
+    ("user_item_avg_attention",False),
+    ("is_item_within_avg_span",False),
+    ("is_item_within_avg_span_2s",False),
+    ("predicted_ind_minmax_by_user_id",False),
+    ("predicted_ind_rel_minmax_by_user_id",False),
+    ("ind_per_ts_minmax_by_user_id",False),
+    ("predicted_ind_lr_by_user_id",False),
+    ("predicted_ind_rel_lr_by_user_id",False),
+    ("predicted_ind_rel_minmax_by_session_id",False),
+    ("ind_per_ts_minmax_by_session_id",False),
 ]
 
 numerical_features_for_ranking_py = [f for f, rank in numerical_features_info if rank]
@@ -436,6 +448,11 @@ def make_vectorizer_3_no_eng(numerical_features, numerical_features_for_ranking)
                     make_pipeline(RankFeatures(ascending=False), MinimizeNNZ()),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
+                # (
+                #     "numerical_01",
+                #     make_pipeline(Normalize01(ascending=False), MinimizeNNZ()),
+                #     numerical_features_for_ranking + ["clickout_id"],
+                # ),
                 (
                     "numerical_ranking_rev",
                     make_pipeline(RankFeatures(ascending=True), MinimizeNNZ()),

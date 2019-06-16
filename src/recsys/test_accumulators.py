@@ -14,7 +14,9 @@ from recsys.data_generator.accumulators import (
     GlobalClickoutTimestamp,
     SequenceClickout,
     RankBasedCTR,
-)
+    ItemCTR, ItemCTREMA, ItemAverageRank, ClickProbabilityClickOffsetTimeOffsetByDevice, UserItemAttentionSpan,
+    SameImpressionsDifferentUser, SameFakeImpressionsDifferentUser, SameImpressionsDifferentUserTopN,
+    ClickSequenceTrend)
 from recsys.data_generator.generate_training_data import FeatureGenerator
 from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast, mrr_fast_v2
@@ -38,7 +40,38 @@ accumulators = [
     RankOfItemsFreshClickout(),
     GlobalClickoutTimestamp(),
     SequenceClickout(),
-    RankBasedCTR()
+    RankBasedCTR(), 
+    ItemCTR(action_types=["clickout item"]),
+    ItemAverageRank(),
+    UserItemAttentionSpan(),
+    SameImpressionsDifferentUser(),
+    SameFakeImpressionsDifferentUser(),
+    ClickSequenceTrend(method="minmax", by="user_id"),
+    ClickSequenceTrend(method="lr", by="user_id"),
+    ClickSequenceTrend(method="minmax", by="session_id"),
+    ClickSequenceTrend(method="lr", by="session_id")
+    # SameImpressionsDifferentUserTopN(topn=3),
+    # SameImpressionsDifferentUserTopN(topn=5),
+    # SameImpressionsDifferentUserTopN(topn=10),
+    # ClickProbabilityClickOffsetTimeOffset(action_types=["clickout item"],
+    #                                       probs_path='../../data/click_probs_by_index.joblib'),
+    # ClickProbabilityClickOffsetTimeOffset(
+    #     name="fake_clickout_prob_time_position_offset",
+    #     action_types=ACTIONS_WITH_ITEM_REFERENCE,
+    #     impressions_type="fake_impressions_raw",
+    #     index_col="fake_index_interacted",
+    #     probs_path='../../data/click_probs_by_index.joblib'
+    # ),
+    # ClickProbabilityClickOffsetTimeOffsetByDevice(name="clickout_prob_time_position_offset_by_device",
+    #                                               action_types=["clickout item"],
+    #                                               probs_path="../../data/"),
+    # ClickProbabilityClickOffsetTimeOffsetByDevice(
+    #     name="fake_clickout_prob_time_position_offset_by_device",
+    #     action_types=ACTIONS_WITH_ITEM_REFERENCE,
+    #     impressions_type="fake_impressions_raw",
+    #     index_col="fake_index_interacted",
+    #     probs_path="../../data/"
+    # ),
     # ClickProbabilityClickOffsetTimeOffset(
     #     name="fake_clickout_prob_time_position_offset",
     #     action_types=ACTIONS_WITH_ITEM_REFERENCE,
@@ -90,18 +123,17 @@ By rank
 8 0.556917981366362
 9 0.5236013986013986
 
-
-0.6272691141456231
+0.6375773044621943
 By rank
-1 0.6655270761353442
-2 0.602912678571626
-3 0.5723195447128363
-4 0.5820829925710631
-5 0.5596296676257162
-6 0.5626214755254666
-7 0.6316358136342608
-8 0.5626260839680572
-9 0.5318723175746586
+1 0.6699690922510806
+2 0.6213110794810293
+3 0.6045843053441776
+4 0.5941121201608742
+5 0.5997246413817992
+6 0.5585462886446919
+7 0.571538007638577
+8 0.546672009907304
+9 0.6279860681646396
 """
 
 """
