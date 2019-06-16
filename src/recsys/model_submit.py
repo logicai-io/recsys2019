@@ -1,6 +1,7 @@
 import gc
 
 import h5sparse
+import joblib
 import numpy as np
 import pandas as pd
 from lightgbm import LGBMRanker
@@ -33,3 +34,4 @@ with timer("model fitting"):
     meta_val["click_proba"] = val_pred
     githash = get_git_hash()
     meta_val.to_csv(f"predictions/model_submit_{githash}.csv", index=False)
+    joblib.dump(model, "model_submit.joblib")

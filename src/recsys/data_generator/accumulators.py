@@ -1421,6 +1421,8 @@ class PairwiseCTR:
         self.pairs = defaultdict(Counter)
 
     def update_acc(self, row: Dict):
+        if not row["reference"].isnumeric():
+            return
         impressions = list(map(int, row["impressions"]))
         if not row["reference"].isnumeric():
             return
