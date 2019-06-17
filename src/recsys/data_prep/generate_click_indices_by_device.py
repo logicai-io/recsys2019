@@ -13,7 +13,9 @@ raw_df = pd.read_csv("../../../data/events_sorted.csv")
 print("Filtering")
 
 for device in ["desktop", "mobile", "tablet"]:
-    clickouts_df = raw_df[(raw_df["action_type"] == "clickout item") & (~raw_df["reference"].isnull()) & (raw_df["device"]==device)]
+    clickouts_df = raw_df[
+        (raw_df["action_type"] == "clickout item") & (~raw_df["reference"].isnull()) & (raw_df["device"] == device)
+    ]
     clickouts_df["reference_int"] = clickouts_df["reference"].map(lambda x: int(x))
     clickouts_df["impressions_list"] = (
         clickouts_df["impressions"].fillna("").str.split("|").map(lambda xs: [int(x) for x in xs if x != ""])

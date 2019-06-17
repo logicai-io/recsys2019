@@ -98,7 +98,7 @@ class FeatureGenerator:
                 if row["reference"] in row["fake_impressions"]
                 else -1000
             )
-            
+
             if row["action_type"] == "clickout item":
                 row["impressions_raw"] = row["impressions"]
                 row["impressions"] = row["impressions"].split("|")

@@ -11,6 +11,7 @@ from recsys.timestamp import convert_dt_to_timezone
 from recsys.utils import reduce_mem_usage
 from scipy.sparse import csr_matrix
 from sklearn.base import BaseEstimator, TransformerMixin
+from recsys.constants import PLATFORM_CONTINENT_MAP
 
 PATH_TO_IMM = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_map.joblib"
 METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_dense.csv"
@@ -33,6 +34,7 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         imm = joblib.load(PATH_TO_IMM)
         metadata_dense = reduce_mem_usage(pd.read_csv(METADATA_DENSE).fillna(0))
         X["country"] = X["city"].map(lambda x: x.split(",")[-1].strip())
+        X["continent"] = X["platform"].map(PLATFORM_CONTINENT_MAP)
         X["item_id_cat"] = X["item_id"].map(str)
         X["country_eq_platform"] = (X["country"].map(COUNTRY_CODES) == X["platform"]).astype(np.int32)
         X["last_event_ts_dict"] = X["last_event_ts"].map(json.loads)

@@ -14,9 +14,18 @@ from recsys.data_generator.accumulators import (
     GlobalClickoutTimestamp,
     SequenceClickout,
     RankBasedCTR,
-    ItemCTR, ItemCTREMA, ItemAverageRank, ClickProbabilityClickOffsetTimeOffsetByDevice, UserItemAttentionSpan,
-    SameImpressionsDifferentUser, SameFakeImpressionsDifferentUser, SameImpressionsDifferentUserTopN,
-    ClickSequenceTrend)
+    ItemCTR,
+    ItemCTREMA,
+    ItemAverageRank,
+    ClickProbabilityClickOffsetTimeOffsetByDevice,
+    UserItemAttentionSpan,
+    SameImpressionsDifferentUser,
+    SameFakeImpressionsDifferentUser,
+    SameImpressionsDifferentUserTopN,
+    ClickSequenceTrend,
+    AccByKey,
+    ItemCTRInteractions,
+)
 from recsys.data_generator.generate_training_data import FeatureGenerator
 from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast, mrr_fast_v2
@@ -24,12 +33,6 @@ from recsys.utils import group_lengths
 from recsys.vectorizers import make_vectorizer_3_no_eng
 from tqdm import tqdm
 from scipy import sparse as sp
-
-"""
-for col in ["fake_impressions_v2_user", "fake_impressions_v2_user_session", 
-            "fake_impressions_v2_user_resets", "fake_impressions_v2_user_session_resets"]:
-"""
-
 
 accumulators = [
     PriceSorted(),
@@ -40,16 +43,23 @@ accumulators = [
     RankOfItemsFreshClickout(),
     GlobalClickoutTimestamp(),
     SequenceClickout(),
-    RankBasedCTR(), 
+    RankBasedCTR(),
     ItemCTR(action_types=["clickout item"]),
-    ItemAverageRank(),
-    UserItemAttentionSpan(),
-    SameImpressionsDifferentUser(),
-    SameFakeImpressionsDifferentUser(),
-    ClickSequenceTrend(method="minmax", by="user_id"),
-    ClickSequenceTrend(method="lr", by="user_id"),
-    ClickSequenceTrend(method="minmax", by="session_id"),
-    ClickSequenceTrend(method="lr", by="session_id")
+    AccByKey(ItemCTR(action_types=["clickout item"]), key="platform_device"),
+    AccByKey(ItemCTR(action_types=["clickout item"]), key="platform"),
+    AccByKey(ItemCTR(action_types=["clickout item"]), key="device"),
+    ItemCTRInteractions(),
+    AccByKey(ItemCTRInteractions(), key="platform_device"),
+    AccByKey(ItemCTRInteractions(), key="platform"),
+    AccByKey(ItemCTRInteractions(), key="device"),
+    # ItemAverageRank(),
+    # UserItemAttentionSpan(),
+    # SameImpressionsDifferentUser(),
+    # SameFakeImpressionsDifferentUser(),
+    # ClickSequenceTrend(method="minmax", by="user_id"),
+    # ClickSequenceTrend(method="lr", by="user_id"),
+    # ClickSequenceTrend(method="minmax", by="session_id"),
+    # ClickSequenceTrend(method="lr", by="session_id")
     # SameImpressionsDifferentUserTopN(topn=3),
     # SameImpressionsDifferentUserTopN(topn=5),
     # SameImpressionsDifferentUserTopN(topn=10),
