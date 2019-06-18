@@ -12,6 +12,9 @@ from recsys.utils import reduce_mem_usage
 from scipy.sparse import csr_matrix
 from sklearn.base import BaseEstimator, TransformerMixin
 
+EUROZONE_COUNTRIES = ["AT","BE","CY","EE","FI","FR","DE","GR","IE","IT",
+                      "LV","LT","LU","MT","NL","PT","SK","SI","ES"]
+
 PATH_TO_IMM = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_map.joblib"
 METADATA_DENSE = pathlib.Path().absolute().parents[1] / "data" / "item_metadata_dense.csv"
 PRICE_PCT_PER_CITY = pathlib.Path().absolute().parents[1] / "data" / "price_pct_by_city.joblib"
@@ -45,10 +48,17 @@ class FeatureEng(BaseEstimator, TransformerMixin):
         X["hour"] = X["timestamp"].map(lambda t: arrow.get(t).hour)
         X["is_rank_greater_than_prv_click"] = (X["rank"] > X["last_item_index"]).astype(np.int32)
         X["current_filters"].fillna("", inplace=True)
+        X["current_filters_flg"] = X["current_filters"].apply(lambda x: 0 if x=="" else 1)
         X["clicked_before"] = (X["item_id"] == X["last_item_clickout"]).astype(np.int32)
         X["last_poi"].fillna("", inplace=True)
         X["alltime_filters"].fillna("", inplace=True)
         X["user_id_1cat"] = X["user_id"].map(lambda x: x[0])
+        X["price_per_stars"] = X["price"] * X["stars"]
+        X["price_per_rating"] = X["price"] * X["rating"]
+        X["filters_with_properties"] = X["current_filters"].apply(lambda x: x.replace("|"," "))+" "+X["properties"]
+        X["mobile_rank_interaction"] = X["device"].apply(lambda x: 1 if x=="mobile" else 0) * X["rank"]
+        X["eurozone_platform"] = X["platform"].apply(lambda x: 1 if x in EUROZONE_COUNTRIES else 0)
+
 
         # add price per city percentile
         price_pct_by_city = joblib.load(PRICE_PCT_PER_CITY)
@@ -111,6 +121,7 @@ class RankFeatures(BaseEstimator, TransformerMixin):
     def transform(self, X):
         for col in X.columns:
             if col != "clickout_id":
+                print(X["clickout_id"].shape)
                 X[col + "rank"] = X.groupby("clickout_id")[col].rank("max", ascending=self.ascending) - 1
         if self.drop_clickout_id:
             X.drop("clickout_id", axis=1, inplace=True)
