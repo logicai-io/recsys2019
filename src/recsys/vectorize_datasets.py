@@ -1,3 +1,7 @@
+import os
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
 from recsys.log_utils import get_logger
 from recsys.vectorizers import make_vectorizer_1, VectorizeChunks, make_vectorizer_2
 
@@ -14,7 +18,7 @@ if __name__ == "__main__":
             vectorizer=lambda: make_vectorizer_1(),
             input_files="../../data/proc/raw_csv/*.csv",
             output_folder="../../data/proc/vectorizer_1/",
-            n_jobs=10,
+            n_jobs=7,
         )
         vectorize_chunks.vectorize_all()
     else:
