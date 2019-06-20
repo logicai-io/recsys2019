@@ -221,6 +221,10 @@ numerical_features_info = [
     ("clickout_item_uniq_prob", True),
     ("interact_uniq_interactions", False),
     ("interact_item_uniq_prob", True),
+    ("price_per_stars", True),
+    ("price_per_rating", True),
+    ("mobile_rank_interaction", False),
+    ("eurozone_platform", False),
 ]
 
 numerical_features_for_ranking_py = [f for f, rank in numerical_features_info if rank]
@@ -311,7 +315,8 @@ def make_vectorizer_1(
                     make_pipeline(RankFeatures(ascending=True), MinimizeNNZ()),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
-                ("properties", CountVectorizer(tokenizer=identity, lowercase=False, min_df=2), "properties"),
+                #("properties", CountVectorizer(tokenizer=identity, lowercase=False, min_df=2), "properties"),
+                ("filters_with_properties", CountVectorizer(tokenizer=identity, lowercase=False, min_df=2), "filters_with_properties"),
                 (
                     "current_filters",
                     CountVectorizer(preprocessor=fillna_with_unk, tokenizer=split_by_pipe, min_df=2),
