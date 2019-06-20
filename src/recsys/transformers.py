@@ -121,7 +121,6 @@ class RankFeatures(BaseEstimator, TransformerMixin):
     def transform(self, X):
         for col in X.columns:
             if col != "clickout_id":
-                print(X["clickout_id"].shape)
                 X[col + "rank"] = X.groupby("clickout_id")[col].rank("max", ascending=self.ascending) - 1
         if self.drop_clickout_id:
             X.drop("clickout_id", axis=1, inplace=True)
