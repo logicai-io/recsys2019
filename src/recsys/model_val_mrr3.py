@@ -4,7 +4,7 @@ import h5sparse
 import joblib
 import numpy as np
 import pandas as pd
-from lightgbm import LGBMRanker
+from lightgbm import LGBMRankerMRR3
 from recsys.log_utils import get_logger
 from recsys.metric import mrr_fast
 from recsys.utils import group_lengths, timer, get_git_hash
@@ -30,7 +30,7 @@ with timer("splitting data"):
     gc.collect()
 
 with timer("model fitting"):
-    model = LGBMRanker(n_estimators=1600, num_leaves=62, n_jobs=-2)
+    model = LGBMRankerMRR3(n_estimators=1600, num_leaves=62, n_jobs=-2)
     model.fit(X_train, meta_train["was_clicked"].values, group=group_lengths(meta_train["clickout_id"].values))
     val_pred = model.predict(X_val)
     train_pred = model.predict(X_train)
@@ -39,5 +39,5 @@ with timer("model fitting"):
     meta_val["click_proba"] = val_pred
     logger.info("Val MRR {:.4f}".format(mrr_fast(meta_val, "click_proba")))
     githash = get_git_hash()
-    meta_val.to_csv(f"predictions/model_val_{githash}.csv", index=False)
-    joblib.dump(model, "model_val.joblib")
+    meta_val.to_csv(f"predictions/model_val_{githash}_mrr3.csv", index=False)
+    joblib.dump(model, "model_val_mrr3.joblib")

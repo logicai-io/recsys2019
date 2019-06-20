@@ -112,8 +112,9 @@ class FeatureGenerator:
                     obs, features = self.calculate_features_per_item(clickout_id, item_id, price, rank, row)
                     yield obs, features
 
-            for acc in self.accs_by_action_type[row["action_type"]]:
-                acc.update_acc(row)
+            if int(row["is_test"]) == 0:
+                for acc in self.accs_by_action_type[row["action_type"]]:
+                    acc.update_acc(row)
 
 
 @click.command()

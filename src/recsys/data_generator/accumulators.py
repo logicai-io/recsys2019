@@ -1,9 +1,10 @@
 import gzip
 import json
-from collections import defaultdict
+from collections import Counter, defaultdict
+from copy import deepcopy
+from math import log1p, sqrt
 from statistics import mean, stdev
 from typing import Dict
-from math import log1p
 
 import joblib
 from recsys.data_generator.accumulators_helpers import (
@@ -22,7 +23,6 @@ from recsys.data_generator.accumulators_helpers import (
 from recsys.data_generator.jaccard_sim import ItemPriceSim, JaccardItemSim
 from recsys.log_utils import get_logger
 from recsys.utils import group_time
-from scipy.stats import pearsonr
 
 ACTION_SHORTENER = {
     "change of sort order": "a",
@@ -265,11 +265,13 @@ class ClickProbabilityClickOffsetTimeOffset:
         action_types=None,
         impressions_type="impressions_raw",
         index_col="index_clicked",
+        probs_path="../../../data/click_probs_by_index.joblib",
     ):
         self.name = name
         self.action_types = action_types
         self.index_col = index_col
         self.impressions_type = impressions_type
+        self.probs_path = probs_path
         # tracks the impression per user
         self.current_impression = defaultdict(str)
         self.last_timestamp = {}
@@ -277,7 +279,7 @@ class ClickProbabilityClickOffsetTimeOffset:
         self.read_probs()
 
     def read_probs(self):
-        self.probs = joblib.load("../../../data/click_probs_by_index.joblib")
+        self.probs = joblib.load(self.probs_path)
 
     def update_acc(self, row):
         self.current_impression[row["user_id"]] = row[self.impressions_type]
@@ -302,6 +304,74 @@ class ClickProbabilityClickOffsetTimeOffset:
 
             if key in self.probs:
                 return self.probs[key]
+            else:
+                try:
+                    return self.probs[(click_offset, 120)]
+                except KeyError:
+                    return self.default_click_prob(item)
+
+        else:
+            # TODO fill this with prior distribution for positions
+            return self.default_click_prob(item)
+
+    def default_click_prob(self, item):
+        probs = {0: 0.3, 1: 0.2, 2: 0.1, 3: 0.07, 4: 0.05, 5: 0.03}
+        try:
+            return probs[item["rank"]]
+        except KeyError:
+            return 0.03
+
+
+class ClickProbabilityClickOffsetTimeOffsetByDevice:
+    def __init__(
+        self,
+        name="clickout_prob_time_position_offset",
+        action_types=None,
+        impressions_type="impressions_raw",
+        index_col="index_clicked",
+        probs_path="../../../data/",
+    ):
+        self.name = name
+        self.action_types = action_types
+        self.index_col = index_col
+        self.impressions_type = impressions_type
+        self.probs_path = probs_path
+        # tracks the impression per user
+        self.current_impression = defaultdict(str)
+        self.last_timestamp = {}
+        self.last_clickout_position = {}
+        self.read_probs()
+
+    def read_probs(self):
+        self.probs = {
+            "desktop": joblib.load(self.probs_path + "click_probs_by_index_and_desktop.joblib"),
+            "mobile": joblib.load(self.probs_path + "click_probs_by_index_and_mobile.joblib"),
+            "tablet": joblib.load(self.probs_path + "click_probs_by_index_and_tablet.joblib"),
+        }
+
+    def update_acc(self, row):
+        self.current_impression[row["user_id"]] = row[self.impressions_type]
+        key = (row["user_id"], row[self.impressions_type])
+        self.last_timestamp[key] = row["timestamp"]
+        self.last_clickout_position[key] = row[self.index_col]
+
+    def get_stats(self, row, item):
+        key = (row["user_id"], row[self.impressions_type])
+
+        if row[self.impressions_type] == self.current_impression[row["user_id"]]:
+            t1 = self.last_timestamp[key]
+            t2 = row["timestamp"]
+
+            c1 = self.last_clickout_position[key]
+            c2 = item["rank"]
+
+            timestamp_offset = int(group_time(t2 - t1))
+            click_offset = int(c2 - c1)
+
+            key = (click_offset, timestamp_offset)
+
+            if key in self.probs[row["device"]]:
+                return self.probs[row["device"]][key]
             else:
                 try:
                     return self.probs[(click_offset, 120)]
@@ -509,17 +579,95 @@ class ItemCTR:
         self.action_types = action_types
         self.clicks = defaultdict(int)
         self.impressions = defaultdict(int)
+        self.impressions_corr = defaultdict(int)
 
     def update_acc(self, row):
+        if not row["reference"].isnumeric():
+            return
         self.clicks[row["reference"]] += 1
-        for item_id in row["impressions"]:
+        for rank, item_id in enumerate(row["impressions"]):
             self.impressions[item_id] += 1
+            if rank <= row["index_clicked"]:
+                self.impressions_corr[item_id] += 1
 
     def get_stats(self, row, item):
         output = {}
         output["clickout_item_clicks"] = self.clicks[item["item_id"]]
         output["clickout_item_impressions"] = self.impressions[item["item_id"]]
+        output["clickout_item_ctr"] = output["clickout_item_clicks"] / (output["clickout_item_impressions"] + 1)
+        output["clickout_item_ctr_corr"] = output["clickout_item_clicks"] / (self.impressions_corr[item["item_id"]] + 1)
         return output
+
+
+class ItemCTRInteractions:
+    def __init__(self):
+        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
+        self.clicks = defaultdict(int)
+        self.impressions = defaultdict(int)
+        self.impressions_corr = defaultdict(int)
+
+    def update_acc(self, row):
+        if not row["reference"].isnumeric():
+            return
+        self.clicks[row["reference"]] += 1
+        for rank, item_id in enumerate(row["fake_impressions"]):
+            self.impressions[item_id] += 1
+
+    def get_stats(self, row, item):
+        output = {}
+        output["interact_item_clicks"] = self.clicks[item["item_id"]]
+        output["interact_item_impressions"] = self.impressions[item["item_id"]]
+        output["interact_item_ctr"] = output["interact_item_clicks"] / (output["interact_item_impressions"] + 1)
+        return output
+
+
+class ItemCTREMA:
+    def __init__(self, alpha):
+        self.alpha = alpha
+        self.action_types = ["clickout item"]
+        self.clicks = defaultdict(int)
+        self.impressions = defaultdict(int)
+
+    def update_acc(self, row):
+        for item_id in row["impressions"]:
+            if item_id == row["reference"]:
+                self.clicks[row["reference"]] = 1 + self.alpha * self.clicks[row["reference"]]
+            else:
+                self.clicks[row["reference"]] = 0 + self.alpha * self.clicks[row["reference"]]
+            self.impressions[item_id] += 1 + self.alpha * self.impressions[item_id]
+
+    def get_stats(self, row, item):
+        alpha = self.alpha
+        output = {}
+        output[f"clickout_item_clicks_ema_alpha_{alpha:.4f}"] = self.clicks[item["item_id"]]
+        output[f"clickout_item_impressions_ema_alpha_{alpha:.4f}"] = self.impressions[item["item_id"]]
+        if output[f"clickout_item_impressions_ema_alpha_{alpha:.4f}"] != 0:
+            output[f"clickout_item_ctr_ema_alpha_{alpha:.4f}"] = (
+                output[f"clickout_item_clicks_ema_alpha_{alpha:.4f}"]
+                / output[f"clickout_item_impressions_ema_alpha_{alpha:.4f}"]
+            )
+        else:
+            output[f"clickout_item_ctr_ema_alpha_{alpha:.4f}"] = 0
+        return output
+
+
+class ItemAverageRank:
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.ranks = defaultdict(list)
+
+    def update_acc(self, row):
+        if not row["reference"].isnumeric():
+            return
+        key = (row["user_id"], row["session_id"], int(row["reference"]))
+        self.ranks[key].append(row["index_clicked"])
+
+    def get_stats(self, row, item):
+        obs = {}
+        key = (row["user_id"], row["session_id"], int(item["item_id"]))
+        obs["item_last_rank"] = self.ranks[key][-1] if self.ranks[key] else -1
+        obs["item_avg_rank"] = sum(self.ranks[key]) / (len(self.ranks[key]) + 1)
+        return obs
 
 
 class ItemCTRRankWeighted:
@@ -574,6 +722,71 @@ class ItemAttentionSpan:
             self.interaction_times_count[item_id] + 1
         )
         return output
+
+
+class UserItemAttentionSpan:
+    def __init__(self):
+        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
+        self.user_interaction_times = defaultdict(list)
+        self.user_last_interaction_item = {}
+        self.user_last_interaction_ts = {}
+
+    def update_acc(self, row):
+        key = (row["user_id"], row["session_id"])
+        new_item_id = row["reference"]
+        new_ts = row["timestamp"]
+        old_item_id = self.user_last_interaction_item.get(key)
+        old_ts = self.user_last_interaction_ts.get(key)
+        if new_item_id != old_item_id and new_item_id and old_item_id:
+            # some other item had interaction
+            self.user_interaction_times[key].append(new_ts - old_ts)
+        self.user_last_interaction_item[key] = new_item_id
+        self.user_last_interaction_ts[key] = new_ts
+
+    def get_stats(self, row, item):
+        key = (row["user_id"], row["session_id"])
+        new_ts = row["timestamp"]
+        old_ts = self.user_last_interaction_ts.get(key, 0)
+        obs = {}
+        if key in self.user_interaction_times:
+            obs["user_item_avg_attention"] = sum(self.user_interaction_times[key]) / (
+                len(self.user_interaction_times[key])
+            )
+            obs["is_item_within_avg_span"] = int(
+                ((new_ts - old_ts) < obs["user_item_avg_attention"])
+                and (self.user_last_interaction_item[key] == item["item_id"])
+            )
+            obs["is_item_within_avg_span_2s"] = int(
+                ((new_ts - old_ts) < (2 * obs["user_item_avg_attention"]))
+                and (self.user_last_interaction_item[key] == item["item_id"])
+            )
+        else:
+            obs["user_item_avg_attention"] = -1
+            obs["is_item_within_avg_span"] = -1
+            obs["is_item_within_avg_span_2s"] = -1
+        return obs
+
+
+class GlobalClickoutTimestamp:
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.last_ts = {}
+        self.last_user = {}
+
+    def update_acc(self, row):
+        if not row["reference"].isnumeric():
+            return
+        self.last_ts[int(row["reference"])] = row["timestamp"]
+        self.last_user[int(row["reference"])] = row["user_id"]
+
+    def get_stats(self, row, item):
+        obs = {}
+        if self.last_ts.get(int(item["item_id"])):
+            obs["last_item_timestamp"] = row["timestamp"] - self.last_ts.get(int(item["item_id"]))
+        else:
+            obs["last_item_timestamp"] = None
+        obs["last_item_click_same_user"] = int(self.last_user.get(int(item["item_id"]), None) == row["user_id"])
+        return obs
 
 
 class ItemCTRByKey:
@@ -674,6 +887,86 @@ class MouseSpeed:
             return sum(values) / len(values)
         else:
             return 0
+
+
+def fit_lr(X, Y):
+    def mean(Xs):
+        return sum(Xs) / len(Xs)
+
+    m_X = mean(X)
+    m_Y = mean(Y)
+
+    def std(Xs, m):
+        normalizer = len(Xs) - 1
+        return sqrt(sum((pow(x - m, 2) for x in Xs)) / normalizer)
+
+    # assert np.round(Series(X).std(), 6) == np.round(std(X, m_X), 6)
+
+    def pearson_r(Xs, Ys):
+
+        sum_xy = 0
+        sum_sq_v_x = 0
+        sum_sq_v_y = 0
+
+        for (x, y) in zip(Xs, Ys):
+            var_x = x - m_X
+            var_y = y - m_Y
+            sum_xy += var_x * var_y
+            sum_sq_v_x += pow(var_x, 2)
+            sum_sq_v_y += pow(var_y, 2)
+        return sum_xy / sqrt(sum_sq_v_x * sum_sq_v_y)
+
+    # assert np.round(Series(X).corr(Series(Y)), 6) == np.round(pearson_r(X, Y), 6)
+
+    r = pearson_r(X, Y)
+
+    b = r * (std(Y, m_Y) / std(X, m_X))
+    A = m_Y - b * m_X
+
+    def line(x):
+        return b * x + A
+
+    return line
+
+
+class ClickSequenceTrend:
+    def __init__(self, method="minmax", by="user_id"):
+        self.by = by
+        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
+        self.user_ind = defaultdict(list)
+        self.method = method
+
+    def update_acc(self, row):
+        if row["fake_index_interacted"] == -1000:
+            return
+        self.user_ind[row[self.by]].append((row["fake_index_interacted"], row["timestamp"]))
+
+    def get_stats(self, row, item):
+        obs = {}
+        obs[f"predicted_ind_{self.method}_by_{self.by}"] = -1
+        obs[f"predicted_ind_rel_{self.method}_by_{self.by}"] = -1
+        obs[f"ind_per_ts_{self.method}_by_{self.by}"] = -1
+        if len(self.user_ind[row[self.by]]) >= 2:
+            max_ind, max_ts = self.user_ind[row[self.by]][-1]
+            if self.method == "minmax":
+                min_ind, min_ts = self.user_ind[row[self.by]][0]
+                if max_ts - min_ts > 0:
+                    ind_per_ts = (max_ind - min_ind) / (max_ts - min_ts)
+                    ts_passed = row["timestamp"] - max_ts
+                    obs[f"ind_per_ts_{self.method}_by_{self.by}"] = ind_per_ts
+                    obs[f"predicted_ind_{self.method}_by_{self.by}"] = max_ind + ts_passed * ind_per_ts
+            elif self.method == "lr":
+                X = [row["timestamp"] - ts for ind, ts in self.user_ind[row[self.by]]]
+                Y = [ind for ind, ts in self.user_ind[row[self.by]]]
+                try:
+                    line = fit_lr(X, Y)
+                    obs[f"predicted_ind_{self.method}_by_{self.by}"] = line(row["timestamp"] - max_ts)
+                except ZeroDivisionError:
+                    obs[f"predicted_ind_{self.method}_by_{self.by}"] = -1
+            obs[f"predicted_ind_rel_{self.method}_by_{self.by}"] = (
+                obs[f"predicted_ind_{self.method}_by_{self.by}"] - item["rank"]
+            )
+        return obs
 
 
 class SimilarUsersItemInteraction:
@@ -1163,6 +1456,240 @@ class ActionsTracker:
         return {"actions_tracker": json.dumps(obs)}
 
 
+class PairwiseCTR:
+    LEFT_WON = -1
+    RIGHT_WON = 1
+    DRAW = 0
+
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.pairs = defaultdict(Counter)
+
+    def update_acc(self, row: Dict):
+        if not row["reference"].isnumeric():
+            return
+        impressions = list(map(int, row["impressions"]))
+        if not row["reference"].isnumeric():
+            return
+        ref = int(row["reference"])
+        for bigr in self.zipngram3(impressions, 2):
+            l, r = bigr
+            if ref == l:
+                self.pairs[bigr].update([self.LEFT_WON])
+            elif ref == r:
+                self.pairs[bigr].update([self.RIGHT_WON])
+            else:
+                self.pairs[bigr].update([self.DRAW])
+
+    def get_stats(self, row, item):
+        impressions = list(map(int, row["impressions"]))
+        position = item["rank"]
+
+        try:
+            prv_item = impressions[position - 1]
+        except IndexError:
+            prv_item = None
+        this_item = impressions[position]
+        try:
+            next_item = impressions[position + 1]
+        except IndexError:
+            next_item = None
+
+        obs = {}
+        obs["pairwise_1_ctr_left_won"] = self.pairs[(prv_item, this_item)][self.LEFT_WON]
+        obs["pairwise_1_ctr_right_won"] = self.pairs[(prv_item, this_item)][self.RIGHT_WON]
+        obs["pairwise_1_ctr_draw"] = self.pairs[(prv_item, this_item)][self.DRAW]
+        obs["pairwise_1_rel"] = obs["pairwise_1_ctr_left_won"] / (obs["pairwise_1_ctr_right_won"] + 1)
+        obs["pairwise_2_ctr_left_won"] = self.pairs[(this_item, next_item)][self.LEFT_WON]
+        obs["pairwise_2_ctr_right_won"] = self.pairs[(this_item, next_item)][self.RIGHT_WON]
+        obs["pairwise_2_ctr_draw"] = self.pairs[(this_item, next_item)][self.DRAW]
+        obs["pairwise_2_rel"] = obs["pairwise_2_ctr_left_won"] / (obs["pairwise_2_ctr_right_won"] + 1)
+        return obs
+
+    def zipngram3(self, words, n=2):
+        return zip(*[words[i:] for i in range(n)])
+
+
+class RankOfItemsFreshClickout:
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.positions = defaultdict(Counter)
+
+    def update_acc(self, row: Dict):
+        if int(row["step"]) <= 2:
+            impressions = list(map(int, row["impressions"]))
+            for rank, item_id in enumerate(impressions):
+                self.positions[item_id].update([rank])
+
+    def get_stats(self, row, item):
+        obs = {}
+        s = sum([cnt for cnt in self.positions[int(item["item_id"])].values()])
+        avg = sum([rank * cnt for rank, cnt in self.positions[int(item["item_id"])].items()]) / (s + 1)
+        obs["average_fresh_rank"] = avg
+        obs["average_fresh_rank_rel"] = avg - item["rank"]
+        return obs
+
+
+class SequenceClickout:
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.last_impressions = {}
+        self.last_prices = {}
+
+    def update_acc(self, row: Dict):
+        self.last_impressions[row["user_id"]] = set(list(map(int, row["impressions"])))
+
+    def get_stats(self, row, item):
+        impressions = set(list(map(int, row["impressions"])))
+        obs = {}
+        last_impressions = self.last_impressions.get(row["user_id"], set())
+        obs["item_was_in_prv_clickout"] = int(int(item["item_id"]) in last_impressions)
+        obs["item_clickouts_intersection"] = len(last_impressions & impressions)
+        return obs
+
+
+class SameImpressionsDifferentUser:
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        # impressions -> (user, item)
+        self.impressions_clicks = defaultdict(list)
+
+    def update_acc(self, row: Dict):
+        if row["reference"].isnumeric():
+            key = (row["user_id"], int(row["reference"]))
+            self.impressions_clicks[row["impressions_raw"]].append(key)
+
+    def get_stats(self, row, item):
+        obs = {}
+        key = (row["user_id"], int(item["item_id"]))
+        all_clicks = [it for user, it in self.impressions_clicks[row["impressions_raw"]] if user != row["user_id"]]
+        item_clicks = [it for it in all_clicks if it == int(item["item_id"])]
+        obs["same_impression_different_user_clicks"] = len(item_clicks)
+        obs["same_impression_different_user_ctr"] = len(item_clicks) / (len(all_clicks) + 1)
+        return obs
+
+
+class SameImpressionsDifferentUserTopN:
+    def __init__(self, topn=5):
+        self.topn = topn
+        self.action_types = ["clickout item"]
+        # impressions -> (user, item)
+        self.impressions_clicks = defaultdict(list)
+
+    def update_acc(self, row: Dict):
+        if row["reference"].isnumeric():
+            impressions_str = self.extract_top_impressions(row)
+            key = (row["user_id"], int(row["reference"]))
+            self.impressions_clicks[impressions_str].append(key)
+
+    def extract_top_impressions(self, row):
+        return "|".join(row["impressions_raw"].split("|")[: self.topn])
+
+    def get_stats(self, row, item):
+        obs = {}
+        key = (row["user_id"], int(item["item_id"]))
+        impressions_str = self.extract_top_impressions(row)
+        all_clicks = [it for user, it in self.impressions_clicks[impressions_str] if user != row["user_id"]]
+        item_clicks = [it for it in all_clicks if it == int(item["item_id"])]
+        obs[f"same_impression_different_user_clicks_{self.topn}"] = len(item_clicks)
+        obs[f"same_impression_different_user_ctr_{self.topn}"] = len(item_clicks) / (len(all_clicks) + 1)
+        return obs
+
+
+class SameFakeImpressionsDifferentUser:
+    def __init__(self):
+        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
+        # impressions -> (user, item)
+        self.impressions_clicks = defaultdict(list)
+
+    def update_acc(self, row: Dict):
+        if row["reference"].isnumeric():
+            key = (row["user_id"], int(row["reference"]))
+            self.impressions_clicks[row["fake_impressions_raw"]].append(key)
+
+    def get_stats(self, row, item):
+        obs = {}
+        key = (row["user_id"], int(item["item_id"]))
+        all_clicks = [it for user, it in self.impressions_clicks[row["impressions_raw"]] if user != row["user_id"]]
+        item_clicks = [it for it in all_clicks if it == int(item["item_id"])]
+        obs["same_fake_impression_different_user_clicks"] = len(item_clicks)
+        obs["same_fake_impression_different_user_ctr"] = len(item_clicks) / (len(all_clicks) + 1)
+        return obs
+
+
+class RankBasedCTR:
+    def __init__(self):
+        self.action_types = ["clickout item"]
+        self.item_rank_clicks = defaultdict(lambda: dict(zip(range(25), [0] * 25)))
+        self.item_rank_impressions = defaultdict(lambda: dict(zip(range(25), [0] * 25)))
+
+    def update_acc(self, row: Dict):
+        if not row["reference"].isnumeric():
+            return
+        item_id = int(row["reference"])
+        if row["index_clicked"] == -1000:
+            return
+        impressions = list(map(int, row["impressions"]))
+        for rank, item_id in enumerate(impressions):
+            self.item_rank_impressions[item_id][rank] += 1
+        self.item_rank_clicks[item_id][row["index_clicked"]] += 1
+
+    def get_stats(self, row, item):
+        item_id = int(item["item_id"])
+        rank = int(item["rank"])
+        obs = {}
+        if rank == 0:
+            obs["rank_based_ctr"] = (
+                (self.item_rank_clicks[item_id][0] + 1) / (self.item_rank_impressions[item_id][0] + 2) * 0.5
+                + (self.item_rank_clicks[item_id][1] + 1) / (self.item_rank_impressions[item_id][1] + 2) * 0.3
+                + (self.item_rank_clicks[item_id][2] + 1) / (self.item_rank_impressions[item_id][2] + 2) * 0.2
+            )
+        elif rank == 24:
+            obs["rank_based_ctr"] = (
+                (self.item_rank_clicks[item_id][24] + 1) / (self.item_rank_impressions[item_id][24] + 2) * 0.5
+                + (self.item_rank_clicks[item_id][23] + 1) / (self.item_rank_impressions[item_id][23] + 2) * 0.3
+                + (self.item_rank_clicks[item_id][22] + 1) / (self.item_rank_impressions[item_id][22] + 2) * 0.2
+            )
+        else:
+            obs["rank_based_ctr"] = (
+                (self.item_rank_clicks[item_id][rank - 1] + 1)
+                / (self.item_rank_impressions[item_id][rank - 1] + 2)
+                * 0.25
+                + (self.item_rank_clicks[item_id][rank] + 1) / (self.item_rank_impressions[item_id][rank] + 2) * 0.5
+                + (self.item_rank_clicks[item_id][rank + 1] + 1)
+                / (self.item_rank_impressions[item_id][rank + 1] + 2)
+                * 0.25
+            )
+        return obs
+
+
+class AccByKey:
+    def __init__(self, base_acc, key):
+        self.key = key
+        self.base_acc = base_acc
+        self.action_types = base_acc.action_types
+        self.accs_by_key = {}
+
+    def update_acc(self, row: Dict):
+        row["platform_device"] = row["platform"] + row["device"]
+        if row[self.key] not in self.accs_by_key:
+            self.accs_by_key[row[self.key]] = deepcopy(self.base_acc)
+        self.accs_by_key[row[self.key]].update_acc(row)
+        del row["platform_device"]
+
+    def get_stats(self, row, item):
+        row["platform_device"] = row["platform"] + row["device"]
+        if row[self.key] not in self.accs_by_key:
+            obs = self.base_acc.get_stats(row, item)
+        else:
+            obs = self.accs_by_key[row[self.key]].get_stats(row, item)
+        for k in list(obs):
+            obs[f"{k}_by_{self.key}"] = obs[k]
+            del obs[k]
+        del row["platform_device"]
+        return obs
+
+
 def group_accumulators(accumulators):
     accs_by_action_type = defaultdict(list)
     for acc in accumulators:
@@ -1279,7 +1806,15 @@ def get_accumulators(hashn=None):
             updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
             get_stats_func=lambda acc, row, item: acc.get(row["user_id"], 0),
         ),
+        # item ctr
         ItemCTR(action_types=["clickout item"]),
+        AccByKey(ItemCTR(action_types=["clickout item"]), key="platform_device"),
+        AccByKey(ItemCTR(action_types=["clickout item"]), key="platform"),
+        AccByKey(ItemCTR(action_types=["clickout item"]), key="device"),
+        ItemCTRInteractions(),
+        AccByKey(ItemCTRInteractions(), key="platform_device"),
+        AccByKey(ItemCTRInteractions(), key="platform"),
+        AccByKey(ItemCTRInteractions(), key="device"),
         StatsAcc(
             name="clickout_item_platform_clicks",
             action_types=["clickout item"],
@@ -1495,6 +2030,19 @@ def get_accumulators(hashn=None):
         ActionsTracker(),
         DistinctInteractions(name="clickout", action_types=["clickout item"]),
         DistinctInteractions(name="interact", action_types=ACTIONS_WITH_ITEM_REFERENCE),
+        PairwiseCTR(),
+        RankOfItemsFreshClickout(),
+        GlobalClickoutTimestamp(),
+        SequenceClickout(),
+        RankBasedCTR(),
+        ItemAverageRank(),
+        UserItemAttentionSpan(),
+        SameImpressionsDifferentUser(),
+        SameFakeImpressionsDifferentUser(),
+        ClickSequenceTrend(method="minmax", by="user_id"),
+        ClickSequenceTrend(method="lr", by="user_id"),
+        ClickSequenceTrend(method="minmax", by="session_id"),
+        ClickSequenceTrend(method="lr", by="session_id"),
     ] + [
         StatsAcc(
             name="{}_count".format(action_type.replace(" ", "_")),
