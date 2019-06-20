@@ -12,9 +12,9 @@ if __name__ == "__main__":
     if vectorizer == 1:
         vectorize_chunks = VectorizeChunks(
             vectorizer=lambda: make_vectorizer_1(),
-            input_files="../../data/proc/raw_csv/*.csv",
+            input_files="/sdb/raw_csv/*.csv",
             output_folder="../../data/proc/vectorizer_1/",
-            n_jobs=10,
+            n_jobs=5,
         )
         vectorize_chunks.vectorize_all()
     else:
