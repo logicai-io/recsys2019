@@ -7,7 +7,7 @@ logger = get_logger()
 
 logger.info("Starting splitting")
 
-df = dt.fread("../../data/events_sorted_trans_all.csv")
+df = dt.fread("/sdb/all.csv")
 filenames = []
 for i in tqdm(range(df.shape[0])):
     if (df[i, "is_val"] == False) and (df[i, "is_test"] == False):
@@ -25,6 +25,6 @@ for i in tqdm(range(df.shape[0])):
 filenames = np.array(filenames)
 
 for filename in tqdm(set(filenames)):
-    df[np.where(filenames == filename)[0], :].to_csv("../../data/proc/raw_csv/" + filename)
+    df[np.where(filenames == filename)[0], :].to_csv("/sdb/raw_csv/" + filename)
 
 logger.info("End splitting")
