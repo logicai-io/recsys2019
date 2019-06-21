@@ -18,6 +18,7 @@ def main(model_config, validation, storage_path):
     predictions_path = '/tmp/predictions.csv'
     model_path = '/tmp/model.joblib'
     model_config = json.loads(model_config)
+    model_config["validation"] = validation
     config_path = "/tmp/config.json"
     with open(config_path, "wt") as out:
         out.write(json.dumps(model_config))
@@ -33,8 +34,8 @@ def main(model_config, validation, storage_path):
               logger=logger)
     upload_data(predictions_path, storage_path + "predictions.csv")
     upload_data(model_path, storage_path + "model.joblib")
-    upload_data(config_path, storage_path + "config.path")
-    os.system("shutdown now")
+    upload_data(config_path, storage_path + "config.json")
+    os.system("sudo shutdown now")
 
 
 if __name__ == '__main__':
