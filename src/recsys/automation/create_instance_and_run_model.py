@@ -140,7 +140,8 @@ def main(config_file, validation):
     print("Waiting some time for the network")
     time.sleep(60)
     os.system(f"gcloud compute scp startup-script.sh pawel@{instance_name}:/tmp/")
-    os.system(f"gcloud compute ssh {instance_name} -- 'chmod +x /tmp/startup-script.sh ; nohup /tmp/startup-script.sh &'")
+    os.system(f"gcloud compute ssh {instance_name} --command='chmod +x /tmp/startup-script.sh'")
+    os.system(f"gcloud compute ssh {instance_name} --command='nohup /tmp/startup-script.sh &'")
 
 if __name__ == '__main__':
     main()
