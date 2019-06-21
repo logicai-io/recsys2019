@@ -8,9 +8,9 @@ from recsys.log_utils import get_logger
 import os
 
 @click.command()
-@click.option("model_config", type=str)
-@click.option("validation", type=int)
-@click.option("storage_path", type=str)
+@click.option("--model_config", type=str)
+@click.option("--validation", type=int)
+@click.option("--storage_path", type=str)
 def main(model_config, validation, storage_path):
     logger = get_logger('/tmp/run.log')
     mat_path = '/tmp/Xcsr.h5'
@@ -18,6 +18,9 @@ def main(model_config, validation, storage_path):
     predictions_path = '/tmp/predictions.csv'
     model_path = '/tmp/model.joblib'
     model_config = json.loads(model_config)
+    config_path = "/tmp/config.json"
+    with open(config_path, "wt") as out:
+        out.write(json.dumps(model_config))
     download_data(model_config['dataset_path_matrix'], mat_path)
     download_data(model_config['dataset_path_meta'], meta_path)
     model_instance = parse_model_instance(model_config)
@@ -28,8 +31,9 @@ def main(model_config, validation, storage_path):
               model_path=model_path,
               val=validation,
               logger=logger)
-    upload_data(predictions_path, storage_path)
-    upload_data(model_path, storage_path)
+    upload_data(predictions_path, storage_path + "predictions.csv")
+    upload_data(model_path, storage_path + "model.joblib")
+    upload_data(config_path, storage_path + "config.path")
     os.system("shutdown now")
 
 
