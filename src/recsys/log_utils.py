@@ -2,8 +2,8 @@ import logging
 import sys
 
 
-def get_logger():
-    file_handler = logging.FileHandler(filename="recsys.log")
+def get_logger(filename="recsys.log"):
+    file_handler = logging.FileHandler(filename=filename)
     stdout_handler = logging.StreamHandler(sys.stdout)
     handlers = [file_handler, stdout_handler]
     logging.basicConfig(

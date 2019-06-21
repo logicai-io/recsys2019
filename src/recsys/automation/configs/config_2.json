@@ -1,0 +1,6 @@
+{
+    "dataset_path_matrix": "data/04b695/Xcsr.h5",
+    "dataset_path_meta": "data/04b695/meta.h5",
+    "model_class": "LGBMRanker",
+    "model_params": {"learning_rate": 0.2, "num_leaves": 128, "min_child_samples":5, "n_estimators": 1600, "n_jobs": -2}
+}
