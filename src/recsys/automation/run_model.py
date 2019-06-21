@@ -8,9 +8,9 @@ from recsys.log_utils import get_logger
 import os
 
 @click.command()
-@click.option("model_config", type=str)
-@click.option("validation", type=int)
-@click.option("storage_path", type=str)
+@click.option("--model_config", type=str)
+@click.option("--validation", type=int)
+@click.option("--storage_path", type=str)
 def main(model_config, validation, storage_path):
     logger = get_logger('/tmp/run.log')
     mat_path = '/tmp/Xcsr.h5'

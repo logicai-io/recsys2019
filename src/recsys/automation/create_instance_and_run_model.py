@@ -24,11 +24,6 @@ def wait_for_operation(compute, project, zone, operation):
 
 
 def clone_disk_from_snapshot(compute, project, zone, snapshot_name, disk_name):
-    """
-    POST
-    https: // www.googleapis.com / compute / v1 / projects / [PROJECT_ID] / zones / [ZONE] / disks
-    """
-
     config = {
         "name": disk_name,
         "sourceSnapshot": f"zones/{zone}/snapshots/{snapshot_name}"
@@ -106,17 +101,17 @@ def delete_instance(compute, project, zone, name):
 
 
 @click.command()
-@click.option("config_file", type=str)
-@click.option("validation", type=bool)
+@click.option("--config_file", type=str)
+@click.option("--validation", type=bool)
 def main(config_file, validation):
     compute = googleapiclient.discovery.build('compute', 'v1')
     project = "logicai-recsys2019"
     timestamp = get_timestamp()
     zone = "europe-west1-b"
     snapshot_name = "recsys1-models"
-    instance_name = "recsys_tmp_{timestamp}"
-    storage_path = "predictions/runs/{timestamp}/"
-    disk_name = "recsys_tmp_disk_{timestamp}"
+    instance_name = f"recsys_tmp_{timestamp}"
+    storage_path = f"predictions/runs/{timestamp}/"
+    disk_name = f"recsys_tmp_disk_{timestamp}"
     with open(config_file) as inp:
         model_config = inp.read()
     validation = 1 if validation else 0
@@ -140,3 +135,6 @@ def main(config_file, validation):
                                 disk_name=disk_name)
     # print("Waiting for creation")
     # wait_for_operation(compute, project, zone, operation['name'])
+
+if __name__ == '__main__':
+    main()
