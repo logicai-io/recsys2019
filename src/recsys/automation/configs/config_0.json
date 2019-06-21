@@ -1,0 +1,7 @@
+{
+    "dataset_path_matrix": "gs://logicai-recsys2019/data/69542a/Xcsr.h5",
+    "dataset_path_meta": "gs://logicai-recsys2019/data/69542a/meta.h5",
+    "model_class": "LGBMRanker",
+    "model_params": {"learning_rate": 0.4, "num_leaves": 128, "n_estimators": 10, "n_jobs": -2},
+    "validation": 0
+}
