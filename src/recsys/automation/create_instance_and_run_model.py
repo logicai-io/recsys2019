@@ -1,3 +1,4 @@
+import json
 import os
 import time
 
@@ -116,6 +117,8 @@ def main(config_file, validation):
     disk_name = f"recsys-tmp-disk-{timestamp}"
     with open(config_file) as inp:
         model_config = inp.read()
+    # make sure it is a proper json
+    assert json.loads(model_config)
     validation = 1 if validation else 0
     print("Clone disk from snapshot")
     operation = clone_disk_from_snapshot(compute=compute,
