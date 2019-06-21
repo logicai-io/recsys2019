@@ -111,12 +111,12 @@ def main(config_file, validation):
     zone = "europe-west1-b"
     snapshot_name = "recsys1-models"
     instance_name = f"recsys-tmp-{timestamp}"
-    storage_path = f"predictions/runs/{timestamp}/"
+    validation_str = "val" if validation else "sub"
+    storage_path = f"predictions/runs/{timestamp}_{validation_str}/"
     disk_name = f"recsys-tmp-disk-{timestamp}"
     with open(config_file) as inp:
         model_config = inp.read()
     validation = 1 if validation else 0
-
     print("Clone disk from snapshot")
     operation = clone_disk_from_snapshot(compute=compute,
                              project=project,
@@ -136,6 +136,11 @@ def main(config_file, validation):
                                 storage_path=storage_path,
                                 disk_name=disk_name)
     print(operation)
+    wait_for_operation(compute, project, zone, operation['name'])
+    print("Waiting some time for the network")
+    time.sleep(60)
+    os.system(f"gcloud compute scp startup-script.sh pawel@{instance_name}:/tmp/")
+    os.system(f"gcloud compute ssh {instance_name} -- 'chmod +x /tmp/startup-script.sh ; nohup /tmp/startup-script.sh &'")
 
 if __name__ == '__main__':
     main()
