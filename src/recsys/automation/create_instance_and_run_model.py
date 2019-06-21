@@ -3,6 +3,7 @@ import time
 
 import click
 import googleapiclient
+import googleapiclient.discovery
 from recsys.automation.utils import get_timestamp
 
 
@@ -26,7 +27,7 @@ def wait_for_operation(compute, project, zone, operation):
 def clone_disk_from_snapshot(compute, project, zone, snapshot_name, disk_name):
     config = {
         "name": disk_name,
-        "sourceSnapshot": f"zones/{zone}/snapshots/{snapshot_name}"
+        "sourceSnapshot": "https://www.googleapis.com/compute/v1/projects/logicai-recsys2019/global/snapshots/recsys1-models"
     }
 
     return compute.disks().insert(
@@ -109,9 +110,9 @@ def main(config_file, validation):
     timestamp = get_timestamp()
     zone = "europe-west1-b"
     snapshot_name = "recsys1-models"
-    instance_name = f"recsys_tmp_{timestamp}"
+    instance_name = f"recsys-tmp-{timestamp}"
     storage_path = f"predictions/runs/{timestamp}/"
-    disk_name = f"recsys_tmp_disk_{timestamp}"
+    disk_name = f"recsys-tmp-disk-{timestamp}"
     with open(config_file) as inp:
         model_config = inp.read()
     validation = 1 if validation else 0
@@ -122,8 +123,9 @@ def main(config_file, validation):
                              zone=zone,
                              snapshot_name=snapshot_name,
                              disk_name=disk_name)
+    print(operation)
     print("Waiting for creation")
-    wait_for_operation(compute, project, zone, operation)
+    wait_for_operation(compute, project, zone, operation['name'])
     print("Create instance")
     operation = create_instance(compute=compute,
                                 project=project,
@@ -133,8 +135,7 @@ def main(config_file, validation):
                                 validation=validation,
                                 storage_path=storage_path,
                                 disk_name=disk_name)
-    # print("Waiting for creation")
-    # wait_for_operation(compute, project, zone, operation['name'])
+    print(operation)
 
 if __name__ == '__main__':
     main()

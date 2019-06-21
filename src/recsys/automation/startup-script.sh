@@ -2,14 +2,16 @@
 
 sudo su pawel
 
-alias PY3=~/.pyenv/versions/recsys/bin/python
-alias PIP=~/.pyenv/versions/recsys/bin/pip
+alias PY3=/home/pawel/.pyenv/versions/recsys/bin/python
+alias PIP=/home/pawel/.pyenv/versions/recsys/bin/pip
 
 PIP install google-cloud-storage
 
-cd /home/pawel/recsys2019/src/recsys/automation
+cd /home/pawel/recsys2019/
 git stash
+git pull
 git checkout automation
+cd /home/pawel/recsys2019/src/recsys/automation
 
 MODEL_CONFIG=$(curl http://metadata/computeMetadata/v1/instance/attributes/model_config -H "Metadata-Flavor: Google")
 VALIDATION=$(curl http://metadata/computeMetadata/v1/instance/attributes/validation -H "Metadata-Flavor: Google")
