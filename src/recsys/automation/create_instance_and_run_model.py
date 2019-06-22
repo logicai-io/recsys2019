@@ -96,7 +96,7 @@ def main(config_file, validation):
     disk_name = f"recsys-tmp-disk-{timestamp}"
     with open(config_file) as inp:
         model_config = inp.read()
-    config_hash = str(str_to_hash(model_config) % 1000000)
+    config_hash = str(str_to_hash(model_config) % 1_000_000)
     storage_path = f"predictions/runs/{config_hash}_{timestamp}_{validation_str}/"
     # make sure it is a proper json
     assert json.loads(model_config)
