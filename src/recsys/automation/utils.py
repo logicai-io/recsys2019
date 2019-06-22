@@ -41,4 +41,4 @@ def get_timestamp():
 
 
 def str_to_hash(s):
-    int(hashlib.sha1(s.encode("utf-8")).hexdigest(), 16) % (10 ** 8)
+    return int(hashlib.sha1(s.encode("utf-8")).hexdigest(), 16) % (10 ** 8)
