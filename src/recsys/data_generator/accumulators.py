@@ -262,12 +262,12 @@ class Last10Actions:
 
 class ClickProbabilityClickOffsetTimeOffset:
     def __init__(
-        self,
-        name="clickout_prob_time_position_offset",
-        action_types=None,
-        impressions_type="impressions_raw",
-        index_col="index_clicked",
-        probs_path="../../../data/click_probs_by_index.joblib",
+            self,
+            name="clickout_prob_time_position_offset",
+            action_types=None,
+            impressions_type="impressions_raw",
+            index_col="index_clicked",
+            probs_path="../../../data/click_probs_by_index.joblib",
     ):
         self.name = name
         self.action_types = action_types
@@ -326,12 +326,12 @@ class ClickProbabilityClickOffsetTimeOffset:
 
 class ClickProbabilityClickOffsetTimeOffsetByDevice:
     def __init__(
-        self,
-        name="clickout_prob_time_position_offset",
-        action_types=None,
-        impressions_type="impressions_raw",
-        index_col="index_clicked",
-        probs_path="../../../data/",
+            self,
+            name="clickout_prob_time_position_offset",
+            action_types=None,
+            impressions_type="impressions_raw",
+            index_col="index_clicked",
+            probs_path="../../../data/",
     ):
         self.name = name
         self.action_types = action_types
@@ -419,7 +419,8 @@ class PoiFeatures:
 
 class IndicesFeatures:
     def __init__(
-        self, action_types=["clickout item"], impressions_type="impressions_raw", index_key="index_clicked", prefix=""
+            self, action_types=["clickout item"], impressions_type="impressions_raw", index_key="index_clicked",
+            prefix=""
     ):
         self.action_types = action_types
         self.impressions_type = impressions_type
@@ -645,8 +646,8 @@ class ItemCTREMA:
         output[f"clickout_item_impressions_ema_alpha_{alpha:.4f}"] = self.impressions[item["item_id"]]
         if output[f"clickout_item_impressions_ema_alpha_{alpha:.4f}"] != 0:
             output[f"clickout_item_ctr_ema_alpha_{alpha:.4f}"] = (
-                output[f"clickout_item_clicks_ema_alpha_{alpha:.4f}"]
-                / output[f"clickout_item_impressions_ema_alpha_{alpha:.4f}"]
+                    output[f"clickout_item_clicks_ema_alpha_{alpha:.4f}"]
+                    / output[f"clickout_item_impressions_ema_alpha_{alpha:.4f}"]
             )
         else:
             output[f"clickout_item_ctr_ema_alpha_{alpha:.4f}"] = 0
@@ -689,7 +690,7 @@ class ItemCTRRankWeighted:
         output["clickout_item_clicks_rank_weighted"] = self.clicks[item["item_id"]]
         output["clickout_item_impressions_rank_weighted"] = self.impressions[item["item_id"]]
         output["clickout_item_ctr_rank_weighted"] = output["clickout_item_clicks_rank_weighted"] / (
-            output["clickout_item_impressions_rank_weighted"] + 1
+                output["clickout_item_impressions_rank_weighted"] + 1
         )
         return output
 
@@ -721,7 +722,7 @@ class ItemAttentionSpan:
         item_id = item["item_id"]
         output = {}
         output["average_item_attention"] = self.interaction_times_sum[item_id] / (
-            self.interaction_times_count[item_id] + 1
+                self.interaction_times_count[item_id] + 1
         )
         return output
 
@@ -810,8 +811,11 @@ class ItemCTRByKey:
             (item["item_id"], row[self.key])
         ]
         output["clickout_item_ctr_by_{key}".format(key=self.key)] = output[
-            "clickout_item_clicks_by_{key}".format(key=self.key)
-        ] / (output["clickout_item_impressions_by_{key}".format(key=self.key)] + 1)
+                                                                        "clickout_item_clicks_by_{key}".format(
+                                                                            key=self.key)
+                                                                    ] / (output[
+                                                                             "clickout_item_impressions_by_{key}".format(
+                                                                                 key=self.key)] + 1)
         return output
 
 
@@ -868,8 +872,8 @@ class MouseSpeed:
         key = (row["user_id"], row["session_id"])
         if key in self.last_index_per_session:
             if (
-                row["timestamp"] > self.last_timestamp_per_session[key]
-                and row["fake_index_interacted"] != self.last_index_per_session[key]
+                    row["timestamp"] > self.last_timestamp_per_session[key]
+                    and row["fake_index_interacted"] != self.last_index_per_session[key]
             ):
                 time_passed = row["timestamp"] - self.last_timestamp_per_session[key]
                 index_diff = abs(row["fake_index_interacted"] - self.last_index_per_session[key])
@@ -905,7 +909,6 @@ def fit_lr(X, Y):
     # assert np.round(Series(X).std(), 6) == np.round(std(X, m_X), 6)
 
     def pearson_r(Xs, Ys):
-
         sum_xy = 0
         sum_sq_v_x = 0
         sum_sq_v_y = 0
@@ -966,7 +969,7 @@ class ClickSequenceTrend:
                 except ZeroDivisionError:
                     obs[f"predicted_ind_{self.method}_by_{self.by}"] = -1
             obs[f"predicted_ind_rel_{self.method}_by_{self.by}"] = (
-                obs[f"predicted_ind_{self.method}_by_{self.by}"] - item["rank"]
+                    obs[f"predicted_ind_{self.method}_by_{self.by}"] - item["rank"]
             )
         return obs
 
@@ -1293,7 +1296,7 @@ class ItemLooStats:
                 clicks = 0
             obs["loo_{}{}".format(action_type, self.suffix)] = clicks
             obs["loo_{}_ctr{}".format(action_type, self.suffix)] = clicks / (
-                obs["loo_item_impressions{}".format(self.suffix)] + 1
+                    obs["loo_item_impressions{}".format(self.suffix)] + 1
             )
         return obs
 
@@ -1329,7 +1332,7 @@ class ItemLooStatsByPlatform:
             clicks = len(self.item_stats[key].get(action_type, set()).difference({user_id}))
             obs["loo_{}{}".format(action_type, self.suffix)] = clicks
             obs["loo_{}_ctr{}".format(action_type, self.suffix)] = clicks / (
-                obs["loo_item_impressions{}".format(self.suffix)] + 1
+                    obs["loo_item_impressions{}".format(self.suffix)] + 1
             )
         return obs
 
@@ -1642,29 +1645,31 @@ class RankBasedCTR:
         rank = int(item["rank"])
         obs = {}
         if self.simple:
-            obs["rank_based_ctr_simple"] = (self.item_rank_clicks[item_id][rank] + 1) / (self.item_rank_impressions[item_id][rank] + 2)
+            obs["rank_based_ctr_simple"] = (self.item_rank_clicks[item_id][rank] + 1) / (
+                        self.item_rank_impressions[item_id][rank] + 2)
         else:
             if rank == 0:
                 obs["rank_based_ctr"] = (
-                    (self.item_rank_clicks[item_id][0] + 1) / (self.item_rank_impressions[item_id][0] + 2) * 0.5
-                    + (self.item_rank_clicks[item_id][1] + 1) / (self.item_rank_impressions[item_id][1] + 2) * 0.3
-                    + (self.item_rank_clicks[item_id][2] + 1) / (self.item_rank_impressions[item_id][2] + 2) * 0.2
+                        (self.item_rank_clicks[item_id][0] + 1) / (self.item_rank_impressions[item_id][0] + 2) * 0.5
+                        + (self.item_rank_clicks[item_id][1] + 1) / (self.item_rank_impressions[item_id][1] + 2) * 0.3
+                        + (self.item_rank_clicks[item_id][2] + 1) / (self.item_rank_impressions[item_id][2] + 2) * 0.2
                 )
             elif rank == 24:
                 obs["rank_based_ctr"] = (
-                    (self.item_rank_clicks[item_id][24] + 1) / (self.item_rank_impressions[item_id][24] + 2) * 0.5
-                    + (self.item_rank_clicks[item_id][23] + 1) / (self.item_rank_impressions[item_id][23] + 2) * 0.3
-                    + (self.item_rank_clicks[item_id][22] + 1) / (self.item_rank_impressions[item_id][22] + 2) * 0.2
+                        (self.item_rank_clicks[item_id][24] + 1) / (self.item_rank_impressions[item_id][24] + 2) * 0.5
+                        + (self.item_rank_clicks[item_id][23] + 1) / (self.item_rank_impressions[item_id][23] + 2) * 0.3
+                        + (self.item_rank_clicks[item_id][22] + 1) / (self.item_rank_impressions[item_id][22] + 2) * 0.2
                 )
             else:
                 obs["rank_based_ctr"] = (
-                    (self.item_rank_clicks[item_id][rank - 1] + 1)
-                    / (self.item_rank_impressions[item_id][rank - 1] + 2)
-                    * 0.25
-                    + (self.item_rank_clicks[item_id][rank] + 1) / (self.item_rank_impressions[item_id][rank] + 2) * 0.5
-                    + (self.item_rank_clicks[item_id][rank + 1] + 1)
-                    / (self.item_rank_impressions[item_id][rank + 1] + 2)
-                    * 0.25
+                        (self.item_rank_clicks[item_id][rank - 1] + 1)
+                        / (self.item_rank_impressions[item_id][rank - 1] + 2)
+                        * 0.25
+                        + (self.item_rank_clicks[item_id][rank] + 1) / (
+                                    self.item_rank_impressions[item_id][rank] + 2) * 0.5
+                        + (self.item_rank_clicks[item_id][rank + 1] + 1)
+                        / (self.item_rank_impressions[item_id][rank + 1] + 2)
+                        * 0.25
                 )
         return obs
 
@@ -1712,21 +1717,83 @@ class PropertiesBayes:
             return
 
         for item_id in row["impressions"]:
-            for prop in self.imm.get(int(item_id),[]):
+            for prop in self.imm.get(int(item_id), []):
                 self.prop_impressions[prop] += 1
 
         item_clicked = int(row["reference"])
-        for prop in self.imm.get(item_clicked,[]):
+        for prop in self.imm.get(item_clicked, []):
             self.prop_clicks[prop] += 1
 
     def get_stats(self, row, item):
         obs = {}
         probs = []
         for prop in self.imm.get(int(item["item_id"]), []):
-            prob = (self.prop_clicks[prop]+1) / (self.prop_impressions[prop]+self.k)
+            prob = (self.prop_clicks[prop] + 1) / (self.prop_impressions[prop] + self.k)
             probs.append(prob)
         obs["properties_prob_mul"] = reduce(mul, probs) if probs else 0
         obs["properties_prob_max"] = max(probs) if probs else 0
+        return obs
+
+
+class RockPaperScissors:
+    def __init__(self, k=None):
+        self.k = k
+        self.action_types = ["clickout item"]
+        self.items_indices = defaultdict(list)
+        self.chain = defaultdict(Counter)
+
+    def update_acc(self, row: Dict):
+        if not row["reference"].isnumeric():
+            return
+        self.items_indices[row["user_id"]].append(row["index_clicked"])
+        all_chain = self.items_indices[row["user_id"]]
+        if len(all_chain) >= 1:
+            x = tuple(all_chain[:-1])
+            if self.k:
+                x = x[-self.k:]
+            y = all_chain[-1]
+            self.chain[x].update([y])
+
+    def get_stats(self, row, item):
+        obs = {}
+        all_chain = tuple(self.items_indices[row["user_id"]])
+        if self.k:
+            all_chain = all_chain[-self.k:]
+        stats = self.chain[all_chain]
+        norm = sum(stats.values())
+        fname = f"rps_prob_k_{self.k}" if self.k else "rps_prob"
+        obs[fname] = (stats.get(item["rank"], 0) + 1) / (norm + 2)
+        return obs
+
+
+class RockPaperScissorsFake:
+    def __init__(self, k=None):
+        self.k = k
+        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
+        self.items_indices = defaultdict(list)
+        self.chain = defaultdict(Counter)
+
+    def update_acc(self, row: Dict):
+        if row["fake_index_interacted"] == -1000:
+            return
+        self.items_indices[row["user_id"]].append(row["fake_index_interacted"])
+        all_chain = self.items_indices[row["user_id"]]
+        if len(all_chain) >= 1:
+            x = tuple(all_chain[:-1])
+            if self.k:
+                x = x[-self.k:]
+            y = all_chain[-1]
+            self.chain[x].update([y])
+
+    def get_stats(self, row, item):
+        obs = {}
+        all_chain = tuple(self.items_indices[row["user_id"]])
+        if self.k:
+            all_chain = all_chain[-self.k:]
+        stats = self.chain[all_chain]
+        norm = sum(stats.values())
+        fname = f"fake_rps_prob_k_{self.k}" if self.k else "fake_rps_prob"
+        obs[fname] = (stats.get(item["rank"], 0) + 1) / (norm + 2)
         return obs
 
 
@@ -1740,359 +1807,395 @@ def group_accumulators(accumulators):
 
 def get_accumulators(hashn=None):
     accumulators = [
-        StatsAcc(
-            name="identical_impressions_item_clicks",
-            action_types=["clickout item"],
-            acc=defaultdict(lambda: defaultdict(int)),
-            updater=lambda acc, row: add_one_nested_key(acc, row["impressions_hash"], row["reference"]),
-            get_stats_func=lambda acc, row, item: acc[row["impressions_hash"]][item["item_id"]],
-        ),
-        StatsAcc(
-            name="identical_impressions_item_clicks2",
-            action_types=["clickout item"],
-            acc=defaultdict(lambda: defaultdict(int)),
-            updater=lambda acc, row: add_one_nested_key(acc, row["impressions_raw"], row["reference"]),
-            get_stats_func=lambda acc, row, item: acc[row["impressions_raw"]][item["item_id"]],
-        ),
-        StatsAcc(
-            name="is_impression_the_same",
-            action_types=["clickout item"],
-            acc=defaultdict(str),
-            updater=lambda acc, row: set_key(acc, row["user_id"], row["impressions_hash"]),
-            get_stats_func=lambda acc, row, item: acc.get(row["user_id"]) == row["impressions_hash"],
-        ),
-        StatsAcc(
-            name="last_10_actions",
-            action_types=ALL_ACTIONS,
-            acc=defaultdict(list),
-            updater=lambda acc, row: append_to_list(acc, row["user_id"], ACTION_SHORTENER[row["action_type"]]),
-            get_stats_func=lambda acc, row, item: "".join(["q"] + acc[row["user_id"]] + ["x"]),
-        ),
-        StatsAcc(
-            name="last_sort_order",
-            action_types=["change of sort order"],
-            acc={},
-            updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
-            get_stats_func=lambda acc, row, item: acc.get(row["user_id"], "UNK"),
-        ),
-        StatsAcc(
-            name="last_filter_selection",
-            action_types=["filter selection"],
-            acc={},
-            updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
-            get_stats_func=lambda acc, row, item: acc.get(row["user_id"], "UNK"),
-        ),
-        StatsAcc(
-            name="last_item_index",
-            action_types=["clickout item"],
-            acc=defaultdict(list),
-            updater=lambda acc, row: append_to_list_not_null(acc, row["user_id"], row["index_clicked"]),
-            get_stats_func=lambda acc, row, item: acc[row["user_id"]][-1] - item["rank"]
-            if acc[row["user_id"]]
-            else -1000,
-        ),
-        StatsAcc(
-            name="last_item_fake_index",
-            action_types=ACTIONS_WITH_ITEM_REFERENCE,
-            acc=defaultdict(list),
-            updater=lambda acc, row: append_to_list_not_null(acc, row["user_id"], row["fake_index_interacted"]),
-            get_stats_func=lambda acc, row, item: acc[row["user_id"]][-1] - item["rank"]
-            if acc[row["user_id"]]
-            else -1000,
-        ),
-        StatsAcc(
-            name="last_clicked_item_position_same_view",
-            action_types=["clickout item"],
-            acc={},
-            updater=lambda acc, row: set_key(acc, (row["user_id"], row["impressions_raw"]), row["index_clicked"]),
-            get_stats_func=lambda acc, row, item: item["rank"]
-            - acc.get((row["user_id"], row["impressions_raw"]), -1000),
-        ),
-        StatsAcc(
-            name="last_item_index_same_view",
-            action_types=["clickout item"],
-            acc=defaultdict(list),
-            updater=lambda acc, row: append_to_list_not_null(
-                acc, (row["user_id"], row["impressions_raw"]), row["index_clicked"]
-            ),
-            get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["impressions_raw"])][-1] - item["rank"]
-            if acc[(row["user_id"], row["impressions_raw"])]
-            else -1000,
-        ),
-        StatsAcc(
-            name="last_item_index_same_fake_view",
-            action_types=ACTIONS_WITH_ITEM_REFERENCE,
-            acc=defaultdict(list),
-            updater=lambda acc, row: append_to_list_not_null(
-                acc, (row["user_id"], row["fake_impressions_raw"]), row["fake_index_interacted"]
-            ),
-            get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["fake_impressions_raw"])][-1] - item["rank"]
-            if acc[(row["user_id"], row["fake_impressions_raw"])]
-            else -1000,
-        ),
-        StatsAcc(
-            name="last_event_ts",
-            action_types=ALL_ACTIONS,
-            acc=defaultdict(lambda: defaultdict(int)),
-            updater=lambda acc, row: set_nested_key(
-                acc, row["user_id"], ACTION_SHORTENER[row["action_type"]], row["timestamp"]
-            ),
-            get_stats_func=lambda acc, row, item: json.dumps(diff_ts(acc[row["user_id"]], row["timestamp"])),
-        ),
-        StatsAcc(
-            name="last_item_clickout",
-            action_types=["clickout item"],
-            acc={},
-            updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
-            get_stats_func=lambda acc, row, item: acc.get(row["user_id"], 0),
-        ),
-        # item ctr
-        ItemCTR(action_types=["clickout item"]),
-        AccByKey(ItemCTR(action_types=["clickout item"]), key="platform_device"),
-        AccByKey(ItemCTR(action_types=["clickout item"]), key="platform"),
-        AccByKey(ItemCTR(action_types=["clickout item"]), key="device"),
-        ItemCTRInteractions(),
-        AccByKey(ItemCTRInteractions(), key="platform_device"),
-        AccByKey(ItemCTRInteractions(), key="platform"),
-        AccByKey(ItemCTRInteractions(), key="device"),
-        StatsAcc(
-            name="clickout_item_platform_clicks",
-            action_types=["clickout item"],
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_key_by_one(acc, (row["reference"], row["platform"])),
-            get_stats_func=lambda acc, row, item: acc[(item["item_id"], row["platform"])],
-        ),
-        StatsAcc(
-            name="clickout_user_item_clicks",
-            action_types=["clickout item"],
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
-            get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
-        ),
-        StatsAcc(
-            name="clickout_user_item_impressions",
-            action_types=["clickout item"],
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_keys_by_one(
-                acc, [(row["user_id"], item_id) for item_id in row["impressions"]]
-            ),
-            get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
-        ),
-        StatsAcc(
-            name="was_interaction_img",
-            action_types=["interaction item image"],
-            acc={},
-            updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
-            get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
-        ),
-        StatsAcc(
-            name="interaction_img_diff_ts",
-            action_types=["interaction item image"],
-            acc={},
-            updater=lambda acc, row: set_key(acc, (row["user_id"], row["reference"]), row["timestamp"]),
-            get_stats_func=lambda acc, row, item: acc.get((row["user_id"], item["item_id"]), item["timestamp"])
-            - item["timestamp"],
-        ),
-        StatsAcc(
-            name="interaction_img_freq",
-            action_types=["interaction item image"],
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
-            get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
-        ),
-        StatsAcc(
-            name="was_interaction_deal",
-            action_types=["interaction item deals"],
-            acc={},
-            updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
-            get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
-        ),
-        StatsAcc(
-            name="interaction_deal_freq",
-            action_types=["interaction item deals"],
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
-            get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
-        ),
-        StatsAcc(
-            name="was_interaction_rating",
-            action_types=["interaction item rating"],
-            acc={},
-            updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
-            get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
-        ),
-        StatsAcc(
-            name="interaction_rating_freq",
-            action_types=["interaction item rating"],
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
-            get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
-        ),
-        StatsAcc(
-            name="was_interaction_info",
-            action_types=["interaction item info"],
-            acc={},
-            updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
-            get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
-        ),
-        StatsAcc(
-            name="interaction_info_freq",
-            action_types=["interaction item info"],
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
-            get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
-        ),
-        StatsAcc(
-            name="was_item_searched",
-            action_types=["search for item"],
-            acc={},
-            updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
-            get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
-        ),
-        StatsAcc(
-            name="user_item_interactions_list",
-            action_types=ACTIONS_WITH_ITEM_REFERENCE,
-            acc=defaultdict(set),
-            updater=lambda acc, row: add_to_set(acc, row["user_id"], tryint(row["reference"])),
-            get_stats_func=lambda acc, row, item: list(acc.get(row["user_id"], [])),
-        ),
-        StatsAcc(
-            name="user_item_session_interactions_list",
-            action_types=ACTIONS_WITH_ITEM_REFERENCE,
-            acc=defaultdict(set),
-            updater=lambda acc, row: add_to_set(acc, (row["user_id"], row["session_id"]), tryint(row["reference"])),
-            get_stats_func=lambda acc, row, item: list(acc.get((row["user_id"], row["session_id"]), [])),
-        ),
-        StatsAcc(
-            name="user_rank_preference",
-            action_types=["clickout item"],
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["index_clicked"])),
-            get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["rank"])],
-        ),
-        StatsAcc(
-            name="user_fake_rank_preference",
-            action_types=ACTIONS_WITH_ITEM_REFERENCE,
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["fake_index_interacted"])),
-            get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["rank"])],
-        ),
-        StatsAcc(
-            name="user_session_rank_preference",
-            action_types=["clickout item"],
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_key_by_one(
-                acc, (row["user_id"], row["session_id"], row["index_clicked"])
-            ),
-            get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["session_id"], item["rank"])],
-        ),
-        StatsAcc(
-            name="user_impression_rank_preference",
-            action_types=["clickout item"],
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_key_by_one(
-                acc, (row["user_id"], row["impressions_hash"], row["index_clicked"])
-            ),
-            get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["impressions_hash"], item["rank"])],
-        ),
-        StatsAcc(
-            name="interaction_item_image_item_last_timestamp",
-            action_types=["interaction item image"],
-            acc={},
-            updater=lambda acc, row: set_key(
-                acc, (row["user_id"], row["reference"], "interaction item image"), row["timestamp"]
-            ),
-            get_stats_func=lambda acc, row, item: min(
-                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "interaction item image"), 0), 1_000_000
-            ),
-        ),
-        StatsAcc(
-            name="clickout_item_item_last_timestamp",
-            action_types=["clickout item"],
-            acc={},
-            updater=lambda acc, row: set_key(
-                acc, (row["user_id"], row["reference"], "clickout item"), row["timestamp"]
-            ),
-            get_stats_func=lambda acc, row, item: min(
-                row["timestamp"] - acc.get((row["user_id"], item["item_id"], "clickout item"), 0), 1_000_000
-            ),
-        ),
-        StatsAcc(
-            name="last_timestamp_clickout",
-            action_types=["clickout item"],
-            acc={},
-            updater=lambda acc, row: set_key(acc, (row["user_id"], row["impressions_raw"]), row["timestamp"]),
-            get_stats_func=lambda acc, row, item: row["timestamp"]
-            - acc.get((row["user_id"], item["impressions_raw"]), 0),
-        ),
-        ClickProbabilityClickOffsetTimeOffset(action_types=["clickout item"]),
-        ClickProbabilityClickOffsetTimeOffset(
-            name="fake_clickout_prob_time_position_offset",
-            action_types=ACTIONS_WITH_ITEM_REFERENCE,
-            impressions_type="fake_impressions_raw",
-            index_col="fake_index_interacted",
-        ),
-        SimilarityFeatures("imm", hashn=0),
-        SimilarityFeatures("imm", hashn=1),
-        SimilarityFeatures("imm", hashn=2),
-        SimilarityFeatures("poi", hashn=0),
-        SimilarityFeatures("poi", hashn=1),
-        SimilarityFeatures("poi", hashn=2),
-        SimilarityFeatures("price", hashn=0),
-        SimilarityFeatures("price", hashn=1),
-        PoiFeatures(),
-        ItemLastClickoutStatsInSession(),
-        # ItemAttentionSpan(),
-        IndicesFeatures(
-            action_types=["clickout item"], prefix="", impressions_type="impressions_raw", index_key="index_clicked"
-        ),
-        IndicesFeatures(
-            action_types=list(ACTIONS_WITH_ITEM_REFERENCE),
-            prefix="fake_",
-            impressions_type="fake_impressions_raw",
-            index_key="fake_index_interacted",
-        ),
-        PriceFeatures(),
-        PriceSimilarity(),
-        SimilarUsersItemInteraction(),
-        MostSimilarUserItemInteraction(),
-        GlobalTimestampPerItem(),
-        ClickSequenceFeatures(),
-        FakeClickSequenceFeatures(),
-        TimeSinceSessionStart(),
-        TimeSinceUserStart(),
-        NumberOfSessions(),
-        AllFilters(),
-        ItemCTRInSequence(),
-        ItemCTRRankWeighted(),
-        Last10Actions(),
-        PriceSorted(),
-        ActionsTracker(),
-        DistinctInteractions(name="clickout", action_types=["clickout item"]),
-        DistinctInteractions(name="interact", action_types=ACTIONS_WITH_ITEM_REFERENCE),
-        PairwiseCTR(),
-        RankOfItemsFreshClickout(),
-        GlobalClickoutTimestamp(),
-        SequenceClickout(),
-        RankBasedCTR(),
-        ItemAverageRank(),
-        UserItemAttentionSpan(),
-        SameImpressionsDifferentUser(),
-        SameFakeImpressionsDifferentUser(),
-        ClickSequenceTrend(method="minmax", by="user_id"),
-        ClickSequenceTrend(method="lr", by="user_id"),
-        ClickSequenceTrend(method="minmax", by="session_id"),
-        ClickSequenceTrend(method="lr", by="session_id"),
-    ] + [
-        StatsAcc(
-            name="{}_count".format(action_type.replace(" ", "_")),
-            action_types=[action_type],
-            acc=defaultdict(int),
-            updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], action_type)),
-            get_stats_func=lambda acc, row, item: acc.get((row["user_id"], action_type), 0),
-        )
-        for action_type in ["filter selection"]
-    ]
+                       StatsAcc(
+                           name="identical_impressions_item_clicks",
+                           action_types=["clickout item"],
+                           acc=defaultdict(lambda: defaultdict(int)),
+                           updater=lambda acc, row: add_one_nested_key(acc, row["impressions_hash"], row["reference"]),
+                           get_stats_func=lambda acc, row, item: acc[row["impressions_hash"]][item["item_id"]],
+                       ),
+                       StatsAcc(
+                           name="identical_impressions_item_clicks2",
+                           action_types=["clickout item"],
+                           acc=defaultdict(lambda: defaultdict(int)),
+                           updater=lambda acc, row: add_one_nested_key(acc, row["impressions_raw"], row["reference"]),
+                           get_stats_func=lambda acc, row, item: acc[row["impressions_raw"]][item["item_id"]],
+                       ),
+                       StatsAcc(
+                           name="is_impression_the_same",
+                           action_types=["clickout item"],
+                           acc=defaultdict(str),
+                           updater=lambda acc, row: set_key(acc, row["user_id"], row["impressions_hash"]),
+                           get_stats_func=lambda acc, row, item: acc.get(row["user_id"]) == row["impressions_hash"],
+                       ),
+                       StatsAcc(
+                           name="last_10_actions",
+                           action_types=ALL_ACTIONS,
+                           acc=defaultdict(list),
+                           updater=lambda acc, row: append_to_list(acc, row["user_id"],
+                                                                   ACTION_SHORTENER[row["action_type"]]),
+                           get_stats_func=lambda acc, row, item: "".join(["q"] + acc[row["user_id"]] + ["x"]),
+                       ),
+                       StatsAcc(
+                           name="last_sort_order",
+                           action_types=["change of sort order"],
+                           acc={},
+                           updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
+                           get_stats_func=lambda acc, row, item: acc.get(row["user_id"], "UNK"),
+                       ),
+                       StatsAcc(
+                           name="last_filter_selection",
+                           action_types=["filter selection"],
+                           acc={},
+                           updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
+                           get_stats_func=lambda acc, row, item: acc.get(row["user_id"], "UNK"),
+                       ),
+                       StatsAcc(
+                           name="last_item_index",
+                           action_types=["clickout item"],
+                           acc=defaultdict(list),
+                           updater=lambda acc, row: append_to_list_not_null(acc, row["user_id"], row["index_clicked"]),
+                           get_stats_func=lambda acc, row, item: acc[row["user_id"]][-1] - item["rank"]
+                           if acc[row["user_id"]]
+                           else -1000,
+                       ),
+                       StatsAcc(
+                           name="last_item_fake_index",
+                           action_types=ACTIONS_WITH_ITEM_REFERENCE,
+                           acc=defaultdict(list),
+                           updater=lambda acc, row: append_to_list_not_null(acc, row["user_id"],
+                                                                            row["fake_index_interacted"]),
+                           get_stats_func=lambda acc, row, item: acc[row["user_id"]][-1] - item["rank"]
+                           if acc[row["user_id"]]
+                           else -1000,
+                       ),
+                       StatsAcc(
+                           name="last_clicked_item_position_same_view",
+                           action_types=["clickout item"],
+                           acc={},
+                           updater=lambda acc, row: set_key(acc, (row["user_id"], row["impressions_raw"]),
+                                                            row["index_clicked"]),
+                           get_stats_func=lambda acc, row, item: item["rank"]
+                                                                 - acc.get((row["user_id"], row["impressions_raw"]),
+                                                                           -1000),
+                       ),
+                       StatsAcc(
+                           name="last_item_index_same_view",
+                           action_types=["clickout item"],
+                           acc=defaultdict(list),
+                           updater=lambda acc, row: append_to_list_not_null(
+                               acc, (row["user_id"], row["impressions_raw"]), row["index_clicked"]
+                           ),
+                           get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["impressions_raw"])][-1] -
+                                                                 item["rank"]
+                           if acc[(row["user_id"], row["impressions_raw"])]
+                           else -1000,
+                       ),
+                       StatsAcc(
+                           name="last_item_index_same_fake_view",
+                           action_types=ACTIONS_WITH_ITEM_REFERENCE,
+                           acc=defaultdict(list),
+                           updater=lambda acc, row: append_to_list_not_null(
+                               acc, (row["user_id"], row["fake_impressions_raw"]), row["fake_index_interacted"]
+                           ),
+                           get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["fake_impressions_raw"])][
+                                                                     -1] - item["rank"]
+                           if acc[(row["user_id"], row["fake_impressions_raw"])]
+                           else -1000,
+                       ),
+                       StatsAcc(
+                           name="last_event_ts",
+                           action_types=ALL_ACTIONS,
+                           acc=defaultdict(lambda: defaultdict(int)),
+                           updater=lambda acc, row: set_nested_key(
+                               acc, row["user_id"], ACTION_SHORTENER[row["action_type"]], row["timestamp"]
+                           ),
+                           get_stats_func=lambda acc, row, item: json.dumps(
+                               diff_ts(acc[row["user_id"]], row["timestamp"])),
+                       ),
+                       StatsAcc(
+                           name="last_item_clickout",
+                           action_types=["clickout item"],
+                           acc={},
+                           updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
+                           get_stats_func=lambda acc, row, item: acc.get(row["user_id"], 0),
+                       ),
+                       # item ctr
+                       ItemCTR(action_types=["clickout item"]),
+                       AccByKey(ItemCTR(action_types=["clickout item"]), key="platform_device"),
+                       AccByKey(ItemCTR(action_types=["clickout item"]), key="platform"),
+                       AccByKey(ItemCTR(action_types=["clickout item"]), key="device"),
+                       ItemCTRInteractions(),
+                       AccByKey(ItemCTRInteractions(), key="platform_device"),
+                       AccByKey(ItemCTRInteractions(), key="platform"),
+                       AccByKey(ItemCTRInteractions(), key="device"),
+                       StatsAcc(
+                           name="clickout_item_platform_clicks",
+                           action_types=["clickout item"],
+                           acc=defaultdict(int),
+                           updater=lambda acc, row: increment_key_by_one(acc, (row["reference"], row["platform"])),
+                           get_stats_func=lambda acc, row, item: acc[(item["item_id"], row["platform"])],
+                       ),
+                       StatsAcc(
+                           name="clickout_user_item_clicks",
+                           action_types=["clickout item"],
+                           acc=defaultdict(int),
+                           updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
+                           get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
+                       ),
+                       StatsAcc(
+                           name="clickout_user_item_impressions",
+                           action_types=["clickout item"],
+                           acc=defaultdict(int),
+                           updater=lambda acc, row: increment_keys_by_one(
+                               acc, [(row["user_id"], item_id) for item_id in row["impressions"]]
+                           ),
+                           get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
+                       ),
+                       StatsAcc(
+                           name="was_interaction_img",
+                           action_types=["interaction item image"],
+                           acc={},
+                           updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
+                           get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
+                       ),
+                       StatsAcc(
+                           name="interaction_img_diff_ts",
+                           action_types=["interaction item image"],
+                           acc={},
+                           updater=lambda acc, row: set_key(acc, (row["user_id"], row["reference"]), row["timestamp"]),
+                           get_stats_func=lambda acc, row, item: acc.get((row["user_id"], item["item_id"]),
+                                                                         item["timestamp"])
+                                                                 - item["timestamp"],
+                       ),
+                       StatsAcc(
+                           name="interaction_img_freq",
+                           action_types=["interaction item image"],
+                           acc=defaultdict(int),
+                           updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
+                           get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
+                       ),
+                       StatsAcc(
+                           name="was_interaction_deal",
+                           action_types=["interaction item deals"],
+                           acc={},
+                           updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
+                           get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
+                       ),
+                       StatsAcc(
+                           name="interaction_deal_freq",
+                           action_types=["interaction item deals"],
+                           acc=defaultdict(int),
+                           updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
+                           get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
+                       ),
+                       StatsAcc(
+                           name="was_interaction_rating",
+                           action_types=["interaction item rating"],
+                           acc={},
+                           updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
+                           get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
+                       ),
+                       StatsAcc(
+                           name="interaction_rating_freq",
+                           action_types=["interaction item rating"],
+                           acc=defaultdict(int),
+                           updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
+                           get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
+                       ),
+                       StatsAcc(
+                           name="was_interaction_info",
+                           action_types=["interaction item info"],
+                           acc={},
+                           updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
+                           get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
+                       ),
+                       StatsAcc(
+                           name="interaction_info_freq",
+                           action_types=["interaction item info"],
+                           acc=defaultdict(int),
+                           updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["reference"])),
+                           get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["item_id"])],
+                       ),
+                       StatsAcc(
+                           name="was_item_searched",
+                           action_types=["search for item"],
+                           acc={},
+                           updater=lambda acc, row: set_key(acc, row["user_id"], row["reference"]),
+                           get_stats_func=lambda acc, row, item: int(acc.get(row["user_id"]) == item["item_id"]),
+                       ),
+                       StatsAcc(
+                           name="user_item_interactions_list",
+                           action_types=ACTIONS_WITH_ITEM_REFERENCE,
+                           acc=defaultdict(set),
+                           updater=lambda acc, row: add_to_set(acc, row["user_id"], tryint(row["reference"])),
+                           get_stats_func=lambda acc, row, item: list(acc.get(row["user_id"], [])),
+                       ),
+                       StatsAcc(
+                           name="user_item_session_interactions_list",
+                           action_types=ACTIONS_WITH_ITEM_REFERENCE,
+                           acc=defaultdict(set),
+                           updater=lambda acc, row: add_to_set(acc, (row["user_id"], row["session_id"]),
+                                                               tryint(row["reference"])),
+                           get_stats_func=lambda acc, row, item: list(acc.get((row["user_id"], row["session_id"]), [])),
+                       ),
+                       StatsAcc(
+                           name="user_rank_preference",
+                           action_types=["clickout item"],
+                           acc=defaultdict(int),
+                           updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], row["index_clicked"])),
+                           get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["rank"])],
+                       ),
+                       StatsAcc(
+                           name="user_fake_rank_preference",
+                           action_types=ACTIONS_WITH_ITEM_REFERENCE,
+                           acc=defaultdict(int),
+                           updater=lambda acc, row: increment_key_by_one(acc, (
+                           row["user_id"], row["fake_index_interacted"])),
+                           get_stats_func=lambda acc, row, item: acc[(row["user_id"], item["rank"])],
+                       ),
+                       StatsAcc(
+                           name="user_session_rank_preference",
+                           action_types=["clickout item"],
+                           acc=defaultdict(int),
+                           updater=lambda acc, row: increment_key_by_one(
+                               acc, (row["user_id"], row["session_id"], row["index_clicked"])
+                           ),
+                           get_stats_func=lambda acc, row, item: acc[(row["user_id"], row["session_id"], item["rank"])],
+                       ),
+                       StatsAcc(
+                           name="user_impression_rank_preference",
+                           action_types=["clickout item"],
+                           acc=defaultdict(int),
+                           updater=lambda acc, row: increment_key_by_one(
+                               acc, (row["user_id"], row["impressions_hash"], row["index_clicked"])
+                           ),
+                           get_stats_func=lambda acc, row, item: acc[
+                               (row["user_id"], row["impressions_hash"], item["rank"])],
+                       ),
+                       StatsAcc(
+                           name="interaction_item_image_item_last_timestamp",
+                           action_types=["interaction item image"],
+                           acc={},
+                           updater=lambda acc, row: set_key(
+                               acc, (row["user_id"], row["reference"], "interaction item image"), row["timestamp"]
+                           ),
+                           get_stats_func=lambda acc, row, item: min(
+                               row["timestamp"] - acc.get((row["user_id"], item["item_id"], "interaction item image"),
+                                                          0), 1_000_000
+                           ),
+                       ),
+                       StatsAcc(
+                           name="clickout_item_item_last_timestamp",
+                           action_types=["clickout item"],
+                           acc={},
+                           updater=lambda acc, row: set_key(
+                               acc, (row["user_id"], row["reference"], "clickout item"), row["timestamp"]
+                           ),
+                           get_stats_func=lambda acc, row, item: min(
+                               row["timestamp"] - acc.get((row["user_id"], item["item_id"], "clickout item"), 0),
+                               1_000_000
+                           ),
+                       ),
+                       StatsAcc(
+                           name="last_timestamp_clickout",
+                           action_types=["clickout item"],
+                           acc={},
+                           updater=lambda acc, row: set_key(acc, (row["user_id"], row["impressions_raw"]),
+                                                            row["timestamp"]),
+                           get_stats_func=lambda acc, row, item: row["timestamp"]
+                                                                 - acc.get((row["user_id"], item["impressions_raw"]),
+                                                                           0),
+                       ),
+                       ClickProbabilityClickOffsetTimeOffset(action_types=["clickout item"]),
+                       ClickProbabilityClickOffsetTimeOffset(
+                           name="fake_clickout_prob_time_position_offset",
+                           action_types=ACTIONS_WITH_ITEM_REFERENCE,
+                           impressions_type="fake_impressions_raw",
+                           index_col="fake_index_interacted",
+                       ),
+                       SimilarityFeatures("imm", hashn=0),
+                       SimilarityFeatures("imm", hashn=1),
+                       SimilarityFeatures("imm", hashn=2),
+                       SimilarityFeatures("poi", hashn=0),
+                       SimilarityFeatures("poi", hashn=1),
+                       SimilarityFeatures("poi", hashn=2),
+                       SimilarityFeatures("price", hashn=0),
+                       SimilarityFeatures("price", hashn=1),
+                       PoiFeatures(),
+                       ItemLastClickoutStatsInSession(),
+                       # ItemAttentionSpan(),
+                       IndicesFeatures(
+                           action_types=["clickout item"], prefix="", impressions_type="impressions_raw",
+                           index_key="index_clicked"
+                       ),
+                       IndicesFeatures(
+                           action_types=list(ACTIONS_WITH_ITEM_REFERENCE),
+                           prefix="fake_",
+                           impressions_type="fake_impressions_raw",
+                           index_key="fake_index_interacted",
+                       ),
+                       PriceFeatures(),
+                       PriceSimilarity(),
+                       SimilarUsersItemInteraction(),
+                       MostSimilarUserItemInteraction(),
+                       GlobalTimestampPerItem(),
+                       ClickSequenceFeatures(),
+                       FakeClickSequenceFeatures(),
+                       TimeSinceSessionStart(),
+                       TimeSinceUserStart(),
+                       NumberOfSessions(),
+                       AllFilters(),
+                       ItemCTRInSequence(),
+                       ItemCTRRankWeighted(),
+                       Last10Actions(),
+                       PriceSorted(),
+                       ActionsTracker(),
+                       DistinctInteractions(name="clickout", action_types=["clickout item"]),
+                       DistinctInteractions(name="interact", action_types=ACTIONS_WITH_ITEM_REFERENCE),
+                       PairwiseCTR(),
+                       RankOfItemsFreshClickout(),
+                       GlobalClickoutTimestamp(),
+                       SequenceClickout(),
+                       RankBasedCTR(),
+                       ItemAverageRank(),
+                       UserItemAttentionSpan(),
+                       SameImpressionsDifferentUser(),
+                       SameFakeImpressionsDifferentUser(),
+                       ClickSequenceTrend(method="minmax", by="user_id"),
+                       ClickSequenceTrend(method="lr", by="user_id"),
+                       ClickSequenceTrend(method="minmax", by="session_id"),
+                       ClickSequenceTrend(method="lr", by="session_id"),
+    RockPaperScissors(),
+    AccByKey(RockPaperScissors(), key="platform_device"),
+    AccByKey(RockPaperScissors(), key="platform"),
+    AccByKey(RockPaperScissors(), key="device"),
+    RockPaperScissors(k=5),
+    AccByKey(RockPaperScissors(k=5), key="platform_device"),
+    AccByKey(RockPaperScissors(k=5), key="platform"),
+    AccByKey(RockPaperScissors(k=5), key="device"),
+    RockPaperScissorsFake(),
+    AccByKey(RockPaperScissorsFake(), key="platform_device"),
+    AccByKey(RockPaperScissorsFake(), key="platform"),
+    AccByKey(RockPaperScissorsFake(), key="device"),
+    RockPaperScissorsFake(k=3),
+    AccByKey(RockPaperScissorsFake(k=3), key="platform_device"),
+    AccByKey(RockPaperScissorsFake(k=3), key="platform"),
+    AccByKey(RockPaperScissorsFake(k=3), key="device"),
+    RockPaperScissorsFake(k=5),
+    AccByKey(RockPaperScissorsFake(k=5), key="platform_device"),
+    AccByKey(RockPaperScissorsFake(k=5), key="platform"),
+    AccByKey(RockPaperScissorsFake(k=5), key="device"),
+                   ] + [
+                       StatsAcc(
+                           name="{}_count".format(action_type.replace(" ", "_")),
+                           action_types=[action_type],
+                           acc=defaultdict(int),
+                           updater=lambda acc, row: increment_key_by_one(acc, (row["user_id"], action_type)),
+                           get_stats_func=lambda acc, row, item: acc.get((row["user_id"], action_type), 0),
+                       )
+                       for action_type in ["filter selection"]
+                   ]
 
     if hashn is not None:
         accumulators = [acc for i, acc in enumerate(accumulators) if i % 32 == hashn]

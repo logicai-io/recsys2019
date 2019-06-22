@@ -231,6 +231,26 @@ numerical_features_info = [
     ("predicted_ind_rel_lr_by_user_id", False),
     ("predicted_ind_rel_minmax_by_session_id", False),
     ("ind_per_ts_minmax_by_session_id", False),
+("rps_prob",False),
+("rps_prob_by_platform_device",False),
+("rps_prob_by_platform",False),
+("rps_prob_by_device",False),
+("rps_prob_k_5",False),
+("rps_prob_k_5_by_platform_device",False),
+("rps_prob_k_5_by_platform",False),
+("rps_prob_k_5_by_device",False),
+("fake_rps_prob",False),
+("fake_rps_prob_by_platform_device",False),
+("fake_rps_prob_by_platform",False),
+("fake_rps_prob_by_device",False),
+("fake_rps_prob_k_3",False),
+("fake_rps_prob_k_3_by_platform_device",False),
+("fake_rps_prob_k_3_by_platform",False),
+("fake_rps_prob_k_3_by_device",False),
+("fake_rps_prob_k_5",False),
+("fake_rps_prob_k_5_by_platform_device",False),
+("fake_rps_prob_k_5_by_platform",False),
+("fake_rps_prob_k_5_by_device",False),
 ]
 
 numerical_features_for_ranking_py = [f for f, rank in numerical_features_info if rank]
@@ -442,7 +462,7 @@ def make_vectorizer_3_no_eng(numerical_features, numerical_features_for_ranking)
                     make_pipeline(RankFeatures(ascending=True), MinimizeNNZ()),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
-                ("actions_tracker", DictVectorizer(), "actions_tracker"),
+                # ("actions_tracker", DictVectorizer(), "actions_tracker"),
             ]
         )
     )

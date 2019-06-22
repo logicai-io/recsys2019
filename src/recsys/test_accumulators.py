@@ -25,7 +25,7 @@ from recsys.data_generator.accumulators import (
     ClickSequenceTrend,
     AccByKey,
     ItemCTRInteractions,
-    ItemAttentionSpan, ItemCTRInSequence)
+    ItemAttentionSpan, ItemCTRInSequence, RockPaperScissors, RockPaperScissorsFake)
 from recsys.data_generator.generate_training_data import FeatureGenerator
 from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast, mrr_fast_v2
@@ -35,30 +35,50 @@ from tqdm import tqdm
 from scipy import sparse as sp
 
 accumulators = [
-    PriceSorted(),
-    ActionsTracker(),
-    DistinctInteractions(name="clickout", action_types=["clickout item"]),
-    DistinctInteractions(name="interact", action_types=ACTIONS_WITH_ITEM_REFERENCE),
-    PairwiseCTR(),
-    RankOfItemsFreshClickout(),
-    GlobalClickoutTimestamp(),
-    SequenceClickout(),
-    ItemCTR(action_types=["clickout item"]),
+    # PriceSorted(),
+    # ActionsTracker(),
+    # DistinctInteractions(name="clickout", action_types=["clickout item"]),
+    # DistinctInteractions(name="interact", action_types=ACTIONS_WITH_ITEM_REFERENCE),
+    # PairwiseCTR(),
+    # RankOfItemsFreshClickout(),
+    # GlobalClickoutTimestamp(),
+    # SequenceClickout(),
+    # ItemCTR(action_types=["clickout item"]),
     # AccByKey(ItemCTR(action_types=["clickout item"]), key="platform_device"),
     # AccByKey(ItemCTR(action_types=["clickout item"]), key="platform"),
     # AccByKey(ItemCTR(action_types=["clickout item"]), key="device"),
-    ItemCTRInteractions(),
+    # ItemCTRInteractions(),
     # AccByKey(ItemCTRInteractions(), key="platform_device"),
     # AccByKey(ItemCTRInteractions(), key="platform"),
     # AccByKey(ItemCTRInteractions(), key="device"),
-    RankBasedCTR(),
+    # RankBasedCTR(),
     # new
-    AccByKey(RankBasedCTR(), key="platform_device"),
-    AccByKey(RankBasedCTR(), key="platform"),
-    AccByKey(RankBasedCTR(), key="device"),
-    AccByKey(RankBasedCTR(simple=True), key="platform_device"),
-    AccByKey(RankBasedCTR(simple=True), key="platform"),
-    AccByKey(RankBasedCTR(simple=True), key="device"),
+    # AccByKey(RankBasedCTR(), key="platform_device"),
+    # AccByKey(RankBasedCTR(), key="platform"),
+    # AccByKey(RankBasedCTR(), key="device"),
+    # AccByKey(RankBasedCTR(simple=True), key="platform_device"),
+    # AccByKey(RankBasedCTR(simple=True), key="platform"),
+    # AccByKey(RankBasedCTR(simple=True), key="device"),
+    RockPaperScissors(),
+    AccByKey(RockPaperScissors(), key="platform_device"),
+    AccByKey(RockPaperScissors(), key="platform"),
+    AccByKey(RockPaperScissors(), key="device"),
+    RockPaperScissors(k=5),
+    AccByKey(RockPaperScissors(k=5), key="platform_device"),
+    AccByKey(RockPaperScissors(k=5), key="platform"),
+    AccByKey(RockPaperScissors(k=5), key="device"),
+    RockPaperScissorsFake(),
+    AccByKey(RockPaperScissorsFake(), key="platform_device"),
+    AccByKey(RockPaperScissorsFake(), key="platform"),
+    AccByKey(RockPaperScissorsFake(), key="device"),
+    RockPaperScissorsFake(k=3),
+    AccByKey(RockPaperScissorsFake(k=3), key="platform_device"),
+    AccByKey(RockPaperScissorsFake(k=3), key="platform"),
+    AccByKey(RockPaperScissorsFake(k=3), key="device"),
+    RockPaperScissorsFake(k=5),
+    AccByKey(RockPaperScissorsFake(k=5), key="platform_device"),
+    AccByKey(RockPaperScissorsFake(k=5), key="platform"),
+    AccByKey(RockPaperScissorsFake(k=5), key="device"),
     # AccByKey(ItemAttentionSpan(), key="platform_device"),
     # AccByKey(ItemAttentionSpan(), key="platform"),
     # AccByKey(ItemAttentionSpan(), key="device"),
@@ -112,17 +132,17 @@ By rank
 """
 
 csv = "../../data/events_sorted_trans_mini.csv"
-feature_generator = FeatureGenerator(
-    limit=1000000,
-    accumulators=accumulators,
-    save_only_features=False,
-    input="../../data/events_sorted.csv",
-    save_as=csv,
-)
-feature_generator.generate_features()
+# feature_generator = FeatureGenerator(
+#     limit=5000000,
+#     accumulators=accumulators,
+#     save_only_features=False,
+#     input="../../data/events_sorted.csv",
+#     save_as=csv,
+# )
+# feature_generator.generate_features()
 
-df = pd.read_csv(csv)
-df["actions_tracker"] = df["actions_tracker"].map(json.loads)
+df = pd.read_csv(csv, nrows=4000000)
+# df["actions_tracker"] = df["actions_tracker"].map(json.loads)
 
 features = [col for col in list(df.columns[27:]) if col != "actions_tracker"]
 df_train, df_val = split_by_timestamp(df)
