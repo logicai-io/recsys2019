@@ -2,7 +2,7 @@ import json
 
 import pandas as pd
 import numpy as np
-from lightgbm import LGBMRanker, LGBMClassifier
+from lightgbm import LGBMRanker, LGBMClassifier, LGBMRankerMRR2
 from recsys.data_generator.accumulators import (
     ACTIONS_WITH_ITEM_REFERENCE,
     ActionsTracker,
@@ -25,7 +25,7 @@ from recsys.data_generator.accumulators import (
     ClickSequenceTrend,
     AccByKey,
     ItemCTRInteractions,
-)
+    ItemAttentionSpan, ItemCTRInSequence)
 from recsys.data_generator.generate_training_data import FeatureGenerator
 from recsys.df_utils import split_by_timestamp
 from recsys.metric import mrr_fast, mrr_fast_v2
@@ -43,80 +43,31 @@ accumulators = [
     RankOfItemsFreshClickout(),
     GlobalClickoutTimestamp(),
     SequenceClickout(),
-    RankBasedCTR(),
     ItemCTR(action_types=["clickout item"]),
-    AccByKey(ItemCTR(action_types=["clickout item"]), key="platform_device"),
-    AccByKey(ItemCTR(action_types=["clickout item"]), key="platform"),
-    AccByKey(ItemCTR(action_types=["clickout item"]), key="device"),
+    # AccByKey(ItemCTR(action_types=["clickout item"]), key="platform_device"),
+    # AccByKey(ItemCTR(action_types=["clickout item"]), key="platform"),
+    # AccByKey(ItemCTR(action_types=["clickout item"]), key="device"),
     ItemCTRInteractions(),
-    AccByKey(ItemCTRInteractions(), key="platform_device"),
-    AccByKey(ItemCTRInteractions(), key="platform"),
-    AccByKey(ItemCTRInteractions(), key="device"),
-    # ItemAverageRank(),
-    # UserItemAttentionSpan(),
-    # SameImpressionsDifferentUser(),
-    # SameFakeImpressionsDifferentUser(),
-    # ClickSequenceTrend(method="minmax", by="user_id"),
-    # ClickSequenceTrend(method="lr", by="user_id"),
-    # ClickSequenceTrend(method="minmax", by="session_id"),
-    # ClickSequenceTrend(method="lr", by="session_id")
-    # SameImpressionsDifferentUserTopN(topn=3),
-    # SameImpressionsDifferentUserTopN(topn=5),
-    # SameImpressionsDifferentUserTopN(topn=10),
-    # ClickProbabilityClickOffsetTimeOffset(action_types=["clickout item"],
-    #                                       probs_path='../../data/click_probs_by_index.joblib'),
-    # ClickProbabilityClickOffsetTimeOffset(
-    #     name="fake_clickout_prob_time_position_offset",
-    #     action_types=ACTIONS_WITH_ITEM_REFERENCE,
-    #     impressions_type="fake_impressions_raw",
-    #     index_col="fake_index_interacted",
-    #     probs_path='../../data/click_probs_by_index.joblib'
-    # ),
-    # ClickProbabilityClickOffsetTimeOffsetByDevice(name="clickout_prob_time_position_offset_by_device",
-    #                                               action_types=["clickout item"],
-    #                                               probs_path="../../data/"),
-    # ClickProbabilityClickOffsetTimeOffsetByDevice(
-    #     name="fake_clickout_prob_time_position_offset_by_device",
-    #     action_types=ACTIONS_WITH_ITEM_REFERENCE,
-    #     impressions_type="fake_impressions_raw",
-    #     index_col="fake_index_interacted",
-    #     probs_path="../../data/"
-    # ),
-    # ClickProbabilityClickOffsetTimeOffset(
-    #     name="fake_clickout_prob_time_position_offset",
-    #     action_types=ACTIONS_WITH_ITEM_REFERENCE,
-    #     impressions_type="fake_impressions_raw",
-    #     index_col="fake_index_interacted",
-    #     probs_path="../../data/click_probs_by_index.joblib"
-    # ),
-    # ClickProbabilityClickOffsetTimeOffset(
-    #     name="fake_clickout_prob_time_position_offset_v2_user",
-    #     action_types=ACTIONS_WITH_ITEM_REFERENCE,
-    #     impressions_type="fake_impressions_v2_user_raw",
-    #     index_col="fake_impressions_v2_user_index",
-    #     probs_path="../../data/click_probs_by_index.joblib"
-    # ),
-    # ClickProbabilityClickOffsetTimeOffset(
-    #     name="fake_clickout_prob_time_position_offset_v2_user_session",
-    #     action_types=ACTIONS_WITH_ITEM_REFERENCE,
-    #     impressions_type="fake_impressions_v2_user_session_raw",
-    #     index_col="fake_impressions_v2_user_session_index",
-    #     probs_path="../../data/click_probs_by_index.joblib"
-    # ),
-    # ClickProbabilityClickOffsetTimeOffset(
-    #     name="fake_clickout_prob_time_position_offset_v2_user_resets",
-    #     action_types=ACTIONS_WITH_ITEM_REFERENCE,
-    #     impressions_type="fake_impressions_v2_user_resets_raw",
-    #     index_col="fake_impressions_v2_user_resets_index",
-    #     probs_path="../../data/click_probs_by_index.joblib"
-    # ),
-    # ClickProbabilityClickOffsetTimeOffset(
-    #     name="fake_clickout_prob_time_position_offset_v2_user_session_resets",
-    #     action_types=ACTIONS_WITH_ITEM_REFERENCE,
-    #     impressions_type="fake_impressions_v2_user_session_resets_raw",
-    #     index_col="fake_impressions_v2_user_session_resets_index",
-    #     probs_path="../../data/click_probs_by_index.joblib"
-    # ),
+    # AccByKey(ItemCTRInteractions(), key="platform_device"),
+    # AccByKey(ItemCTRInteractions(), key="platform"),
+    # AccByKey(ItemCTRInteractions(), key="device"),
+    RankBasedCTR(),
+    # new
+    AccByKey(RankBasedCTR(), key="platform_device"),
+    AccByKey(RankBasedCTR(), key="platform"),
+    AccByKey(RankBasedCTR(), key="device"),
+    AccByKey(RankBasedCTR(simple=True), key="platform_device"),
+    AccByKey(RankBasedCTR(simple=True), key="platform"),
+    AccByKey(RankBasedCTR(simple=True), key="device"),
+    # AccByKey(ItemAttentionSpan(), key="platform_device"),
+    # AccByKey(ItemAttentionSpan(), key="platform"),
+    # AccByKey(ItemAttentionSpan(), key="device"),
+    # AccByKey(ItemCTRInSequence(), key="platform_device"),
+    # AccByKey(ItemCTRInSequence(), key="platform"),
+    # AccByKey(ItemCTRInSequence(), key="device"),
+    # AccByKey(PairwiseCTR(), key="platform_device"),
+    # AccByKey(PairwiseCTR(), key="platform"),
+    # AccByKey(PairwiseCTR(), key="device"),
 ]
 
 """
@@ -206,6 +157,27 @@ print("By rank")
 for n in range(1, 10):
     print(n, mrr_fast(df_val[df_val["clickout_step_rev"] == n], "click_proba"))
 
+
+model = LGBMRankerMRR2(learning_rate=0.1, n_estimators=100, min_child_samples=5, min_child_weight=0.00001, n_jobs=-2)
+model.fit(
+    mat_train,
+    df_train["was_clicked"],
+    group=group_lengths(df_train["clickout_id"]),
+    # eval_set=[(mat_val, df_val["was_clicked"])],
+    # eval_group=[group_lengths(df_val["clickout_id"])],
+    # eval_metric=mrr_metric,
+)
+
+df_train["click_proba"] = model.predict(mat_train)
+df_val["click_proba"] = model.predict(mat_val)
+
+print(mrr_fast(df_val, "click_proba"))
+print("By rank")
+for n in range(1, 10):
+    print(n, mrr_fast(df_val[df_val["clickout_step_rev"] == n], "click_proba"))
+
+
+
 model = LGBMRanker(
     learning_rate=0.1,
     n_estimators=100,
@@ -229,41 +201,3 @@ print(mrr_fast(df_val, "click_proba"))
 for fname, imp in zip(features, model.feature_importances_):
     df_val[fname + "m"] = -df_val[fname]
     print(fname, imp, max(mrr_fast(df_val.sample(frac=1), fname + "m"), mrr_fast(df_val.sample(frac=1), fname)))
-
-
-"""
-
-def transpose_mat(mat_train, df_train):
-    mat_train_t = np.zeros((df_train["clickout_id"].nunique(), mat_train.shape[1]*25), dtype=np.float32)
-    mat_clickout_row = dict(zip(df_train["clickout_id"].unique(), np.arange(df_train["clickout_id"].nunique())))
-    mat_clickout_y = dict(zip(df_train["clickout_id"], df_train["index_clicked"]))
-    n_rows = mat_train.shape[0]
-    n_cols = mat_train.shape[1]
-    ranks = df_train["rank"].values
-    clickouts = df_train["clickout_id"].values
-    for i in tqdm(range(n_rows)):
-        rank = ranks[i]
-        i_t = mat_clickout_row[clickouts[i]]
-        for j in range(n_cols):
-            j_t = rank*n_cols + j
-            mat_train_t[i_t, j_t] = mat_train[i, j]
-    y_train_t = pd.Series(df_train["clickout_id"].unique()).map(mat_clickout_y)
-    return sp.csr_matrix(mat_train_t), y_train_t
-
-
-mat_train_t, y_train_t = transpose_mat(mat_train, df_train)
-mat_val_t, y_val_t = transpose_mat(mat_val, df_val)
-
-model = LGBMClassifier(learning_rate=0.1, n_estimators=100, min_child_samples=5, min_child_weight=0.00001, verbose=1, n_jobs=-2)
-model.fit(
-    sp.csr_matrix(mat_train_t),
-    y_train_t,
-    eval_set=[(sp.csr_matrix(mat_val_t), y_val_t)],
-)
-
-val_pred_proba = model.predict_proba(sp.csr_matrix(mat_val_t))[:,1:]
-val_pred_proba_sort = np.argsort(-val_pred_proba, axis=1)
-val_pred_proba_sort[np.arange(val_pred_proba.shape[0]), y_val_t]
-
-assert False
-"""

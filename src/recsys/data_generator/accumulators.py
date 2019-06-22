@@ -1,7 +1,9 @@
 import gzip
 import json
+from _operator import mul
 from collections import Counter, defaultdict
 from copy import deepcopy
+from functools import reduce
 from math import log1p, sqrt
 from statistics import mean, stdev
 from typing import Dict
@@ -1618,10 +1620,11 @@ class SameFakeImpressionsDifferentUser:
 
 
 class RankBasedCTR:
-    def __init__(self):
+    def __init__(self, simple=False):
         self.action_types = ["clickout item"]
         self.item_rank_clicks = defaultdict(lambda: dict(zip(range(25), [0] * 25)))
         self.item_rank_impressions = defaultdict(lambda: dict(zip(range(25), [0] * 25)))
+        self.simple = simple
 
     def update_acc(self, row: Dict):
         if not row["reference"].isnumeric():
@@ -1638,28 +1641,31 @@ class RankBasedCTR:
         item_id = int(item["item_id"])
         rank = int(item["rank"])
         obs = {}
-        if rank == 0:
-            obs["rank_based_ctr"] = (
-                (self.item_rank_clicks[item_id][0] + 1) / (self.item_rank_impressions[item_id][0] + 2) * 0.5
-                + (self.item_rank_clicks[item_id][1] + 1) / (self.item_rank_impressions[item_id][1] + 2) * 0.3
-                + (self.item_rank_clicks[item_id][2] + 1) / (self.item_rank_impressions[item_id][2] + 2) * 0.2
-            )
-        elif rank == 24:
-            obs["rank_based_ctr"] = (
-                (self.item_rank_clicks[item_id][24] + 1) / (self.item_rank_impressions[item_id][24] + 2) * 0.5
-                + (self.item_rank_clicks[item_id][23] + 1) / (self.item_rank_impressions[item_id][23] + 2) * 0.3
-                + (self.item_rank_clicks[item_id][22] + 1) / (self.item_rank_impressions[item_id][22] + 2) * 0.2
-            )
+        if self.simple:
+            obs["rank_based_ctr_simple"] = (self.item_rank_clicks[item_id][rank] + 1) / (self.item_rank_impressions[item_id][rank] + 2)
         else:
-            obs["rank_based_ctr"] = (
-                (self.item_rank_clicks[item_id][rank - 1] + 1)
-                / (self.item_rank_impressions[item_id][rank - 1] + 2)
-                * 0.25
-                + (self.item_rank_clicks[item_id][rank] + 1) / (self.item_rank_impressions[item_id][rank] + 2) * 0.5
-                + (self.item_rank_clicks[item_id][rank + 1] + 1)
-                / (self.item_rank_impressions[item_id][rank + 1] + 2)
-                * 0.25
-            )
+            if rank == 0:
+                obs["rank_based_ctr"] = (
+                    (self.item_rank_clicks[item_id][0] + 1) / (self.item_rank_impressions[item_id][0] + 2) * 0.5
+                    + (self.item_rank_clicks[item_id][1] + 1) / (self.item_rank_impressions[item_id][1] + 2) * 0.3
+                    + (self.item_rank_clicks[item_id][2] + 1) / (self.item_rank_impressions[item_id][2] + 2) * 0.2
+                )
+            elif rank == 24:
+                obs["rank_based_ctr"] = (
+                    (self.item_rank_clicks[item_id][24] + 1) / (self.item_rank_impressions[item_id][24] + 2) * 0.5
+                    + (self.item_rank_clicks[item_id][23] + 1) / (self.item_rank_impressions[item_id][23] + 2) * 0.3
+                    + (self.item_rank_clicks[item_id][22] + 1) / (self.item_rank_impressions[item_id][22] + 2) * 0.2
+                )
+            else:
+                obs["rank_based_ctr"] = (
+                    (self.item_rank_clicks[item_id][rank - 1] + 1)
+                    / (self.item_rank_impressions[item_id][rank - 1] + 2)
+                    * 0.25
+                    + (self.item_rank_clicks[item_id][rank] + 1) / (self.item_rank_impressions[item_id][rank] + 2) * 0.5
+                    + (self.item_rank_clicks[item_id][rank + 1] + 1)
+                    / (self.item_rank_impressions[item_id][rank + 1] + 2)
+                    * 0.25
+                )
         return obs
 
 
@@ -1687,6 +1693,40 @@ class AccByKey:
             obs[f"{k}_by_{self.key}"] = obs[k]
             del obs[k]
         del row["platform_device"]
+        return obs
+
+
+class PropertiesBayes:
+    def __init__(self, k=5, path="../../../data/item_metadata_map.joblib"):
+        """
+        :param k: Smoothing parameter
+        """
+        self.k = k
+        self.action_types = ["clickout item"]
+        self.imm = joblib.load(path)
+        self.prop_clicks = defaultdict(int)
+        self.prop_impressions = defaultdict(int)
+
+    def update_acc(self, row: Dict):
+        if not row["reference"].isnumeric():
+            return
+
+        for item_id in row["impressions"]:
+            for prop in self.imm.get(int(item_id),[]):
+                self.prop_impressions[prop] += 1
+
+        item_clicked = int(row["reference"])
+        for prop in self.imm.get(item_clicked,[]):
+            self.prop_clicks[prop] += 1
+
+    def get_stats(self, row, item):
+        obs = {}
+        probs = []
+        for prop in self.imm.get(int(item["item_id"]), []):
+            prob = (self.prop_clicks[prop]+1) / (self.prop_impressions[prop]+self.k)
+            probs.append(prob)
+        obs["properties_prob_mul"] = reduce(mul, probs) if probs else 0
+        obs["properties_prob_max"] = max(probs) if probs else 0
         return obs
 
 
