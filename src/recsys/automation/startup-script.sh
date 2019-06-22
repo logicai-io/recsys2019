@@ -8,7 +8,7 @@ PIP install google-cloud-storage
 cd /home/pawel/recsys2019/
 git stash
 git pull
-git checkout automation
+git checkout master
 cd /home/pawel/recsys2019/src/recsys/automation
 
 MODEL_CONFIG=$(curl http://metadata/computeMetadata/v1/instance/attributes/model_config -H "Metadata-Flavor: Google")
