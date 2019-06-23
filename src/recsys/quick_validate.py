@@ -12,14 +12,12 @@ warnings.filterwarnings("ignore")
 
 
 def read_data():
-    nrows = 200000
-    df = pd.read_csv("../../data/events_sorted_trans_all.csv", nrows=nrows)
+    df = pd.read_csv("../../data/events_sorted_trans_all.csv")
     df_train, df_val = split_by_timestamp(df)
     return df_train, df_val
 
 
 df_train, df_val = read_data()
-assert False
 vectorizer = make_vectorizer_1()
 mat_train = vectorizer.fit_transform(df_train, df_train["was_clicked"])
 print(mat_train.shape)
