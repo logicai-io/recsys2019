@@ -1,0 +1,6 @@
+{
+    "dataset_path_matrix": "data/f6e3ae/Xcsr.h5",
+    "dataset_path_meta": "data/f6e3ae/meta.h5",
+    "model_class": "LGBMRanker",
+    "model_params": {"boosting_type": "goss", "learning_rate": 0.2, "num_leaves": 128, "min_child_samples":5, "n_estimators": 1600, "n_jobs": -2}
+}
