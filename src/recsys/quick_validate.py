@@ -12,14 +12,12 @@ warnings.filterwarnings("ignore")
 
 
 def read_data():
-    nrows = 200000
-    df = pd.read_csv("../../data/events_sorted_trans_all.csv", nrows=nrows)
+    df = pd.read_csv("../../data/events_sorted_trans_all.csv")
     df_train, df_val = split_by_timestamp(df)
     return df_train, df_val
 
 
 df_train, df_val = read_data()
-assert False
 vectorizer = make_vectorizer_1()
 mat_train = vectorizer.fit_transform(df_train, df_train["was_clicked"])
 print(mat_train.shape)
@@ -64,4 +62,19 @@ By rank
 7 0.5577631093186649
 8 0.5881863593922418
 9 0.5779483588307118
+
+2m
+
+0.6444460221884221
+By rank
+1 0.6765936073972822
+2 0.6287187402623371
+3 0.6161324468070215
+4 0.5788387141337403
+5 0.5954916720444046
+6 0.6032179496195775
+7 0.582078925991308
+8 0.5569134781743041
+9 0.547580069910817
+
 """
