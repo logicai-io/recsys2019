@@ -11,5 +11,5 @@ for p in ps:
     p.wait()
 
 os.system(
-    "paste -d, ../../../data/events_sorted_trans_0*.csv ../../../data/features/comp_v0_selected.csv > ../../../data/events_sorted_trans_all.csv"
+    "paste -d, ../../../data/events_sorted_trans_0*.csv ../../../data/features/comp-v1-selected.csv ../../../data/features/price_features.csv ../../../data/features/time_rank_user-features.csv > ../../../data/events_sorted_trans_all.csv"
 )
