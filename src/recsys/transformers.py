@@ -157,10 +157,6 @@ class LagNumericalFeaturesWithinGroup(BaseEstimator, TransformerMixin):
             new_cols.append(col + "_shifted_p1_diff")
             X[col + "_shifted_m1_diff"] = X[col] - X.groupby([self.groupby])[col].shift(-self.offset).fillna(0)
             new_cols.append(col + "_shifted_m1_diff")
-            X[col + "_shifted_p1"] = X.groupby([self.groupby])[col].shift(self.offset).fillna(0)
-            new_cols.append(col + "_shifted_p1")
-            X[col + "_shifted_m1"] = X.groupby([self.groupby])[col].shift(-self.offset).fillna(0)
-            new_cols.append(col + "_shifted_m1")
         if self.drop_clickout_id:
             X.drop("clickout_id", axis=1, inplace=True)
         return X[new_cols]
