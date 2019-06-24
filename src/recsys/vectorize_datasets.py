@@ -1,3 +1,8 @@
+import os
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+
 from recsys.log_utils import get_logger
 from recsys.vectorizers import make_vectorizer_1, VectorizeChunks, make_vectorizer_2
 
