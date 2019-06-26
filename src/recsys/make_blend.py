@@ -1,11 +1,12 @@
 import glob
 import hashlib
+import os
 from multiprocessing.pool import Pool
 
 import pandas as pd
 from recsys.metric import mrr_fast, mrr_fast_v2
 from recsys.submission import group_clickouts
-from scipy.optimize import fmin_powell, fmin
+from scipy.optimize import fmin_powell, fmin, basinhopping, fmin_l_bfgs_b, minimize, fmin_bfgs
 
 
 def str_to_hash(s):
@@ -52,7 +53,12 @@ def read_prediction_val(fn):
     p.sort_values(["user_id", "session_id", "step"], inplace=True)
     p.reset_index(inplace=True, drop=True)
     mrr = mrr_fast(p, "click_proba")
-    return mrr, p
+    config_file = fn.replace("predictions.csv", "config.json")
+    if os.path.exists(config_file) and config_file.endswith("config.json"):
+        config = open(config_file).read()
+    else:
+        config = fn
+    return mrr, p, config
 
 
 def read_prediction(fn):
@@ -63,7 +69,6 @@ def read_prediction(fn):
 
 
 if __name__ == '__main__':
-
     preds1_vals, preds1_subs = get_preds_1()
     preds2_vals, preds2_subs = get_preds_2()
 
@@ -73,20 +78,24 @@ if __name__ == '__main__':
     # read validation models
     with Pool(32) as pool:
         val_predictions_dfs = pool.map(read_prediction_val, [fn for _,fn in preds_vals_all])
-    val_predictions = [(mrr, hsh, df) for ((hsh, fn), (mrr, df)) in zip(preds_vals_all, val_predictions_dfs) if (df.shape[0] == 3077674) and (mrr > 0.68)]
+    val_predictions = [(mrr, hsh, df, config) for ((hsh, fn), (mrr, df, config)) 
+                       in zip(preds_vals_all, val_predictions_dfs) 
+                       if (df.shape[0] == 3077674) and (mrr > 0.68) and ("160357" not in fn)]
     val_hashes = [p[1] for p in val_predictions]
 
-    # read submission models
-    with Pool(32) as pool:
-        sub_predictions_dfs = pool.map(read_prediction, [fn for _, fn in preds_subs_all])
-    sub_predictions = [(hsh, df) for ((hsh, fn), df) in zip(preds_subs_all, sub_predictions_dfs) if hsh in val_hashes]
+    mrrs, _, _, configs = list(zip(*val_predictions))
+    summary_df = pd.DataFrame({'config': configs, 'mrr': mrrs})
+    print(summary_df)
+    summary_df.to_csv("model_summary.csv")
 
     final = val_predictions[-1][2].copy()
 
     def opt(v):
         final["click_proba"] = 0
-        for c, (_, _, pred) in zip(v, val_predictions):
-            # c = max(c,0)
+        s = sum(v)
+        if s != 0:
+            v = [e/s for e in v]
+        for c, (_, _, pred, _) in zip(v, val_predictions):
             final["click_proba"] += c * pred["click_proba"]
         mrr = mrr_fast_v2(final["was_clicked"], final["click_proba"], final["clickout_id"])
         print(v)
@@ -94,15 +103,17 @@ if __name__ == '__main__':
         return -mrr
 
     coefs = fmin(opt, [0] * len(val_predictions))
-    coefs = fmin(opt, coefs)
     mrr = mrr_fast(final, "click_proba")
     mrr_str = f"{mrr:.4f}"[2:]
     print(mrr)
 
+    # read submission models
+    with Pool(32) as pool:
+        sub_predictions_dfs = pool.map(read_prediction, [fn for _, fn in preds_subs_all])
+    sub_predictions = [(hsh, df) for ((hsh, fn), df) in zip(preds_subs_all, sub_predictions_dfs) if hsh in val_hashes]
     final = sub_predictions[-1][1].copy()
     final["click_proba"] = 0
     for c, (hsh, pred) in zip(coefs, sub_predictions):
-        # c = max(c,0)
         print(hsh, c*10000)
         final["click_proba"] += c * pred["click_proba"]
     _, submission_df = group_clickouts(final)
