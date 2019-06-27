@@ -97,12 +97,13 @@ if __name__ == '__main__':
 
     def opt(v):
         preds_ens = preds_stack.dot(v)
-        mrr = mrr_fast_v3(preds_ens, final["was_clicked"].values, lengths)
+        mrr = mrr_fast_v3(final["was_clicked"].values, preds_ens, lengths)
         print(f"MRR {mrr}")
         return -mrr
 
     coefs = fmin(opt, [0] * len(val_predictions))
-    coefs = fmin_powell(opt, coefs)
+    coefs = fmin(opt, coefs, ftol=0.000001)
+    final["click_proba"] = preds_stack.dot(coefs)
     mrr = mrr_fast(final, "click_proba")
     mrr_str = f"{mrr:.4f}"[2:]
     print(mrr)
