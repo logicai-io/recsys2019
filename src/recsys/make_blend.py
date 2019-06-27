@@ -6,8 +6,10 @@ from multiprocessing.pool import Pool
 import pandas as pd
 from recsys.metric import mrr_fast, mrr_fast_v2
 from recsys.submission import group_clickouts
+from recsys.utils import group_lengths
 from scipy.optimize import fmin_powell, fmin, basinhopping, fmin_l_bfgs_b, minimize, fmin_bfgs
-
+import numpy as np
+from recsys.mrr import mrr_fast_v3
 
 def str_to_hash(s):
     return int(hashlib.sha1(s.encode("utf-8")).hexdigest(), 16) % (10 ** 8)
@@ -90,19 +92,17 @@ if __name__ == '__main__':
 
     final = val_predictions[-1][2].copy()
 
+    lengths = group_lengths(final["clickout_id"])
+    preds_stack = np.vstack([df["click_proba"] for _,_,df,_ in val_predictions]).T
+
     def opt(v):
-        final["click_proba"] = 0
-        s = sum(v)
-        if s != 0:
-            v = [e/s for e in v]
-        for c, (_, _, pred, _) in zip(v, val_predictions):
-            final["click_proba"] += c * pred["click_proba"]
-        mrr = mrr_fast_v2(final["was_clicked"], final["click_proba"], final["clickout_id"])
-        print(v)
+        preds_ens = preds_stack.dot(v)
+        mrr = mrr_fast_v3(preds_ens, final["was_clicked"].values, lengths)
         print(f"MRR {mrr}")
         return -mrr
 
     coefs = fmin(opt, [0] * len(val_predictions))
+    coefs = fmin_powell(opt, coefs)
     mrr = mrr_fast(final, "click_proba")
     mrr_str = f"{mrr:.4f}"[2:]
     print(mrr)
