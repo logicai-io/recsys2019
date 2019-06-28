@@ -83,7 +83,7 @@ if __name__ == '__main__':
         val_predictions_dfs = pool.map(read_prediction_val, [fn for _, fn in preds_vals_all])
     val_predictions = [(mrr, hsh, df, config) for ((hsh, fn), (mrr, df, config))
                        in zip(preds_vals_all, val_predictions_dfs)
-                       if (df.shape[0] == 3077674) and (mrr > 0.68) and ("160357" not in fn)]
+                       if (df.shape[0] == 3077674) and (mrr > 0.66) and ("160357" not in fn)]
     val_hashes = [p[1] for p in val_predictions]
 
     final = val_predictions[-1][2].copy()
