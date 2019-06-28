@@ -3,13 +3,14 @@ import hashlib
 import os
 from multiprocessing.pool import Pool
 
+import numpy as np
 import pandas as pd
-from recsys.metric import mrr_fast, mrr_fast_v2
+from recsys.metric import mrr_fast
+from recsys.mrr import mrr_fast_v3
 from recsys.submission import group_clickouts
 from recsys.utils import group_lengths
-from scipy.optimize import fmin_powell, fmin, basinhopping, fmin_l_bfgs_b, minimize, fmin_bfgs
-import numpy as np
-from recsys.mrr import mrr_fast_v3
+from scipy.optimize import fmin
+
 
 def str_to_hash(s):
     return int(hashlib.sha1(s.encode("utf-8")).hexdigest(), 16) % (10 ** 8)
@@ -79,27 +80,24 @@ if __name__ == '__main__':
 
     # read validation models
     with Pool(32) as pool:
-        val_predictions_dfs = pool.map(read_prediction_val, [fn for _,fn in preds_vals_all])
-    val_predictions = [(mrr, hsh, df, config) for ((hsh, fn), (mrr, df, config)) 
-                       in zip(preds_vals_all, val_predictions_dfs) 
+        val_predictions_dfs = pool.map(read_prediction_val, [fn for _, fn in preds_vals_all])
+    val_predictions = [(mrr, hsh, df, config) for ((hsh, fn), (mrr, df, config))
+                       in zip(preds_vals_all, val_predictions_dfs)
                        if (df.shape[0] == 3077674) and (mrr > 0.68) and ("160357" not in fn)]
     val_hashes = [p[1] for p in val_predictions]
-
-    mrrs, _, _, configs = list(zip(*val_predictions))
-    summary_df = pd.DataFrame({'config': configs, 'mrr': mrrs})
-    print(summary_df)
-    summary_df.to_csv("model_summary.csv")
 
     final = val_predictions[-1][2].copy()
 
     lengths = group_lengths(final["clickout_id"])
-    preds_stack = np.vstack([df["click_proba"] for _,_,df,_ in val_predictions]).T
+    preds_stack = np.vstack([df["click_proba"] for _, _, df, _ in val_predictions]).T
+
 
     def opt(v):
         preds_ens = preds_stack.dot(v)
         mrr = mrr_fast_v3(final["was_clicked"].values, preds_ens, lengths)
         print(f"MRR {mrr}")
         return -mrr
+
 
     coefs = fmin(opt, [0] * len(val_predictions))
     coefs = fmin(opt, coefs, ftol=0.000001)
@@ -108,15 +106,19 @@ if __name__ == '__main__':
     mrr_str = f"{mrr:.4f}"[2:]
     print(mrr)
 
+    mrrs, _, _, configs = list(zip(*val_predictions))
+    summary_df = pd.DataFrame({'config': configs, 'mrr': mrrs, 'coef': coefs})
+    print(summary_df)
+    summary_df.to_csv(f"model_summary_{mrr_str}.csv")
+
     # read submission models
     with Pool(32) as pool:
         sub_predictions_dfs = pool.map(read_prediction, [fn for _, fn in preds_subs_all])
+
     sub_predictions = [(hsh, df) for ((hsh, fn), df) in zip(preds_subs_all, sub_predictions_dfs) if hsh in val_hashes]
+    sub_preds_stack = np.vstack([df["click_proba"] for _, df in sub_predictions]).T
     final = sub_predictions[-1][1].copy()
-    final["click_proba"] = 0
-    for c, (hsh, pred) in zip(coefs, sub_predictions):
-        print(hsh, c*10000)
-        final["click_proba"] += c * pred["click_proba"]
+    final["click_proba"] = sub_preds_stack.dot(coefs)
     _, submission_df = group_clickouts(final)
     save_as = f"submissions/submission_{mrr_str}.csv"
     print(f"Saving submission file {save_as}")
