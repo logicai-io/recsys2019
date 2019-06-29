@@ -344,12 +344,12 @@ def make_vectorizer_1(
                 ),
                 (
                     "numerical_context",
-                    make_pipeline(LagNumericalFeaturesWithinGroup(), MinimizeNNZ()),
+                    make_pipeline(LagNumericalFeaturesWithinGroup()),
                     numerical_features + ["clickout_id"],
                 ),
                 (
                     "numerical_context_offset_2",
-                    make_pipeline(LagNumericalFeaturesWithinGroup(offset=2), MinimizeNNZ()),
+                    make_pipeline(LagNumericalFeaturesWithinGroup(offset=2)),
                     numerical_features_offset_2 + ["clickout_id"],
                 ),
                 (
@@ -359,12 +359,12 @@ def make_vectorizer_1(
                 ),
                 (
                     "numerical_ranking",
-                    make_pipeline(RankFeatures(ascending=False), MinimizeNNZ()),
+                    make_pipeline(RankFeatures(ascending=False)),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
                 (
                     "numerical_ranking_rev",
-                    make_pipeline(RankFeatures(ascending=True), MinimizeNNZ()),
+                    make_pipeline(RankFeatures(ascending=True)),
                     numerical_features_for_ranking + ["clickout_id"],
                 ),
                 ("properties", CountVectorizer(tokenizer=identity, lowercase=False, min_df=2), "properties"),
