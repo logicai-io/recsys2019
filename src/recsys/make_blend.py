@@ -10,7 +10,6 @@ from recsys.mrr import mrr_fast_v3
 from recsys.submission import group_clickouts
 from recsys.utils import group_lengths
 from scipy.optimize import fmin
-from sklearn.preprocessing import StandardScaler
 
 
 def str_to_hash(s):
@@ -84,19 +83,18 @@ if __name__ == '__main__':
         val_predictions_dfs = pool.map(read_prediction_val, [fn for _, fn in preds_vals_all])
     val_predictions = [(mrr, hsh, df, config) for ((hsh, fn), (mrr, df, config))
                        in zip(preds_vals_all, val_predictions_dfs)
-                       if (df.shape[0] == 3077674) and (mrr > 0.66) and ("160357" not in fn)]
+                       if (df.shape[0] == 3077674) and (mrr > 0.68) and ("160357" not in fn)]
     val_hashes = [p[1] for p in val_predictions]
 
     print("Debuging click probas")
-    for _,hsh,df,_ in val_predictions:
-        print(hsh, df["click_proba"].min(), df["click_proba"].max())
+    for mrr, hsh, df, _ in val_predictions:
+        print(mrr, hsh, df["click_proba"].min(), df["click_proba"].max())
 
     final = val_predictions[-1][2].copy()
 
     lengths = group_lengths(final["clickout_id"])
     preds_stack = np.vstack([df["click_proba"] for _, _, df, _ in val_predictions]).T
-    scaler = StandardScaler()
-    preds_stack = scaler.fit_transform(preds_stack)
+
 
     def opt(v):
         preds_ens = preds_stack.dot(v)
@@ -104,9 +102,9 @@ if __name__ == '__main__':
         print(f"MRR {mrr}")
         return -mrr
 
-
-    coefs = fmin(opt, [0] * len(val_predictions))
+    coefs = fmin(opt, [0] * preds_stack.shape[1])
     coefs = fmin(opt, coefs, ftol=0.000001)
+
     final["click_proba"] = preds_stack.dot(coefs)
     mrr = mrr_fast(final, "click_proba")
     mrr_str = f"{mrr:.4f}"[2:]
@@ -123,7 +121,6 @@ if __name__ == '__main__':
 
     sub_predictions = [(hsh, df) for ((hsh, fn), df) in zip(preds_subs_all, sub_predictions_dfs) if hsh in val_hashes]
     sub_preds_stack = np.vstack([df["click_proba"] for _, df in sub_predictions]).T
-    sub_preds_stack = scaler.transform(sub_preds_stack)
     final = sub_predictions[-1][1].copy()
     final["click_proba"] = sub_preds_stack.dot(coefs)
     _, submission_df = group_clickouts(final)
