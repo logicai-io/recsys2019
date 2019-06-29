@@ -1672,13 +1672,16 @@ class AccByKey:
 
     def update_acc(self, row: Dict):
         row["platform_device"] = row["platform"] + row["device"]
+        row["platform_device_city"] = row["platform"] + row["device"] + row["city"]
         if row[self.key] not in self.accs_by_key:
             self.accs_by_key[row[self.key]] = deepcopy(self.base_acc)
         self.accs_by_key[row[self.key]].update_acc(row)
         del row["platform_device"]
+        del row["platform_device_city"]
 
     def get_stats(self, row, item):
         row["platform_device"] = row["platform"] + row["device"]
+        row["platform_device_city"] = row["platform"] + row["device"] + row["city"]
         if row[self.key] not in self.accs_by_key:
             obs = self.base_acc.get_stats(row, item)
         else:
@@ -1687,6 +1690,7 @@ class AccByKey:
             obs[f"{k}_by_{self.key}"] = obs[k]
             del obs[k]
         del row["platform_device"]
+        del row["platform_device_city"]
         return obs
 
 
@@ -1808,13 +1812,17 @@ def get_accumulators(hashn=None):
         ),
         # item ctr
         ItemCTR(action_types=["clickout item"]),
+        AccByKey(ItemCTR(action_types=["clickout item"]), key="platform_device_city"),
         AccByKey(ItemCTR(action_types=["clickout item"]), key="platform_device"),
         AccByKey(ItemCTR(action_types=["clickout item"]), key="platform"),
         AccByKey(ItemCTR(action_types=["clickout item"]), key="device"),
+        AccByKey(ItemCTR(action_types=["clickout item"]), key="city"),
         ItemCTRInteractions(),
+        AccByKey(ItemCTRInteractions(), key="platform_device_city"),
         AccByKey(ItemCTRInteractions(), key="platform_device"),
         AccByKey(ItemCTRInteractions(), key="platform"),
         AccByKey(ItemCTRInteractions(), key="device"),
+        AccByKey(ItemCTRInteractions(), key="city"),
         StatsAcc(
             name="clickout_item_platform_clicks",
             action_types=["clickout item"],
