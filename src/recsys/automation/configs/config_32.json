@@ -1,0 +1,6 @@
+{
+    "dataset_path_matrix": "data/eec9ef/Xcsr.h5",
+    "dataset_path_meta": "data/eec9ef/meta.h5",
+    "model_class": "LGBMRanker",
+    "model_params": {"boosting_type": "dart", "learning_rate": 0.2, "num_leaves": 256, "min_child_samples": 5, "n_estimators": 1000, "drop_rate": 0.03, "feature_fraction": 0.5, "n_jobs": -2}
+}
