@@ -119,10 +119,10 @@ if __name__ == '__main__':
     with Pool(32) as pool:
         sub_predictions_dfs = pool.map(read_prediction, [fn for _, fn in preds_subs_all])
 
-    for df in sub_predictions_dfs:
-        print(df["click_proba"].min(), df["click_proba"].max())
 
     sub_predictions = [(hsh, df) for ((hsh, fn), df) in zip(preds_subs_all, sub_predictions_dfs) if hsh in val_hashes]
+    for coef, (hsh, df) in zip(coefs, sub_predictions):
+        print(coef, hsh, df["click_proba"].min(), df["click_proba"].max())
     sub_preds_stack = np.vstack([df["click_proba"] for _, df in sub_predictions]).T
     final = sub_predictions[-1][1].copy()
     final["click_proba"] = sub_preds_stack.dot(coefs)
