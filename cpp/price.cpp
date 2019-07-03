@@ -10,11 +10,11 @@
 #include "features.h"
 #include "utils.h"
 
-const std::string kInputPath = "/Users/sink/projects/recsys2019/data/events_sorted.csv";
-const std::string kOutputPath = "/Users/sink/projects/recsys2019/data/price.csv";
+const std::string kInputPath = "../data/events_sorted.csv";
+const std::string kOutputPath = "../data/price.csv";
 
 const std::string kClickoutItem("clickout item");
-const int kLineLimit = 10000;
+const int kLineLimit = 50000000;
 
 
 const std::string kName = "price";

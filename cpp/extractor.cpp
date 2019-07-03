@@ -10,8 +10,8 @@
 #include "features.h"
 #include "utils.h"
 
-const std::string kInputPath = "/Users/sink/projects/recsys2019/data/scores.csv";
-const std::string kOutputPath = "/Users/sink/projects/recsys2019/data/comparison_v0.csv";
+const std::string kInputPath = "../data/scores.csv";
+const std::string kOutputPath = "../data/comparison.csv";
 
 const int kLineLimit = 1000;
 

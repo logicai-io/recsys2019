@@ -9,12 +9,12 @@
 #include "counters.h"
 #include "utils.h"
 
-const std::string kInputPath = "/Users/sink/projects/recsys2019/data/events_sorted.csv";
-const std::string kOutputPath = "/Users/sink/projects/recsys2019/data/scores_v1.csv";
+const std::string kInputPath = "../data/events_sorted.csv";
+const std::string kOutputPath = "../data/scores.csv";
 
 const int kLineLimit = 20000000;
 
-std::vector<Counter*> counters_v0 = {
+std::vector<Counter*> counters = {
     new ClickoutCounter(),
     new ImpressionCounter(),
     new InteractionCounter(),
@@ -29,10 +29,7 @@ std::vector<Counter*> counters_v0 = {
     new ComparisonCounter(
             new ClickoutCounter(),
             new InteractionCounter()),
-    new IdentifierCounter()
-};
-
-std::vector<Counter*> counters = {
+    new IdentifierCounter(),
     // verified impressions
     new VerifiedImpressionCounter(),
     new ComparisonCounter(
