@@ -14,18 +14,15 @@ from recsys.transformers import (
     PandasToNpArray,
     PandasToRecords,
     RankFeatures,
-    SanitizeSparseMatrix,
     SparsityFilter,
-    Normalize01,
 )
 from recsys.utils import logger
 from scipy.sparse import load_npz, save_npz
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
 
 numerical_features_info = [
     ("avg_price_similarity", True),
@@ -168,33 +165,6 @@ numerical_features_info = [
     ("item_stats_distance", True),
     ("item_stats_rating", True),
     ("item_stats_popularity", True),
-    # ("graph_similarity_user_item_random_walk", True),
-    # ("graph_similarity_user_item_clickout", True),
-    # ("graph_similarity_user_item_search", True),
-    # ("graph_similarity_user_item_interaction_info", True),
-    # ("graph_similarity_user_item_interaction_img", True),
-    # ("graph_similarity_user_item_intearction_deal", True),
-    # ("graph_similarity_user_item_all_interactions", True),
-    # ("graph_similarity_user_item_random_walk_resets", True),
-    # ("avg_properties_similarity", True),
-    # ("avg_properties_similarity_norm", True)
-    # ("timestamp", False),
-    # ("last_clickout_item_stats", True),
-    # ("interaction_item_image_unique_num_by_session_id",True),
-    # ("interaction_item_image_unique_num_by_timestamp",True),
-    # ("clickout_item_unique_num_by_session_id",True),
-    # ("clickout_item_unique_num_by_timestamp",True),
-    # ("interaction_item_info_unique_num_by_timestamp",True),
-    # ("interaction_item_info_unique_num_by_session_id",True),
-    # ("search_for_item_unique_num_by_session_id",True),
-    # ("search_for_item_unique_num_by_timestamp",True),
-    # ("interaction_item_rating_unique_num_by_timestamp",True),
-    # ("interaction_item_rating_unique_num_by_session_id",True),
-    # ("interaction_item_deals_unique_num_by_timestamp",True),
-    # ("interaction_item_deals_unique_num_by_session_id",True),
-    # ("average_item_attention", True)
-    # ("last_item_time_diff_same_user", False),
-    # ("last_item_time_diff", False),
     ("click_sequence_min", False),
     ("click_sequence_max", False),
     ("click_sequence_min_norm", False),
@@ -389,131 +359,6 @@ def make_vectorizer_1(
                 ),
             ]
         ),
-    )
-
-
-def make_vectorizer_2(
-    categorical_features=categorical_features_py,
-    numerical_features=numerical_features_py,
-    numerical_features_offset_2=numerical_features_offset_2,
-    numerical_features_for_ranking=numerical_features_for_ranking_py,
-):
-    return make_pipeline(
-        FeatureEng(),
-        ColumnTransformer(
-            [
-                (
-                    "numerical",
-                    make_pipeline(
-                        PandasToNpArray(), SimpleImputer(strategy="constant", fill_value=0), StandardScaler()
-                    ),
-                    numerical_features + ps_features,
-                ),
-                (
-                    "numerical_context",
-                    make_pipeline(
-                        LagNumericalFeaturesWithinGroup(),
-                        SimpleImputer(strategy="constant", fill_value=0),
-                        StandardScaler(),
-                    ),
-                    numerical_features + ["clickout_id"],
-                ),
-                (
-                    "numerical_context_offset_2",
-                    make_pipeline(LagNumericalFeaturesWithinGroup(offset=2), StandardScaler()),
-                    numerical_features_offset_2 + ["clickout_id"],
-                ),
-                ("categorical", make_pipeline(PandasToRecords(), DictVectorizer()), categorical_features),
-                ("properties", TfidfVectorizer(tokenizer=identity, lowercase=False, min_df=2), "properties"),
-                (
-                    "numerical_ranking",
-                    make_pipeline(RankFeatures(), StandardScaler()),
-                    numerical_features_for_ranking + ["clickout_id"],
-                ),
-            ]
-        ),
-        SanitizeSparseMatrix(),
-    )
-
-
-def make_vectorizer_3(
-    numerical_features=numerical_features_py, numerical_features_for_ranking=numerical_features_for_ranking_py
-):
-    return make_pipeline(
-        FeatureEng(),
-        ColumnTransformer(
-            [
-                (
-                    "numerical",
-                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="constant", fill_value=-9999)),
-                    numerical_features,
-                ),
-                (
-                    "numerical_ranking",
-                    make_pipeline(RankFeatures(ascending=False), MinimizeNNZ()),
-                    numerical_features_for_ranking + ["clickout_id"],
-                ),
-                (
-                    "numerical_ranking_rev",
-                    make_pipeline(RankFeatures(ascending=True), MinimizeNNZ()),
-                    numerical_features_for_ranking + ["clickout_id"],
-                ),
-            ]
-        ),
-    )
-
-
-def make_vectorizer_3_no_eng(numerical_features, numerical_features_for_ranking):
-    return make_pipeline(
-        ColumnTransformer(
-            [
-                (
-                    "numerical",
-                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="constant", fill_value=-9999)),
-                    numerical_features,
-                ),
-                (
-                    "numerical_ranking",
-                    make_pipeline(RankFeatures(ascending=False), MinimizeNNZ()),
-                    numerical_features_for_ranking + ["clickout_id"],
-                ),
-                # (
-                #     "numerical_01",
-                #     make_pipeline(Normalize01(ascending=False), MinimizeNNZ()),
-                #     numerical_features_for_ranking + ["clickout_id"],
-                # ),
-                (
-                    "numerical_ranking_rev",
-                    make_pipeline(RankFeatures(ascending=True), MinimizeNNZ()),
-                    numerical_features_for_ranking + ["clickout_id"],
-                ),
-                ("actions_tracker", DictVectorizer(), "actions_tracker"),
-            ]
-        )
-    )
-
-
-def make_vectorizer_4(numerical_features, numerical_features_for_ranking):
-    return make_pipeline(
-        ColumnTransformer(
-            [
-                (
-                    "numerical",
-                    make_pipeline(PandasToNpArray(), SimpleImputer(strategy="constant", fill_value=-9999)),
-                    numerical_features,
-                ),
-                (
-                    "numerical_ranking",
-                    make_pipeline(RankFeatures(ascending=False), MinimizeNNZ()),
-                    numerical_features_for_ranking + ["clickout_id"],
-                ),
-                (
-                    "numerical_ranking_rev",
-                    make_pipeline(RankFeatures(ascending=True), MinimizeNNZ()),
-                    numerical_features_for_ranking + ["clickout_id"],
-                ),
-            ]
-        )
     )
 
 
