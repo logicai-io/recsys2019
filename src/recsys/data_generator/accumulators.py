@@ -1332,6 +1332,7 @@ class SequenceClickout:
     Was the item in the previous impression.
     Similarity between current impression and the previous one
     """
+
     def __init__(self):
         self.action_types = ["clickout item"]
         self.last_impressions = {}
@@ -1353,6 +1354,7 @@ class SameImpressionsDifferentUser:
     """
     If there was the same impression with the different user calculate CTR of the items
     """
+
     def __init__(self):
         self.action_types = ["clickout item"]
         # impressions -> (user, item)
@@ -1378,6 +1380,7 @@ class SameImpressionsDifferentUserTopN:
     Same as SameImpressionsDifferentUser but only take into account the top N impressions
     when calculating the "exactness" of the impressions
     """
+
     def __init__(self, topn=5):
         self.topn = topn
         self.action_types = ["clickout item"]
@@ -1408,6 +1411,7 @@ class SameFakeImpressionsDifferentUser:
     """
     This is the same as SameImpressionsDifferentUser but we use all interactions to calculate the CTR
     """
+
     def __init__(self):
         self.action_types = ACTIONS_WITH_ITEM_REFERENCE
         # impressions -> (user, item)
@@ -1434,6 +1438,7 @@ class RankBasedCTR:
     When extracting the statistics we use a smooth version of CTR so take the CTR at the position with the
     highest weight and surrounding ones with lower weights.
     """
+
     def __init__(self):
         self.action_types = ["clickout item"]
         self.item_rank_clicks = defaultdict(lambda: dict(zip(range(25), [0] * 25)))
@@ -1487,6 +1492,7 @@ class AccByKey:
 
     AccByKey(ItemCTR(), key="device")
     """
+
     def __init__(self, base_acc, key):
         self.key = key
         self.base_acc = base_acc
