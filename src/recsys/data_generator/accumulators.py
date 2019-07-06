@@ -1328,6 +1328,10 @@ class RankOfItemsFreshClickout:
 
 
 class SequenceClickout:
+    """
+    Was the item in the previous impression.
+    Similarity between current impression and the previous one
+    """
     def __init__(self):
         self.action_types = ["clickout item"]
         self.last_impressions = {}
@@ -1346,6 +1350,9 @@ class SequenceClickout:
 
 
 class SameImpressionsDifferentUser:
+    """
+    If there was the same impression with the different user calculate CTR of the items
+    """
     def __init__(self):
         self.action_types = ["clickout item"]
         # impressions -> (user, item)
@@ -1367,6 +1374,10 @@ class SameImpressionsDifferentUser:
 
 
 class SameImpressionsDifferentUserTopN:
+    """
+    Same as SameImpressionsDifferentUser but only take into account the top N impressions
+    when calculating the "exactness" of the impressions
+    """
     def __init__(self, topn=5):
         self.topn = topn
         self.action_types = ["clickout item"]
@@ -1394,6 +1405,9 @@ class SameImpressionsDifferentUserTopN:
 
 
 class SameFakeImpressionsDifferentUser:
+    """
+    This is the same as SameImpressionsDifferentUser but we use all interactions to calculate the CTR
+    """
     def __init__(self):
         self.action_types = ACTIONS_WITH_ITEM_REFERENCE
         # impressions -> (user, item)
@@ -1415,6 +1429,11 @@ class SameFakeImpressionsDifferentUser:
 
 
 class RankBasedCTR:
+    """
+    This class calculates the CTR of the item combined with the ranking of the item.
+    When extracting the statistics we use a smooth version of CTR so take the CTR at the position with the
+    highest weight and surrounding ones with lower weights.
+    """
     def __init__(self):
         self.action_types = ["clickout item"]
         self.item_rank_clicks = defaultdict(lambda: dict(zip(range(25), [0] * 25)))
@@ -1461,6 +1480,13 @@ class RankBasedCTR:
 
 
 class AccByKey:
+    """
+    This is a meta accumulator that wraps other accumulators.
+    It can calculate exactly the same statistics as the base accumulator but it works within some group.
+    So for example we can calculate ItemCTR per device like this
+
+    AccByKey(ItemCTR(), key="device")
+    """
     def __init__(self, base_acc, key):
         self.key = key
         self.base_acc = base_acc

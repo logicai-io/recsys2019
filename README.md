@@ -2,6 +2,13 @@
 
 This is the code for the 1st place ACM Recsys competition.
 
+Team members
+=================
+
+- Paweł Jankiewicz (https://www.linkedin.com/in/pjankiewicz/)
+- Liudmyla Kyrashchuk (https://www.linkedin.com/in/liudmylakyrashchuk/)
+- Paweł Sienkowski (https://www.linkedin.com/in/pawel-sienkowski/)
+
 Best single model
 =================
 
@@ -14,15 +21,22 @@ Current process (full)
 2. ./download_data.sh
 3. cd ../../src/recsys/data_prep
 4. ./run_data_prep.sh
-5. cd ..
-6. cd data_generator; python generate_data_parallel_all.py; cd - (pypy is good)
-7. python split_events_sorted_trans.py (pypy is good)
-8. python vectorize_datasets.py
-9. python model_val.py (validate model)
-10. python model_submit.py (make test predictions)
-11. python make_blend.py (prepare submission file)
-
-Steps 6-11 are also inside run_all.sh script
+5. C++ feature generation
+```
+cd cpp
+make
+./build/price # extracts price features
+./build/scores # extracts incremental features for each impression (|-separated format)
+./build/extractor # extracts comparison features for |-separated features (extracted in scores)
+cd ..
+```
+6. cd ..
+7. cd data_generator; python generate_data_parallel_all.py; cd - (pypy is good)
+8. python split_events_sorted_trans.py (pypy is good)
+9. python vectorize_datasets.py
+10. python model_val.py (validate model)
+11. python model_submit.py (make test predictions)
+12. python make_blend.py (prepare submission file)
 
 Quick validation (1 million rows)
 ----------------------

@@ -1,4 +1,4 @@
-flags = -std=c++14 
+flags = -std=c++1y
 
 all: price.o events.o utils.o features.o scores.o counters.o extractor.o
 	g++ ${flags} -o ./build/events ./build/events.o ./build/utils.o
