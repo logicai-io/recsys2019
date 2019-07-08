@@ -19,7 +19,7 @@ Current process (full)
 
 1. cd data/
 2. ./download_data.sh
-3. cd ../../src/recsys/data_prep
+3. cd ../src/recsys/data_prep
 4. ./run_data_prep.sh
 5. C++ feature generation
 ```
