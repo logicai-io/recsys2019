@@ -23,16 +23,16 @@ Current process (full)
 4. ./run_data_prep.sh
 5. C++ feature generation
 ```
-cd cpp
+cd ../../../cpp
 make
 ./build/price # extracts price features
 ./build/scores # extracts incremental features for each impression (|-separated format)
 ./build/extractor # extracts comparison features for |-separated features (extracted in scores)
-cd ..
+python select_features.py
 ```
-6. cd ..
-7. cd data_generator; python generate_data_parallel_all.py; cd - (pypy is good)
-8. python split_events_sorted_trans.py (pypy is good)
+6. cd ../src/recsys/data_generator/
+7. cd data_generator; python generate_data_parallel_all.py; cd .. (pypy is good)
+8. python split_events_sorted_trans.py
 9. python vectorize_datasets.py
 10. python model_val.py (validate model)
 11. python model_submit.py (make test predictions)
