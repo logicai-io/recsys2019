@@ -5,6 +5,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from lightgbm import LGBMRanker
+from recsys.config import BEST_PARAMS
 from recsys.log_utils import get_logger
 from recsys.metric import mrr_fast
 from recsys.utils import group_lengths, timer, get_git_hash
@@ -30,7 +31,7 @@ with timer("splitting data"):
     gc.collect()
 
 with timer("model fitting"):
-    model = LGBMRanker(n_estimators=1600, num_leaves=62, n_jobs=-2)
+    model = LGBMRanker(**BEST_PARAMS)
     model.fit(X_train, meta_train["was_clicked"].values, group=group_lengths(meta_train["clickout_id"].values))
     val_pred = model.predict(X_val)
     train_pred = model.predict(X_train)
