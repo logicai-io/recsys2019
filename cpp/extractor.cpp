@@ -13,7 +13,7 @@
 const std::string kInputPath = "../data/scores.csv";
 const std::string kOutputPath = "../data/comparison.csv";
 
-const int kLineLimit = 1000;
+const int kLineLimit = 50000000;
 
 int main() {
     std::string line;
