@@ -10,6 +10,6 @@ if __name__ == "__main__":
         vectorizer=lambda: make_vectorizer_1(),
         input_files="../../data/proc/raw_csv/*.csv",
         output_folder="../../data/proc/vectorizer_1/",
-        n_jobs=7,
+        n_jobs=7
     )
     vectorize_chunks.vectorize_all()

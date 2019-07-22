@@ -391,7 +391,10 @@ class VectorizeChunks:
 
     def save_to_one_flie_csrs(self, fns):
         save_as = os.path.join(self.output_folder, "Xcsr.h5")
-        os.unlink(save_as)
+        try:
+            os.unlink(save_as)
+        except:
+            pass
         h5f = h5sparse.File(save_as)
         first = True
         for fn in fns:
