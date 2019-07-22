@@ -1,6 +1,6 @@
 # recsys2019
 
-This is the code for the 1st place ACM Recsys competition.
+This is the code for the 1st place ACM Recsys competition. Paper is uploaded to the repository (https://github.com/logicai-io/recsys2019/blob/master/Boosting%20algorithms%20for%20session-based%2C%20context-aware%20recommender%20system%20in%20online%20travel%20domain.pdf).
 
 Team members
 =================
