@@ -2,12 +2,15 @@
 
 This is the code for the 1st place ACM Recsys competition. Paper is uploaded to the repository (https://github.com/logicai-io/recsys2019/blob/master/Boosting%20algorithms%20for%20session-based%2C%20context-aware%20recommender%20system%20in%20online%20travel%20domain.pdf).
 
+If you have any questions please write to pawel@[address of our company website]
+
 Team members
 =================
 
 - Paweł Jankiewicz (https://www.linkedin.com/in/pjankiewicz/)
 - Liudmyla Kyrashchuk (https://www.linkedin.com/in/liudmylakyrashchuk/)
 - Paweł Sienkowski (https://www.linkedin.com/in/pawel-sienkowski/)
+- Magdalena Wójcik (https://www.linkedin.com/in/claygirl/)
 
 Best single model
 =================
