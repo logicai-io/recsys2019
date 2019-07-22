@@ -50,6 +50,8 @@ logger = get_logger()
 
 class StatsAcc:
     """
+    This is the base class for the accumulator. All other classes should implement get_stats and update_acc methods.
+
     Example definition
 
     StatsAcc(filter=lambda row: row.action_type == "clickout_item",
@@ -103,28 +105,11 @@ class ItemLastClickoutStatsInSession:
         return output
 
 
-class ClickSequenceEncoder:
-    def __init__(self):
-        self.name = "click_index_sequence"
-        self.current_impression = {}
-        self.sequences = defaultdict(list)
-        self.action_types = ["clickout item"]
-
-    def update_acc(self, row):
-        if row["action_type"] in self.action_types:
-            key = (row["user_id"], row["session_id"])
-            if self.current_impression.get(key) == row["impressions_raw"]:
-                self.sequences[key][-1].append(row["index_clicked"])
-            else:
-                self.sequences[key].append([row["index_clicked"]])
-            self.current_impression[key] = row["impressions_raw"]
-
-    def get_stats(self, row, item):
-        key = (row["user_id"], row["session_id"])
-        return json.dumps(self.sequences[key])
-
-
 class ClickSequenceFeatures:
+    """
+    Basic information about the sequence of indices users clicked.
+    """
+
     def __init__(self):
         self.current_impression = {}
         self.sequences = defaultdict(list)
@@ -172,6 +157,10 @@ class ClickSequenceFeatures:
 
 
 class FakeClickSequenceFeatures:
+    """
+    Basic information about the sequence of indices users interacted with.
+    """
+
     def __init__(self):
         self.current_impression = {}
         self.sequences = defaultdict(list)
@@ -220,23 +209,11 @@ class FakeClickSequenceFeatures:
         return len(compressed_with_rank), (len(compressed_with_rank) / len(compressed_without_rank))
 
 
-class ItemIDS:
-    def __init__(self):
-        self.action_types = ["clickout item"]
-
-    def update_acc(self, row):
-        pass
-
-    def get_stats(self, row, item):
-        obs = {}
-        for n in range(25):
-            obs[f"item_id_at_{n:02d}"] = 0
-        for n, item_id in enumerate(row["impressions"]):
-            obs[f"item_id_at_{n:02d}"] = int(item_id) // 10000
-        return obs
-
-
 class Last10Actions:
+    """
+    It creates a list of the last 10 actions
+    """
+
     def __init__(self):
         self.current_impression = {}
         self.sequences = defaultdict(list)
@@ -259,6 +236,11 @@ class Last10Actions:
 
 
 class ClickProbabilityClickOffsetTimeOffset:
+    """
+    It creates the feature based on the previous index clicked, current item rank and timestamp difference between
+    the previous interaction and current timestamp.
+    """
+
     def __init__(
         self,
         name="clickout_prob_time_position_offset",
@@ -322,75 +304,13 @@ class ClickProbabilityClickOffsetTimeOffset:
             return 0.03
 
 
-class ClickProbabilityClickOffsetTimeOffsetByDevice:
-    def __init__(
-        self,
-        name="clickout_prob_time_position_offset",
-        action_types=None,
-        impressions_type="impressions_raw",
-        index_col="index_clicked",
-        probs_path="../../../data/",
-    ):
-        self.name = name
-        self.action_types = action_types
-        self.index_col = index_col
-        self.impressions_type = impressions_type
-        self.probs_path = probs_path
-        # tracks the impression per user
-        self.current_impression = defaultdict(str)
-        self.last_timestamp = {}
-        self.last_clickout_position = {}
-        self.read_probs()
-
-    def read_probs(self):
-        self.probs = {
-            "desktop": joblib.load(self.probs_path + "click_probs_by_index_and_desktop.joblib"),
-            "mobile": joblib.load(self.probs_path + "click_probs_by_index_and_mobile.joblib"),
-            "tablet": joblib.load(self.probs_path + "click_probs_by_index_and_tablet.joblib"),
-        }
-
-    def update_acc(self, row):
-        self.current_impression[row["user_id"]] = row[self.impressions_type]
-        key = (row["user_id"], row[self.impressions_type])
-        self.last_timestamp[key] = row["timestamp"]
-        self.last_clickout_position[key] = row[self.index_col]
-
-    def get_stats(self, row, item):
-        key = (row["user_id"], row[self.impressions_type])
-
-        if row[self.impressions_type] == self.current_impression[row["user_id"]]:
-            t1 = self.last_timestamp[key]
-            t2 = row["timestamp"]
-
-            c1 = self.last_clickout_position[key]
-            c2 = item["rank"]
-
-            timestamp_offset = int(group_time(t2 - t1))
-            click_offset = int(c2 - c1)
-
-            key = (click_offset, timestamp_offset)
-
-            if key in self.probs[row["device"]]:
-                return self.probs[row["device"]][key]
-            else:
-                try:
-                    return self.probs[(click_offset, 120)]
-                except KeyError:
-                    return self.default_click_prob(item)
-
-        else:
-            # TODO fill this with prior distribution for positions
-            return self.default_click_prob(item)
-
-    def default_click_prob(self, item):
-        probs = {0: 0.3, 1: 0.2, 2: 0.1, 3: 0.07, 4: 0.05, 5: 0.03}
-        try:
-            return probs[item["rank"]]
-        except KeyError:
-            return 0.03
-
-
 class PoiFeatures:
+    """
+    Features extracted from the Point of Interest (POI).
+    What was the last point of interest the user searched for
+    What is the CTR of the item when users are searching for this POI.
+    """
+
     def __init__(self):
         self.name = "last_poi_features"
         self.action_types = ["search for poi", "clickout item"]
@@ -416,6 +336,11 @@ class PoiFeatures:
 
 
 class IndicesFeatures:
+    """
+    Features with the last indices the user interacted with.
+    It has the last 5 indices and timestamps
+    """
+
     def __init__(
         self, action_types=["clickout item"], impressions_type="impressions_raw", index_key="index_clicked", prefix=""
     ):
@@ -471,6 +396,10 @@ class IndicesFeatures:
 
 
 class PriceSimilarity:
+    """
+    Similarity of price of the current item vs items that the user clicked before
+    """
+
     def __init__(self):
         self.action_types = ["clickout item"]
         self.last_prices = defaultdict(list)
@@ -494,6 +423,10 @@ class PriceSimilarity:
 
 
 class PriceFeatures:
+    """
+    Some basic features based on the price
+    """
+
     def __init__(self):
         self.action_types = ["clickout item"]
 
@@ -510,6 +443,17 @@ class PriceFeatures:
 
 
 class SimilarityFeatures:
+    """
+    This class calculates similarity measure between the interaction items and the current item.
+    The similarities are based on the 3 main dimensions of the item:
+    - properties
+    - point of interests around the hotel
+    - prices
+    For each similarity type it calculates:
+    - average similarity
+    - similarity to the last item
+    """
+
     def __init__(self, type, hashn):
         self.action_types = ACTIONS_WITH_ITEM_REFERENCE
         self.type = type
@@ -575,6 +519,15 @@ class SimilarityFeatures:
 
 
 class ItemCTR:
+    """
+    Basic class that calculates the CTR for the item.
+    The features are:
+    - number of clicks
+    - number of impressions
+    - CTR
+    - CTR corrected (it includes only the impressions that were below "above" the item)
+    """
+
     def __init__(self, action_types):
         self.action_types = action_types
         self.clicks = defaultdict(int)
@@ -600,6 +553,10 @@ class ItemCTR:
 
 
 class ItemCTRInteractions:
+    """
+    Similar to ItemCTR but it is based on the interactions.
+    """
+
     def __init__(self):
         self.action_types = ACTIONS_WITH_ITEM_REFERENCE
         self.clicks = defaultdict(int)
@@ -621,37 +578,11 @@ class ItemCTRInteractions:
         return output
 
 
-class ItemCTREMA:
-    def __init__(self, alpha):
-        self.alpha = alpha
-        self.action_types = ["clickout item"]
-        self.clicks = defaultdict(int)
-        self.impressions = defaultdict(int)
-
-    def update_acc(self, row):
-        for item_id in row["impressions"]:
-            if item_id == row["reference"]:
-                self.clicks[row["reference"]] = 1 + self.alpha * self.clicks[row["reference"]]
-            else:
-                self.clicks[row["reference"]] = 0 + self.alpha * self.clicks[row["reference"]]
-            self.impressions[item_id] += 1 + self.alpha * self.impressions[item_id]
-
-    def get_stats(self, row, item):
-        alpha = self.alpha
-        output = {}
-        output[f"clickout_item_clicks_ema_alpha_{alpha:.4f}"] = self.clicks[item["item_id"]]
-        output[f"clickout_item_impressions_ema_alpha_{alpha:.4f}"] = self.impressions[item["item_id"]]
-        if output[f"clickout_item_impressions_ema_alpha_{alpha:.4f}"] != 0:
-            output[f"clickout_item_ctr_ema_alpha_{alpha:.4f}"] = (
-                output[f"clickout_item_clicks_ema_alpha_{alpha:.4f}"]
-                / output[f"clickout_item_impressions_ema_alpha_{alpha:.4f}"]
-            )
-        else:
-            output[f"clickout_item_ctr_ema_alpha_{alpha:.4f}"] = 0
-        return output
-
-
 class ItemAverageRank:
+    """
+    It calculate the average, the last rank per each item
+    """
+
     def __init__(self):
         self.action_types = ["clickout item"]
         self.ranks = defaultdict(list)
@@ -671,6 +602,10 @@ class ItemAverageRank:
 
 
 class ItemCTRRankWeighted:
+    """
+    CTR weighted by the ranking.
+    """
+
     def __init__(self):
         self.action_types = ["clickout item"]
         self.clicks = defaultdict(int)
@@ -692,39 +627,11 @@ class ItemCTRRankWeighted:
         return output
 
 
-class ItemAttentionSpan:
-    def __init__(self):
-        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
-        self.interaction_item = {}
-        self.interaction_item_ts = {}
-        self.interaction_times_sum = defaultdict(int)
-        self.interaction_times_count = defaultdict(int)
-
-    def update_acc(self, row):
-        key = (row["user_id"], row["session_id"])
-        new_item_id = row["reference"]
-        new_ts = row["timestamp"]
-        if key in self.interaction_item:
-            old_item_id = self.interaction_item[key]
-            old_ts = self.interaction_item_ts[key]
-            if new_item_id != old_item_id:
-                # some other item had interaction
-                self.interaction_times_sum[old_item_id] += new_ts - old_ts
-                self.interaction_times_count[old_item_id] += 1
-                self.interaction_item[key] = new_item_id
-        self.interaction_item[key] = new_item_id
-        self.interaction_item_ts[key] = new_ts
-
-    def get_stats(self, row, item):
-        item_id = item["item_id"]
-        output = {}
-        output["average_item_attention"] = self.interaction_times_sum[item_id] / (
-            self.interaction_times_count[item_id] + 1
-        )
-        return output
-
-
 class UserItemAttentionSpan:
+    """
+    This class calculates how much time the user spends when he interacted with the item.
+    """
+
     def __init__(self):
         self.action_types = ACTIONS_WITH_ITEM_REFERENCE
         self.user_interaction_times = defaultdict(list)
@@ -768,6 +675,11 @@ class UserItemAttentionSpan:
 
 
 class GlobalClickoutTimestamp:
+    """
+    This class extracts the timestamp of the last click on the item (globally).
+    It also checks if the click was from the same user.
+    """
+
     def __init__(self):
         self.action_types = ["clickout item"]
         self.last_ts = {}
@@ -789,31 +701,13 @@ class GlobalClickoutTimestamp:
         return obs
 
 
-class ItemCTRByKey:
-    def __init__(self, action_types, key=None):
-        self.action_types = action_types
-        self.clicks = defaultdict(int)
-        self.impressions = defaultdict(int)
-        self.key = key
-
-    def update_acc(self, row):
-        self.clicks[(row["reference"], row[self.key])] += 1
-        for item_id in row["impressions"]:
-            self.impressions[(item_id, row[self.key])] += 1
-
-    def get_stats(self, row, item):
-        output = {}
-        output["clickout_item_clicks_by_{key}".format(key=self.key)] = self.clicks[(item["item_id"], row[self.key])]
-        output["clickout_item_impressions_by_{key}".format(key=self.key)] = self.impressions[
-            (item["item_id"], row[self.key])
-        ]
-        output["clickout_item_ctr_by_{key}".format(key=self.key)] = output[
-            "clickout_item_clicks_by_{key}".format(key=self.key)
-        ] / (output["clickout_item_impressions_by_{key}".format(key=self.key)] + 1)
-        return output
-
-
 class DistinctInteractions:
+    """
+    This class is quite interesting. We noticed that the users have some tendencies to interact with unique
+    items or the same items as before. So if the user interacts with the items that are mostly unique that means
+    that the next item will probably also be unique.
+    """
+
     def __init__(self, name, action_types, by="timestamp"):
         self.name = name
         self.action_types = action_types
@@ -853,40 +747,6 @@ class DistinctInteractions:
             obs[f"{self.name}_item_uniq_prob"] = (uniq + 1) / (all + 2)
 
         return obs
-
-
-class MouseSpeed:
-    def __init__(self):
-        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
-        self.last_timestamp_per_session = {}
-        self.last_index_per_session = {}
-        self.mouse_speed = defaultdict(list)
-
-    def update_acc(self, row):
-        key = (row["user_id"], row["session_id"])
-        if key in self.last_index_per_session:
-            if (
-                row["timestamp"] > self.last_timestamp_per_session[key]
-                and row["fake_index_interacted"] != self.last_index_per_session[key]
-            ):
-                time_passed = row["timestamp"] - self.last_timestamp_per_session[key]
-                index_diff = abs(row["fake_index_interacted"] - self.last_index_per_session[key])
-                self.mouse_speed[row["user_id"]].append(time_passed / index_diff)
-        else:
-            if row["fake_index_interacted"] != -1000:
-                self.last_timestamp_per_session[key] = row["timestamp"]
-                self.last_index_per_session[key] = row["fake_index_interacted"]
-
-    def get_stats(self, row, item):
-        output = {}
-        output["mouse_speed"] = self._mean(self.mouse_speed[row["user_id"]])
-        return output
-
-    def _mean(self, values):
-        if values:
-            return sum(values) / len(values)
-        else:
-            return 0
 
 
 def fit_lr(X, Y):
@@ -930,6 +790,13 @@ def fit_lr(X, Y):
 
 
 class ClickSequenceTrend:
+    """
+    We calculate the click trend of the user. If there is a sequence the user follows it should be more or less
+    reflected in the simple model.
+
+    We use a linear regression and the slope of minimum and maximum index.
+    """
+
     def __init__(self, method="minmax", by="user_id"):
         self.by = by
         self.action_types = ACTIONS_WITH_ITEM_REFERENCE
@@ -973,7 +840,11 @@ class SimilarUsersItemInteraction:
     """
     This is an accumulator that given interaction with items
     Finds users who interacted with the same items and then gathers statistics of interaction
-    from them
+    from them.
+    In other words if the users and items are a bipartite graph this class calculates two passes over the edges 
+    of this graph.
+    
+    ITEM <--- interacts with --- USER --- interacts with ---> ITEM
     """
 
     def __init__(self):
@@ -1017,6 +888,10 @@ class SimilarUsersItemInteraction:
 
 
 class GlobalTimestampPerItem:
+    """
+    Similar to the previous class which extracts the timestamps of clicks on the item
+    """
+
     def __init__(self):
         self.action_types = ["clickout item"]
         self.timestamp = {}
@@ -1042,6 +917,10 @@ class GlobalTimestampPerItem:
 
 
 class TimeSinceSessionStart:
+    """
+    Calculates the time since the start of the session
+    """
+
     def __init__(self):
         self.action_types = ALL_ACTIONS
         self.session_start = {}
@@ -1062,6 +941,10 @@ class TimeSinceSessionStart:
 
 
 class NumberOfSessions:
+    """
+    Calculates the number of sessions of the current user
+    """
+
     def __init__(self):
         self.action_types = ALL_ACTIONS
         self.session_count = defaultdict(set)
@@ -1076,6 +959,10 @@ class NumberOfSessions:
 
 
 class TimeSinceUserStart:
+    """
+    Calculates time since first user action
+    """
+
     def __init__(self):
         self.action_types = ALL_ACTIONS
         self.start = {}
@@ -1096,6 +983,10 @@ class TimeSinceUserStart:
 
 
 class AllFilters:
+    """
+    Extracts all the filters the user used throughout the history
+    """
+
     def __init__(self):
         self.action_types = ["filter selection"]
         self.filters_by_user = defaultdict(set)
@@ -1114,6 +1005,8 @@ class MostSimilarUserItemInteraction:
     This is an accumulator that given interaction with items
     Finds users who interacted with the same items and then gathers statistics of interaction
     from them
+    
+    This class is similar to SimilarUsersItemInteraction but it only focuses on the most similar users.
     """
 
     def __init__(self):
@@ -1214,127 +1107,11 @@ class MostSimilarUserItemInteractionv2:
         return items
 
 
-class SameImpressionUserStats:
-    """
-    Example definition
-
-    StatsAcc(filter=lambda row: row.action_type == "clickout_item",
-             init_acc=defaultdict(int),
-             updater=lambda acc, row: acc[(row.user_id, row.item_id)]+=1)
-    """
-
-    def __init__(self):
-        self.action_types = ["clickout item"]
-        self.view_stats = defaultdict(lambda: defaultdict(set))
-
-    def update_acc(self, row):
-        self.view_stats[row["impressions_raw"]][row["user_id"]]
-        self.updater(self.acc, row)
-
-    def get_stats(self, row, item):
-        return self.get_stats_func(self.acc, row, item)
-
-
-class ItemLooStats:
-    """
-    Example definition
-
-    StatsAcc(filter=lambda row: row.action_type == "clickout_item",
-             init_acc=defaultdict(int),
-             updater=lambda acc, row: acc[(row.user_id, row.item_id)]+=1)
-    """
-
-    def __init__(self, suffix=""):
-        self.action_types = ACTIONS_WITH_ITEM_REFERENCE
-        self.input = input
-        self.item_stats = {}
-        self.suffix = suffix
-
-    def update_acc(self, row):
-        action_type = row["action_type"]
-        user_id = row["user_id"]
-        if action_type == "clickout item":
-            for item_id in row["impressions"]:
-                item_id = int(item_id)
-                try:
-                    self.item_stats[item_id]["impressions"].add(user_id)
-                except KeyError:
-                    self.item_stats[item_id] = {"impressions": {user_id}}
-
-        try:
-            item_id = int(row["reference"])
-        except:
-            return
-
-        if item_id not in self.item_stats:
-            self.item_stats[item_id] = {}
-
-        try:
-            self.item_stats[item_id][action_type].add(user_id)
-        except KeyError:
-            self.item_stats[item_id][action_type] = {user_id}
-
-    def get_stats(self, row, item):
-        item_id = int(item["item_id"])
-        user_id = row["user_id"]
-        obs = {}
-        try:
-            obs["loo_item_impressions{}".format(self.suffix)] = len(
-                self.item_stats[item_id]["impressions"].difference({user_id})
-            )
-        except KeyError:
-            obs["loo_item_impressions{}".format(self.suffix)] = 0
-        for action_type in ACTIONS_WITH_ITEM_REFERENCE:
-            try:
-                clicks = len(self.item_stats[item_id].get(action_type, set()).difference({user_id}))
-            except KeyError:
-                clicks = 0
-            obs["loo_{}{}".format(action_type, self.suffix)] = clicks
-            obs["loo_{}_ctr{}".format(action_type, self.suffix)] = clicks / (
-                obs["loo_item_impressions{}".format(self.suffix)] + 1
-            )
-        return obs
-
-
-class ItemLooStatsByPlatform:
-    """
-    Example definition
-
-    StatsAcc(filter=lambda row: row.action_type == "clickout_item",
-             init_acc=defaultdict(int),
-             updater=lambda acc, row: acc[(row.user_id, row.item_id)]+=1)
-    """
-
-    def __init__(self, input="../../../data/item_stats_loo.joblib", suffix=""):
-        self.action_types = ["clickout item"]
-        self.input = input
-        self.item_stats = None
-        self.suffix = suffix
-
-    def update_acc(self, row):
-        pass
-
-    def get_stats(self, row, item):
-        if self.item_stats is None:
-            self.item_stats = joblib.load(self.input)
-        key = (int(item["item_id"]), row["platform"])
-        user_id = row["user_id"]
-        obs = {}
-        obs["loo_item_impressions{}".format(self.suffix)] = len(
-            self.item_stats[key]["impressions"].difference({user_id})
-        )
-        for action_type in ACTIONS_WITH_ITEM_REFERENCE:
-            clicks = len(self.item_stats[key].get(action_type, set()).difference({user_id}))
-            obs["loo_{}{}".format(action_type, self.suffix)] = clicks
-            obs["loo_{}_ctr{}".format(action_type, self.suffix)] = clicks / (
-                obs["loo_item_impressions{}".format(self.suffix)] + 1
-            )
-        return obs
-
-
 class ItemCTRInSequence:
     """
-    Calculates statistics of items which were clicked as the last in sequence
+    Calculates statistics of items which were clicked as the last in sequence.
+    Because the competition focuses on the last clickout actions we wanted to measure
+    how likely the item was clicked as the last one in the sequence.
     """
 
     def __init__(self):
@@ -1368,6 +1145,11 @@ class ItemCTRInSequence:
 
 
 class PriceSorted:
+    """
+    Sometimes the filter says that the prices are sorted but they are not.
+    This class creates a feature `wrong_price_sorting` if the sort order is not as it should be.
+    """
+
     def __init__(self):
         self.action_types = ["clickout item"]
 
@@ -1396,6 +1178,11 @@ class PriceSorted:
 
 
 class ActionsTracker:
+    """
+    This is a very generic class that extracts many features from the events.
+    It is probably an overkill and it causes the memory to explode.
+    """
+
     def __init__(self):
         self.action_types = ALL_ACTIONS
         self.all_events_list = defaultdict(lambda: defaultdict(list))
@@ -1457,6 +1244,12 @@ class ActionsTracker:
 
 
 class PairwiseCTR:
+    """
+    This class calculates statistics of items pairs. If the items A and B are often next to each other it can
+    be that sometimes A wins more often (as it should be because it is higher in the ranking) or B wins more
+    often which can mean that the ranking is wrong.
+    """
+
     LEFT_WON = -1
     RIGHT_WON = 1
     DRAW = 0
@@ -1511,6 +1304,10 @@ class PairwiseCTR:
 
 
 class RankOfItemsFreshClickout:
+    """
+    This class calculates rank of items that were clicked in the first 2 steps of the user history.
+    """
+
     def __init__(self):
         self.action_types = ["clickout item"]
         self.positions = defaultdict(Counter)
@@ -1531,6 +1328,11 @@ class RankOfItemsFreshClickout:
 
 
 class SequenceClickout:
+    """
+    Was the item in the previous impression.
+    Similarity between current impression and the previous one
+    """
+
     def __init__(self):
         self.action_types = ["clickout item"]
         self.last_impressions = {}
@@ -1549,6 +1351,10 @@ class SequenceClickout:
 
 
 class SameImpressionsDifferentUser:
+    """
+    If there was the same impression with the different user calculate CTR of the items
+    """
+
     def __init__(self):
         self.action_types = ["clickout item"]
         # impressions -> (user, item)
@@ -1570,6 +1376,11 @@ class SameImpressionsDifferentUser:
 
 
 class SameImpressionsDifferentUserTopN:
+    """
+    Same as SameImpressionsDifferentUser but only take into account the top N impressions
+    when calculating the "exactness" of the impressions
+    """
+
     def __init__(self, topn=5):
         self.topn = topn
         self.action_types = ["clickout item"]
@@ -1597,6 +1408,10 @@ class SameImpressionsDifferentUserTopN:
 
 
 class SameFakeImpressionsDifferentUser:
+    """
+    This is the same as SameImpressionsDifferentUser but we use all interactions to calculate the CTR
+    """
+
     def __init__(self):
         self.action_types = ACTIONS_WITH_ITEM_REFERENCE
         # impressions -> (user, item)
@@ -1618,6 +1433,12 @@ class SameFakeImpressionsDifferentUser:
 
 
 class RankBasedCTR:
+    """
+    This class calculates the CTR of the item combined with the ranking of the item.
+    When extracting the statistics we use a smooth version of CTR so take the CTR at the position with the
+    highest weight and surrounding ones with lower weights.
+    """
+
     def __init__(self):
         self.action_types = ["clickout item"]
         self.item_rank_clicks = defaultdict(lambda: dict(zip(range(25), [0] * 25)))
@@ -1664,6 +1485,14 @@ class RankBasedCTR:
 
 
 class AccByKey:
+    """
+    This is a meta accumulator that wraps other accumulators.
+    It can calculate exactly the same statistics as the base accumulator but it works within some group.
+    So for example we can calculate ItemCTR per device like this
+
+    AccByKey(ItemCTR(), key="device")
+    """
+
     def __init__(self, base_acc, key):
         self.key = key
         self.base_acc = base_acc
@@ -2059,37 +1888,3 @@ def get_accumulators(hashn=None):
         print("N acc", hashn, len(accumulators))
 
     return accumulators
-
-
-if __name__ == "__main__":
-    acc = SimilarUsersItemInteraction()
-    row = {"user_id": "b", "session_id": "b", "reference": 1, "clickout_id": 100}
-    acc.update_acc(row)
-    print("{} {}".format(acc.users_items, acc.items_users))
-
-    row = {"user_id": "b", "session_id": "b", "reference": 2, "clickout_id": 100}
-    acc.update_acc(row)
-    print("{} {}".format(acc.users_items, acc.items_users))
-
-    row = {"user_id": "c", "session_id": "b", "reference": 1, "clickout_id": 100}
-    acc.update_acc(row)
-    print("{} {}".format(acc.users_items, acc.items_users))
-
-    row = {"user_id": "c", "session_id": "b", "reference": 3, "clickout_id": 100}
-    acc.update_acc(row)
-    print("{} {}".format(acc.users_items, acc.items_users))
-
-    row = {"user_id": "a", "session_id": "b", "reference": 1, "clickout_id": 110}
-    acc.update_acc(row)
-    print("{} {}".format(acc.users_items, acc.items_users))
-    print(acc.get_stats(row, {"item_id": 1}))
-    print(acc.get_stats(row, {"item_id": 2}))
-    print(acc.get_stats(row, {"item_id": 3}))
-    print(acc.get_stats(row, {"item_id": 4}))
-
-    row = {"user_id": "a", "session_id": "b", "reference": 2, "clickout_id": 120}
-    acc.update_acc(row)
-    print("{} {}".format(acc.users_items, acc.items_users))
-    row = {"user_id": "a", "session_id": "b", "reference": 3, "clickout_id": 200}
-    acc.update_acc(row)
-    print("{} {}".format(acc.users_items, acc.items_users))

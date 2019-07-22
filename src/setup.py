@@ -9,6 +9,6 @@ setup(
     version="0.1",
     author="LogicAI",
     packages=["recsys"],
-    ext_modules = cythonize(extensions, include_path=[get_include()]),
-    include_dirs=[get_include()]
+    ext_modules=cythonize(extensions, include_path=[get_include()]),
+    include_dirs=[get_include()],
 )

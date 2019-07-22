@@ -43,11 +43,19 @@ def get_preds_2():
     pred1_subs_hashes = [fn.split("/")[-2].split("_")[0] for fn in pred1_subs]
     common_hashes = set(pred1_subs_hashes) & set(pred1_vals_hashes)
     pred1_vals_c = sorted(
-        [(hsh, fn.replace("config.json", "predictions.csv")) for hsh, fn in zip(pred1_vals_hashes, pred1_vals) if
-         hsh in common_hashes])
+        [
+            (hsh, fn.replace("config.json", "predictions.csv"))
+            for hsh, fn in zip(pred1_vals_hashes, pred1_vals)
+            if hsh in common_hashes
+        ]
+    )
     pred1_subs_c = sorted(
-        [(hsh, fn.replace("config.json", "predictions.csv")) for hsh, fn in zip(pred1_subs_hashes, pred1_subs) if
-         hsh in common_hashes])
+        [
+            (hsh, fn.replace("config.json", "predictions.csv"))
+            for hsh, fn in zip(pred1_subs_hashes, pred1_subs)
+            if hsh in common_hashes
+        ]
+    )
     return pred1_vals_c, pred1_subs_c
 
 
@@ -71,7 +79,7 @@ def read_prediction(fn):
     return p
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     preds1_vals, preds1_subs = get_preds_1()
     preds2_vals, preds2_subs = get_preds_2()
 
@@ -81,9 +89,11 @@ if __name__ == '__main__':
     # read validation models
     with Pool(32) as pool:
         val_predictions_dfs = pool.map(read_prediction_val, [fn for _, fn in preds_vals_all])
-    val_predictions = [(mrr, hsh, df, config) for ((hsh, fn), (mrr, df, config))
-                       in zip(preds_vals_all, val_predictions_dfs)
-                       if (df.shape[0] == 3077674) and (mrr > 0.68) and ("160357" not in fn) and ("59629" not in fn)]
+    val_predictions = [
+        (mrr, hsh, df, config)
+        for ((hsh, fn), (mrr, df, config)) in zip(preds_vals_all, val_predictions_dfs)
+        if (df.shape[0] == 3_077_674) and (mrr > 0.68) and ("160357" not in fn) and ("59629" not in fn)
+    ]
     val_hashes = [p[1] for p in val_predictions]
 
     print("Debuging click probas")
@@ -95,7 +105,6 @@ if __name__ == '__main__':
     lengths = group_lengths(final["clickout_id"])
     preds_stack = np.vstack([df["click_proba"] for _, _, df, _ in val_predictions]).T
 
-
     def opt(v):
         preds_ens = preds_stack.dot(v)
         mrr = mrr_fast_v3(final["was_clicked"].values, preds_ens, lengths)
@@ -103,7 +112,7 @@ if __name__ == '__main__':
         return -mrr
 
     coefs = fmin(opt, [0] * preds_stack.shape[1])
-    coefs = fmin(opt, coefs, ftol=0.000001)
+    coefs = fmin(opt, coefs, ftol=0.000_001)
 
     final["click_proba"] = preds_stack.dot(coefs)
     mrr = mrr_fast(final, "click_proba")
@@ -111,14 +120,13 @@ if __name__ == '__main__':
     print(mrr)
 
     mrrs, _, _, configs = list(zip(*val_predictions))
-    summary_df = pd.DataFrame({'config': configs, 'mrr': mrrs, 'coef': coefs})
+    summary_df = pd.DataFrame({"config": configs, "mrr": mrrs, "coef": coefs})
     print(summary_df)
     summary_df.to_csv(f"model_summary_{mrr_str}.csv")
 
     # read submission models
     with Pool(32) as pool:
         sub_predictions_dfs = pool.map(read_prediction, [fn for _, fn in preds_subs_all])
-
 
     sub_predictions = [(hsh, df) for ((hsh, fn), df) in zip(preds_subs_all, sub_predictions_dfs) if hsh in val_hashes]
     for coef, (hsh, df) in zip(coefs, sub_predictions):
