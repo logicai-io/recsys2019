@@ -52,7 +52,7 @@ mpmath==1.1.0
 mystic==0.3.4
 nbconvert==5.4.1
 nbformat==4.4.0
-notebook==5.7.6
+notebook==6.4.12
 numexpr==2.6.9
 numpy==1.16.2
 pandas==0.24.2
