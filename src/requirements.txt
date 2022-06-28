@@ -1,6 +1,6 @@
 absl-py==0.7.0
 appdirs==1.4.3
-arrow==0.13.1
+arrow==0.15.1
 astor==0.7.1
 attrs==19.1.0
 backcall==0.1.0
