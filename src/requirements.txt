@@ -50,7 +50,7 @@ mkl-random==1.0.2
 mock==2.0.0
 mpmath==1.1.0
 mystic==0.3.4
-nbconvert==5.4.1
+nbconvert==6.5.1
 nbformat==4.4.0
 notebook==5.7.6
 numexpr==2.6.9
