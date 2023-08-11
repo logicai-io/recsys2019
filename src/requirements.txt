@@ -19,7 +19,7 @@ dill==0.3.0
 entrypoints==0.3
 gast==0.2.2
 gitdb2==2.0.5
-GitPython==2.1.11
+GitPython==3.1.32
 grpcio==1.16.1
 h5py==2.9.0
 h5sparse==0.1.0
